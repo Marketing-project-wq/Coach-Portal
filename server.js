@@ -128,6 +128,21 @@ async function coachWeek(coach, weekStartISO, today) {
   return { week, range, start: iso(ws) };
 }
 
+// Build class-card objects (used by the dashboard list and the date-range filter).
+function cardsFrom(sched, counts, started, types, today) {
+  return sched.map((x) => {
+    const c = counts[x.id] || { confirmed: 0, pending: 0 };
+    const t = types[x.class_type_id] || {};
+    const isToday = x.schedule_date === today;
+    const isStarted = started.has(x.id);
+    return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
+      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted,
+      accent: isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C'),
+      status: isStarted ? 'Sedang Berlangsung' : (isToday ? 'Akan Datang' : 'Terjadwal'),
+      canAbsen: isToday && !isStarted, dateLabel: dLabel(x.schedule_date) };
+  });
+}
+
 // ---------- HTTP ----------
 function send(res, status, body, headers = {}) {
   const payload = typeof body === 'string' ? body : JSON.stringify(body);
@@ -220,17 +235,7 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
   const upIds = upcomingSched.map((x) => x.id);
   const upCounts = await bookingCounts(upIds);
   const upStarted = await startedSet(upIds);
-  const todayList = upcomingSched.map((x) => {
-    const c = upCounts[x.id] || { confirmed: 0, pending: 0 };
-    const t = types[x.class_type_id] || {};
-    const isToday = x.schedule_date === today;
-    const isStarted = upStarted.has(x.id);
-    return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
-      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted,
-      accent: isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C'),
-      status: isStarted ? 'Sedang Berlangsung' : (isToday ? 'Akan Datang' : 'Terjadwal'),
-      canAbsen: isToday && !isStarted, dateLabel: dLabel(x.schedule_date) };
-  });
+  const todayList = cardsFrom(upcomingSched, upCounts, upStarted, types, today);
   const todayCount = upcomingSched.filter((x) => x.schedule_date === today).length;
   const todayLabel = `${DOW_FULL[d0.getDay()]}, ${d0.getDate()} ${MON_FULL[d0.getMonth()]} ${d0.getFullYear()} · ` + (todayCount > 0 ? `${todayCount} kelas hari ini` : `${todayList.length} kelas mendatang`);
 
@@ -256,6 +261,18 @@ route('GET', '/api/coach/week', async (req, res, s, q) => {
   }
   const wk = await coachWeek(s.c, start, today);
   return send(res, 200, { week: wk.week, range: wk.range, start: wk.start });
+});
+
+// Classes within a chosen date range (the "dari–sampai" filter on the schedule list).
+route('GET', '/api/coach/classes', async (req, res, s, q) => {
+  const today = todayJakarta();
+  const from = q.from || today;
+  const to = q.to || null;
+  const types = await classTypes();
+  const sched = (await coachSchedules(s.c, from, to)).slice(0, 80);
+  const ids = sched.map((x) => x.id);
+  const [counts, started] = await Promise.all([bookingCounts(ids), startedSet(ids)]);
+  return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today), from, to });
 });
 
 // ===== COACH: class detail + participants =====

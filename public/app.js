@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', week: [], weekStart: '', weekRange: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
   }
   boot() {
     if (this.MOCK) {
@@ -81,7 +81,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart })).catch(fail); this.loadRotations(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadRotations(); }
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
@@ -138,6 +138,17 @@ class Component extends DCLogic {
     if (this.MOCK) { this.setD({ weekStart: start, weekRange: start }); return; }
     this.api('/api/coach/week?start=' + start).then((r) => this.setD({ week: r.week, weekRange: r.range, weekStart: r.start })).catch((e) => this.toastMsg(e.message));
   }
+  fmtD(iso) { const M = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; const d = new Date(iso + 'T00:00:00'); return d.getDate() + ' ' + M[d.getMonth()]; }
+  applyRange() {
+    const from = (document.getElementById('rangeFrom') || {}).value;
+    const to = (document.getElementById('rangeTo') || {}).value;
+    if (!from || !to) return this.toastMsg('Pilih tanggal dari & sampai.');
+    if (from > to) return this.toastMsg('Tanggal "dari" harus sebelum "sampai".');
+    const label = (this.fmtD(from) + ' – ' + this.fmtD(to)).toUpperCase();
+    if (this.MOCK) return this.setD({ jadwalLabel: label });
+    this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
+  }
+  resetRange() { if (this.MOCK) return this.setD({ jadwalLabel: 'MENDATANG' }); this.loadScreen('dash'); }
   decideRotation(id, action) {
     if (this.MOCK) { const inc = this.state.d.rotations.incoming.filter((p) => p.id !== id); this.setD({ rotations: Object.assign({}, this.state.d.rotations, { incoming: inc }) }); return this.toastMsg(action === 'approve' ? 'Rotation disetujui' : 'Rotation ditolak'); }
     this.api('/api/coach/rotations/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
@@ -257,6 +268,7 @@ class Component extends DCLogic {
       isCoachView, hasIncoming, incomingCount, rotHeader,
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
+      jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),

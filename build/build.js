@@ -40,7 +40,9 @@ template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation')
   template = template.slice(0, start) + block + template.slice(end);
 })();
 // Dashboard: show upcoming classes (not just today) + bind the greeting/stat numbers to real data
-template = template.replace('JADWAL HARI INI', 'JADWAL MENDATANG');
+// Schedule heading becomes a date-range filter (dari–sampai) + dynamic label
+const jadwalHead = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:6px 0 14px;"><div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);">JADWAL {{ jadwalLabel }}</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><input type="date" id="rangeFrom" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:\'Hanken Grotesk\';outline:0;"><span style="color:var(--muted2);font-size:12px;">s/d</span><input type="date" id="rangeTo" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:\'Hanken Grotesk\';outline:0;"><button onclick="{{ applyRange }}" style="background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:\'Archivo\';">Terapkan</button><button onclick="{{ resetRange }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:8px 12px;font-weight:700;font-size:12.5px;cursor:pointer;">Reset</button></div></div>';
+template = template.replace('<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL HARI INI</div>', jadwalHead);
 template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
 template = template.replace('line-height:1.1;">18</div>', 'line-height:1.1;">{{ monthClasses }}</div>');
 template = template.replace('line-height:1.1;">162</div>', 'line-height:1.1;">{{ monthPeserta }}</div>');
