@@ -19,6 +19,9 @@ template = template.replace('value="rheza@20fit.id"', 'id="loginEmail" placehold
 template = template.replace('value="rheza456" type="password"', 'id="loginPassword" type="password" placeholder="password" value=""');
 // Reset-modal input flagged so confirmReset can read it
 template = template.replace('value="{{ resetPwd }}"', 'data-reset value="{{ resetPwd }}"');
+// Login card copy: neutral heading + rename the first field label (Email -> Name)
+template = template.replace('Masuk sebagai Coach', 'Masuk ke Akun Anda');
+template = template.replace('>Email</label>', '>Name</label>');
 // coachToday card: Detail/Absen buttons become per-item (scoped to that loop)
 (() => {
   const start = template.indexOf('<sc-for list="{{ coachToday }}"');
@@ -52,7 +55,7 @@ template = template.replace('sampai Head Coach menyetujui', 'sampai coach rotati
 
 // ---- Label renames (longest/upper variants first) ----
 const renames = [
-  ['PENGGANTIAN', 'ROTATION'], ['Penggantian', 'Rotation'], ['PENGGANTI', 'ROTATION'], ['pengganti', 'rotation'],
+  ['PENGGANTIAN', 'ROTATION'], ['Penggantian', 'Rotation'], ['penggantian', 'rotation'], ['PENGGANTI', 'ROTATION'], ['pengganti', 'rotation'],
   ['Jadwal Tim', 'Schedule'], ['Email Apresiasi', 'Feedback'],
 ];
 for (const [a, b] of renames) template = template.split(a).join(b);
