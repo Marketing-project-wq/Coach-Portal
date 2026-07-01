@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review Kelas · 20FIT Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#08090B; --panel:#121419; --panel2:#171A21; --border:#262B35; --border2:#323845; --text:#F3F5F7; --muted:#888F9C; --muted2:#5B616E; --volt:#D6FF3D; --amber:#FFB020; --green:#3ED598; --red:#FF5247; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  body{ background:var(--bg); color:var(--text); min-height:100vh; font-family:'Hanken Grotesk',system-ui,sans-serif; display:flex; align-items:flex-start; justify-content:center; padding:28px 16px 60px; }
+  .wrap{ width:100%; max-width:440px; }
+  .brand{ display:flex; align-items:center; gap:11px; margin-bottom:22px; justify-content:center; }
+  .badge{ width:38px; height:38px; border-radius:10px; background:var(--volt); color:#08090B; font-family:'Archivo'; font-weight:900; font-size:18px; display:flex; align-items:center; justify-content:center; }
+  .brand-name{ font-family:'Archivo'; font-weight:800; font-size:16px; letter-spacing:.02em; } .brand-name span{ color:var(--volt); }
+  .card{ background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 24px; }
+  h1{ font-family:'Archivo'; font-weight:800; font-size:22px; margin-bottom:6px; }
+  .sub{ color:var(--muted); font-size:13.5px; margin-bottom:22px; line-height:1.5; }
+  label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:7px; }
+  input, textarea{ width:100%; background:var(--panel2); border:1px solid var(--border2); color:var(--text); border-radius:12px; padding:13px 14px; font-size:14.5px; font-family:inherit; outline:0; }
+  input:focus, textarea:focus{ border-color:var(--volt); }
+  textarea{ min-height:96px; resize:vertical; }
+  .field{ margin-bottom:16px; }
+  .btn{ width:100%; background:var(--volt); color:#08090B; border:0; border-radius:12px; padding:15px; font-family:'Archivo'; font-weight:800; font-size:15px; cursor:pointer; text-transform:uppercase; letter-spacing:.02em; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn.ghost{ background:transparent; border:1px solid var(--border2); color:var(--muted); text-transform:none; letter-spacing:0; }
+  .msg{ font-size:13px; margin-top:14px; text-align:center; min-height:18px; } .msg.err{ color:var(--red); } .msg.ok{ color:var(--green); }
+  .classbox{ background:var(--panel2); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px; }
+  .classbox .cls{ font-family:'Archivo'; font-weight:800; font-size:17px; } .classbox .meta{ color:var(--muted); font-size:13px; margin-top:4px; }
+  .stars{ display:flex; gap:8px; justify-content:center; margin:6px 0 20px; }
+  .star{ font-size:38px; line-height:1; color:var(--border2); cursor:pointer; transition:transform .1s, color .1s; }
+  .star.on{ color:var(--amber); } .star:hover{ transform:scale(1.12); }
+  .hidden{ display:none; }
+  .done{ text-align:center; padding:12px 0; }
+  .done .big{ font-size:44px; margin-bottom:8px; } .done h2{ font-family:'Archivo'; font-weight:800; font-size:20px; margin-bottom:6px; }
+  .done p{ color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><div class="badge">20</div><div class="brand-name">20FIT<span> ARENA</span></div></div>
+
+    <!-- STEP 1: enter booking code -->
+    <div class="card" id="step1">
+      <h1>Beri Review Kelas</h1>
+      <p class="sub">Masukkan kode booking Anda untuk memberi ulasan pada coach & kelas yang Anda ikuti.</p>
+      <div class="field">
+        <label for="code">Kode Booking</label>
+        <input id="code" placeholder="mis. CL-20260701-0001" autocapitalize="characters" autocomplete="off">
+      </div>
+      <button class="btn" id="findBtn">Cari Kelas</button>
+      <div class="msg" id="msg1"></div>
+    </div>
+
+    <!-- STEP 2: rate + comment -->
+    <div class="card hidden" id="step2">
+      <div class="classbox">
+        <div class="cls" id="clsName">—</div>
+        <div class="meta" id="clsMeta">—</div>
+      </div>
+      <label style="text-align:center;">Beri Rating</label>
+      <div class="stars" id="stars"></div>
+      <div class="field">
+        <label for="rname">Nama (opsional)</label>
+        <input id="rname" placeholder="Nama Anda">
+      </div>
+      <div class="field">
+        <label for="comment">Komentar (opsional)</label>
+        <textarea id="comment" placeholder="Bagaimana kelasnya? Beri masukan untuk coach…"></textarea>
+      </div>
+      <button class="btn" id="submitBtn">Kirim Review</button>
+      <div class="msg" id="msg2"></div>
+      <button class="btn ghost" id="backBtn" style="margin-top:10px;">← Ganti kode booking</button>
+    </div>
+
+    <!-- STEP 3: done -->
+    <div class="card hidden done" id="step3">
+      <div class="big">🎉</div>
+      <h2>Terima kasih!</h2>
+      <p>Review Anda sudah terkirim ke coach. Sampai jumpa di kelas berikutnya! 💪</p>
+    </div>
+  </div>
+
+  <script>
+    var $ = function(id){ return document.getElementById(id); };
+    var state = { code:'', rating:0 };
+
+    function show(step){ ['step1','step2','step3'].forEach(function(s){ $(s).classList.toggle('hidden', s!==step); }); }
+
+    // build stars
+    var starsEl = $('stars');
+    for (var i=1;i<=5;i++){ (function(n){ var s=document.createElement('span'); s.className='star'; s.textContent='★'; s.onclick=function(){ setRating(n); }; starsEl.appendChild(s); })(i); }
+    function setRating(n){ state.rating=n; var els=starsEl.children; for(var i=0;i<5;i++) els[i].classList.toggle('on', i<n); }
+
+    async function api(path, body){
+      var r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      var d = await r.json().catch(function(){ return {}; });
+      if (!r.ok) throw new Error(d.error || 'Terjadi kesalahan.');
+      return d;
+    }
+
+    $('findBtn').onclick = async function(){
+      var code = $('code').value.trim().toUpperCase();
+      var m = $('msg1'); m.textContent=''; m.className='msg';
+      if (!code){ m.textContent='Masukkan kode booking dulu.'; m.className='msg err'; return; }
+      this.disabled=true; this.textContent='Mencari…';
+      try{
+        var d = await api('/api/public/lookup', { booking_code: code });
+        if (d.already){ m.textContent='Kode ini sudah pernah memberi review. Terima kasih!'; m.className='msg err'; return; }
+        state.code = code; state.rating=0; setRating(0);
+        $('clsName').textContent = d.class_label + (d.coach ? ' · Coach ' + d.coach : '');
+        $('clsMeta').textContent = 'Kode ' + code + (d.date ? ' · ' + d.date : '');
+        $('rname').value = d.name || '';
+        show('step2');
+      }catch(e){ m.textContent=e.message; m.className='msg err'; }
+      finally{ this.disabled=false; this.textContent='Cari Kelas'; }
+    };
+
+    $('submitBtn').onclick = async function(){
+      var m = $('msg2'); m.textContent=''; m.className='msg';
+      if (!state.rating){ m.textContent='Beri rating bintang dulu.'; m.className='msg err'; return; }
+      this.disabled=true; this.textContent='Mengirim…';
+      try{
+        await api('/api/public/review', { booking_code: state.code, rating: state.rating, name: $('rname').value.trim(), comment: $('comment').value.trim() });
+        show('step3');
+      }catch(e){ m.textContent=e.message; m.className='msg err'; this.disabled=false; this.textContent='Kirim Review'; }
+    };
+
+    $('backBtn').onclick = function(){ show('step1'); };
+  </script>
+</body></html>
