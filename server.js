@@ -342,11 +342,16 @@ route('GET', '/api/coach/rotations', async (req, res, s) => {
 route('POST', '/api/coach/rotations/:id/decide', async (req, res, s, q, params) => {
   const body = await readBody(req);
   const status = body && body.action === 'approve' ? 'approved' : 'rejected';
-  const rows = await sb(`arena_coach_substitutions?select=to_coach&id=eq.${enc(params.id)}&limit=1`);
+  const rows = await sb(`arena_coach_substitutions?select=to_coach,schedule_id&id=eq.${enc(params.id)}&limit=1`);
   const r = rows && rows[0];
   if (!r) return send(res, 404, { error: 'Permintaan rotation tidak ditemukan.' });
   if (r.to_coach !== s.c) return send(res, 403, { error: 'Hanya coach rotation yang dapat menyetujui/menolak.' });
   await sb(`arena_coach_substitutions?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status, decided_by: s.c, decided_at: new Date().toISOString() }) });
+  // On approval, transfer the class to the new coach — the schedule's instructor is
+  // what every dashboard (and the shared Admin Hub) reads, so this is the real handover.
+  if (status === 'approved' && r.schedule_id) {
+    await sb(`arena_class_schedules?id=eq.${enc(r.schedule_id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ instructor: r.to_coach, updated_at: new Date().toISOString() }) });
+  }
   return send(res, 200, { ok: true, status });
 });
 
@@ -398,7 +403,7 @@ route('GET', '/api/hc/subs', async (req, res, s) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
   const rows = await sb('arena_coach_substitutions?select=*&order=created_at.desc&limit=50');
   const pending = (rows || []).filter((r) => r.status === 'pending').map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || '', time: r.time_label || '', reason: r.reason || '' }));
-  const history = (rows || []).filter((r) => r.status !== 'pending').slice(0, 10).map((r) => ({ from: r.from_coach, to: r.to_coach, cls: r.class_label || '', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status === 'approved' ? 'Approved' : 'Cancelled' }));
+  const history = (rows || []).filter((r) => r.status !== 'pending').slice(0, 10).map((r) => ({ from: r.from_coach, to: r.to_coach, cls: r.class_label || '', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status === 'approved' ? 'Approved' : (r.status === 'rejected' ? 'Ditolak' : 'Cancelled') }));
   return send(res, 200, { pending, history });
 });
 // Head Coach only VIEWS rotation activity (notification) — approving is done by the rotation coach.
