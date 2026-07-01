@@ -36,7 +36,10 @@ template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation')
   const block = template.slice(start, end)
     .replace(/\{\{ openClass \}\}/g, '{{ c.openClass }}')
     .replace(/\{\{ openAbsen \}\}/g, '{{ c.openAbsen }}')
-    .replace('{{ c.end }}</span>', '{{ c.end }} · {{ c.dateLabel }}</span>');
+    .replace('{{ c.end }}</span>', '{{ c.end }} · {{ c.dateLabel }}</span>')
+    // jam & tanggal kelas: samakan ukuran (sedang, 16px)
+    .replace('font-weight:700;font-size:24px;color:var(--text);">{{ c.time }}', 'font-weight:700;font-size:16px;color:var(--text);">{{ c.time }}')
+    .replace('font-size:13px;color:var(--muted);">{{ c.end }}', 'font-size:16px;color:var(--muted);">{{ c.end }}');
   template = template.slice(0, start) + block + template.slice(end);
 })();
 // Dashboard: show upcoming classes (not just today) + bind the greeting/stat numbers to real data
