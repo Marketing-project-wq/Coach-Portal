@@ -18,13 +18,14 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], week: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, coaches: [], stats: [] };
+    return { today: [], week: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
   }
   boot() {
     if (this.MOCK) {
       const role = (location.search.match(/role=(\w+)/) || [])[1] || 'coach';
       this.accountRole = role;
-      this.state.loggedIn = true; this.state.role = role; this.state.screen = role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts';
+      const scr = (location.search.match(/screen=(\w+)/) || [])[1];
+      this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts');
       this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role });
       this.state.d = this.mockData();
       return;
@@ -80,12 +81,12 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month })).catch(fail);
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month })).catch(fail); this.loadRotations(); }
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
-    else if (screen === 'subrev') this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail);
+    else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats })).catch(fail); }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
@@ -123,15 +124,17 @@ class Component extends DCLogic {
     const cur = this.state.currentClass && this.state.currentClass.schedule;
     const reasonEl = document.querySelector('#app textarea');
     const payload = { to_coach: this.state.selSub, schedule_id: cur ? cur.schedule_id : null, class_label: cur ? cur.type : null, time_label: cur ? cur.time : null, reason: reasonEl ? reasonEl.value : '' };
-    if (this.MOCK) { this.toastMsg('Permintaan terkirim ke Head Coach'); return this.go('dash'); }
+    const toName = this.state.selSub;
+    if (this.MOCK) { this.toastMsg('Permintaan rotation terkirim ke ' + toName); return this.go('dash'); }
     this.api('/api/coach/subs', { method: 'POST', body: JSON.stringify(payload) })
-      .then(() => { this.setState({ selSub: '' }); this.toastMsg('Permintaan terkirim ke Head Coach'); this.go('dash'); })
+      .then(() => { this.setState({ selSub: '' }); this.toastMsg('Permintaan rotation terkirim ke ' + toName); this.go('dash'); })
       .catch((e) => this.toastMsg(e.message));
   }
-  decideSub(id, action) {
-    if (this.MOCK) { this.setState({ d: Object.assign({}, this.state.d, { subs: { pending: this.state.d.subs.pending.filter((p) => p.id !== id), history: this.state.d.subs.history } }) }); return this.toastMsg(action === 'approve' ? 'Penggantian disetujui' : 'Permintaan dibatalkan'); }
-    this.api('/api/hc/subs/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
-      .then(() => { this.toastMsg(action === 'approve' ? 'Penggantian disetujui · disinkron ke Admin Hub' : 'Permintaan dibatalkan'); this.loadScreen('subrev'); })
+  loadRotations() { if (this.MOCK) return; this.api('/api/coach/rotations').then((d) => this.setD({ rotations: d })).catch(() => {}); }
+  decideRotation(id, action) {
+    if (this.MOCK) { const inc = this.state.d.rotations.incoming.filter((p) => p.id !== id); this.setD({ rotations: Object.assign({}, this.state.d.rotations, { incoming: inc }) }); return this.toastMsg(action === 'approve' ? 'Rotation disetujui' : 'Rotation ditolak'); }
+    this.api('/api/coach/rotations/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
+      .then(() => { this.toastMsg(action === 'approve' ? 'Rotation disetujui · kelas kini kelas Anda' : 'Rotation ditolak'); this.loadRotations(); })
       .catch((e) => this.toastMsg(e.message));
   }
   openReset(c) { this.setState({ reset: c.name, resetId: c.id, resetPwd: (c.name || '').replace(/^coach\s*/i, '').toLowerCase() + Math.floor(100 + Math.random() * 900) }); }
@@ -179,8 +182,9 @@ class Component extends DCLogic {
     const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
     const canAdmin = this.accountRole === 'admin';
 
-    const titles = { dash: ['Coach', 'Dashboard'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Penggantian Coach'], email: ['Coach', 'Email Apresiasi'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Jadwal Tim'], subrev: ['Head Coach', 'Permintaan Penggantian'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Email Apresiasi'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
-    const tt = titles[scr] || ['', ''];
+    const titles = { dash: ['Coach', 'Dashboard'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Feedback'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
+    let tt = titles[scr] || ['', ''];
+    if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];
     const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
@@ -199,10 +203,24 @@ class Component extends DCLogic {
     const emailLog = (D.emailLog || []).map((e) => { const m = this.statusPill(e.status); return Object.assign({}, e, { bg: m.bg, col: m.col, icon: e.status === 'Gagal' ? '⚠' : '✓', iconBg: e.status === 'Gagal' ? 'rgba(255,82,71,.12)' : 'var(--volt-dim)' }); });
     // HC today all
     const todayAll = (D.hcToday || []).map((t) => { const kc = { ok: ['rgba(62,213,152,.14)', C.green, '✓ '], warn: ['rgba(255,176,32,.14)', C.amber, '⚠ '], live: [C.voltDim, C.volt, ''], idle: ['rgba(136,143,156,.1)', C.muted, ''] }[t.kind] || ['rgba(136,143,156,.1)', C.muted, '']; return Object.assign({}, t, { bg: kc[0], col: kc[1], dot: t.kind === 'live' ? '● ' : kc[2] }); });
-    // pending subs
-    const pendingSubs = ((D.subs && D.subs.pending) || []).map((p) => Object.assign({}, p, { fromIni: this.ini(p.from), toIni: this.ini(p.to), approve: () => this.decideSub(p.id, 'approve'), cancel: () => this.decideSub(p.id, 'cancel') }));
+    // rotation requests — coach (rotation coach) decides; head coach only gets notified
+    const isCoachView = st.role === 'coach';
+    let pendingSubs, subHistory, incomingCount;
+    if (isCoachView) {
+      const inc = (D.rotations && D.rotations.incoming) || [];
+      pendingSubs = inc.map((p) => Object.assign({}, p, { fromIni: this.ini(p.from), toIni: this.ini(p.to), canDecide: true, notify: false, approve: () => this.decideRotation(p.id, 'approve'), cancel: () => this.decideRotation(p.id, 'reject') }));
+      const outg = (D.rotations && D.rotations.outgoing) || [];
+      subHistory = outg.map((h) => { const label = h.status === 'approved' ? 'Approved' : h.status === 'rejected' ? 'Ditolak' : h.status === 'cancelled' ? 'Cancelled' : 'Menunggu'; const m = this.statusPill(label === 'Approved' ? 'Approved' : label === 'Menunggu' ? 'Akan Datang' : 'Cancelled'); return Object.assign({}, h, { status: label, bg: m.bg, col: m.col }); });
+      incomingCount = inc.length;
+    } else {
+      const pend = (D.subs && D.subs.pending) || [];
+      pendingSubs = pend.map((p) => Object.assign({}, p, { fromIni: this.ini(p.from), toIni: this.ini(p.to), canDecide: false, notify: true }));
+      subHistory = ((D.subs && D.subs.history) || []).map((h) => { const m = this.statusPill(h.status); return Object.assign({}, h, { bg: m.bg, col: m.col }); });
+      incomingCount = pend.length;
+    }
     const pendingCount = pendingSubs.length; const noPending = pendingCount === 0;
-    const subHistory = ((D.subs && D.subs.history) || []).map((h) => { const m = this.statusPill(h.status); return Object.assign({}, h, { bg: m.bg, col: m.col }); });
+    const hasIncoming = incomingCount > 0;
+    const rotHeader = isCoachView ? 'MENUNGGU PERSETUJUAN ANDA' : 'NOTIFIKASI ROTATION';
     // schedule grid
     const coachCols = ((D.schedule && D.schedule.coaches) || []).map((n) => ({ name: n }));
     const scheduleRows = ((D.schedule && D.schedule.times) || []).map((tm) => ({
@@ -229,6 +247,7 @@ class Component extends DCLogic {
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
       login: () => this.login(), logout: () => this.logout(),
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
+      isCoachView, hasIncoming, incomingCount, rotHeader,
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
@@ -257,6 +276,7 @@ class Component extends DCLogic {
     d.hcToday = [{ time: '07:00', coach: 'Elsen', type: 'HYROX Complete', status: 'Mengajar', kind: 'live' }, { time: '07:00', coach: 'Rheza', type: 'HYROX Foundation', status: 'Akan Datang', kind: 'idle' }];
     d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
     d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
+    d.rotations = { incoming: [{ id: 'r1', from: 'Gilang', to: 'Rheza', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], outgoing: [{ id: 'r2', from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: 'Rab, 07:00', status: 'approved' }] };
     d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-' }];
     d.stats = [{ date: '01 Jun', time: '07:00', type: 'HYROX Complete', peserta: 12 }];
     return d;

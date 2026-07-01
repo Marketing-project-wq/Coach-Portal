@@ -258,9 +258,27 @@ route('GET', '/api/coach/subs/options', async (req, res, s, q) => {
 });
 route('POST', '/api/coach/subs', async (req, res, s) => {
   const body = await readBody(req);
-  if (!body || !body.to_coach) return send(res, 400, { error: 'Coach pengganti wajib dipilih.' });
+  if (!body || !body.to_coach) return send(res, 400, { error: 'Coach rotation wajib dipilih.' });
   await sb('arena_coach_substitutions', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: body.schedule_id || null, from_coach: s.c, to_coach: body.to_coach, class_label: body.class_label || null, time_label: body.time_label || null, reason: body.reason || null, status: 'pending' }) });
   return send(res, 200, { ok: true });
+});
+
+// Rotation requests directed at / raised by this coach; the ROTATION COACH (to_coach) decides.
+route('GET', '/api/coach/rotations', async (req, res, s) => {
+  const rows = await sb(`arena_coach_substitutions?select=*&or=(from_coach.eq.${enc(s.c)},to_coach.eq.${enc(s.c)})&order=created_at.desc&limit=60`);
+  const incoming = (rows || []).filter((r) => r.to_coach === s.c && r.status === 'pending').map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || 'Kelas', time: r.time_label || '', reason: r.reason || '-' }));
+  const outgoing = (rows || []).filter((r) => r.from_coach === s.c).map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || 'Kelas', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status }));
+  return send(res, 200, { incoming, outgoing });
+});
+route('POST', '/api/coach/rotations/:id/decide', async (req, res, s, q, params) => {
+  const body = await readBody(req);
+  const status = body && body.action === 'approve' ? 'approved' : 'rejected';
+  const rows = await sb(`arena_coach_substitutions?select=to_coach&id=eq.${enc(params.id)}&limit=1`);
+  const r = rows && rows[0];
+  if (!r) return send(res, 404, { error: 'Permintaan rotation tidak ditemukan.' });
+  if (r.to_coach !== s.c) return send(res, 403, { error: 'Hanya coach rotation yang dapat menyetujui/menolak.' });
+  await sb(`arena_coach_substitutions?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status, decided_by: s.c, decided_at: new Date().toISOString() }) });
+  return send(res, 200, { ok: true, status });
 });
 
 // ===== COACH: appreciation emails =====
@@ -314,13 +332,7 @@ route('GET', '/api/hc/subs', async (req, res, s) => {
   const history = (rows || []).filter((r) => r.status !== 'pending').slice(0, 10).map((r) => ({ from: r.from_coach, to: r.to_coach, cls: r.class_label || '', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status === 'approved' ? 'Approved' : 'Cancelled' }));
   return send(res, 200, { pending, history });
 });
-route('POST', '/api/hc/subs/:id/decide', async (req, res, s, q, params) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
-  const body = await readBody(req);
-  const status = body && body.action === 'approve' ? 'approved' : 'cancelled';
-  await sb(`arena_coach_substitutions?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status, decided_by: s.c, decided_at: new Date().toISOString() }) });
-  return send(res, 200, { ok: true, status });
-});
+// Head Coach only VIEWS rotation activity (notification) — approving is done by the rotation coach.
 route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
   const today = todayJakarta();

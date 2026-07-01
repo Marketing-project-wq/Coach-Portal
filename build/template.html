@@ -1,116 +1,486 @@
 <!DOCTYPE html>
-<html lang="id"><head>
+<html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>20FIT Arena · Coach Portal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* cyrillic */
-
-/* greek */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* cyrillic */
-
-/* greek */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-/* cyrillic-ext */
-
-/* cyrillic */
-
-/* greek */
-
-/* vietnamese */
-
-/* latin-ext */
-
-/* latin */
-
-
-</style>
+<script src="a6a23393-64a5-4d08-b218-6a65e2076bee"></script>
 </head>
 <body>
-<div id="app"></div>
-<template id="tpl"><div style="--bg:#08090B;--panel:#121419;--panel2:#171A21;--raised:#1D212A;--border:#262B35;--border2:#323845;--text:#F3F5F7;--muted:#888F9C;--muted2:#5B616E;--volt:#D6FF3D;--volt-dim:rgba(214,255,61,.13);--green:#3ED598;--amber:#FFB020;--red:#FF5247;--cyan:#4DD4F2;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--text);background:var(--bg);min-height:100vh;position:relative;-webkit-font-smoothing:antialiased;">
+
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<style>/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("7740e303-0ba7-4e02-ae88-97fdff9756a0") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("32adc4a4-89e3-40e1-9943-6012e69d5949") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 500;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("1a4236fb-7aff-4f6d-a463-75b58ebc7fd0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("7740e303-0ba7-4e02-ae88-97fdff9756a0") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("32adc4a4-89e3-40e1-9943-6012e69d5949") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("1a4236fb-7aff-4f6d-a463-75b58ebc7fd0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("7740e303-0ba7-4e02-ae88-97fdff9756a0") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("32adc4a4-89e3-40e1-9943-6012e69d5949") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("1a4236fb-7aff-4f6d-a463-75b58ebc7fd0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("7740e303-0ba7-4e02-ae88-97fdff9756a0") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("32adc4a4-89e3-40e1-9943-6012e69d5949") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("1a4236fb-7aff-4f6d-a463-75b58ebc7fd0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("7740e303-0ba7-4e02-ae88-97fdff9756a0") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("32adc4a4-89e3-40e1-9943-6012e69d5949") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("1a4236fb-7aff-4f6d-a463-75b58ebc7fd0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("34ab3ee1-f09a-4cc9-b3cd-8d18bfcc3ff6") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("aa24f0de-4cf2-4013-9863-0a809d561a09") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("3fd9abd1-47be-49f7-854a-10874a2a791f") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("9d5bc82f-291a-4586-ae7b-07667a62a6c0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("34ab3ee1-f09a-4cc9-b3cd-8d18bfcc3ff6") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("aa24f0de-4cf2-4013-9863-0a809d561a09") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("3fd9abd1-47be-49f7-854a-10874a2a791f") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("9d5bc82f-291a-4586-ae7b-07667a62a6c0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("34ab3ee1-f09a-4cc9-b3cd-8d18bfcc3ff6") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("aa24f0de-4cf2-4013-9863-0a809d561a09") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("3fd9abd1-47be-49f7-854a-10874a2a791f") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("9d5bc82f-291a-4586-ae7b-07667a62a6c0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("34ab3ee1-f09a-4cc9-b3cd-8d18bfcc3ff6") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("aa24f0de-4cf2-4013-9863-0a809d561a09") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("3fd9abd1-47be-49f7-854a-10874a2a791f") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("9d5bc82f-291a-4586-ae7b-07667a62a6c0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("f52a547a-4159-4912-8867-27f8ae1355ab") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("877c528c-fe98-44b0-92d0-ffc4a223561f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("0df9785b-1dc2-4f96-a0ec-d1ffcb1671d8") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("2dcccf18-148b-4f52-9a95-badb25b338d6") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("e1758057-3551-45bf-b1bc-f91022e9a60d") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("138d5bc6-4fa5-420e-8df8-e877456a4c24") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("f52a547a-4159-4912-8867-27f8ae1355ab") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("877c528c-fe98-44b0-92d0-ffc4a223561f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("0df9785b-1dc2-4f96-a0ec-d1ffcb1671d8") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("2dcccf18-148b-4f52-9a95-badb25b338d6") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("e1758057-3551-45bf-b1bc-f91022e9a60d") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("138d5bc6-4fa5-420e-8df8-e877456a4c24") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("f52a547a-4159-4912-8867-27f8ae1355ab") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("877c528c-fe98-44b0-92d0-ffc4a223561f") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("0df9785b-1dc2-4f96-a0ec-d1ffcb1671d8") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("2dcccf18-148b-4f52-9a95-badb25b338d6") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("e1758057-3551-45bf-b1bc-f91022e9a60d") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("138d5bc6-4fa5-420e-8df8-e877456a4c24") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#08090B;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#262A33;border-radius:8px;border:2px solid #08090B;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes popIn{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
+  @keyframes pulseDot{0%,100%{opacity:1;}50%{opacity:.35;}}
+  @keyframes sweep{from{background-position:-200% 0;}to{background-position:200% 0;}}
+  @keyframes toastIn{from{opacity:0;transform:transl(-50%,18px);}to{opacity:1;transform:translate(-50%,0);}}
+</style>
+</helmet>
+<div style="--bg:#08090B;--panel:#121419;--panel2:#171A21;--raised:#1D212A;--border:#262B35;--border2:#323845;--text:#F3F5F7;--muted:#888F9C;--muted2:#5B616E;--volt:#D6FF3D;--volt-dim:rgba(214,255,61,.13);--green:#3ED598;--amber:#FFB020;--red:#FF5247;--cyan:#4DD4F2;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--text);background:var(--bg);min-height:100vh;position:relative;-webkit-font-smoothing:antialiased;">
 
   <!-- atmosphere -->
   <div style="position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(900px 600px at 12% -8%,rgba(214,255,61,.07),transparent 60%),radial-gradient(800px 700px at 108% 110%,rgba(77,212,242,.05),transparent 55%);"></div>
@@ -128,7 +498,7 @@
       <div style="position:relative;">
         <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border2);border-radius:100px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--volt);margin-bottom:26px;">Official HYROX Training Club</div>
         <h1 style="font-family:'Archivo';font-weight:900;font-size:64px;line-height:.96;letter-spacing:-.03em;margin:0 0 18px;text-transform:uppercase;">Coach<br>Portal</h1>
-        <p style="color:var(--muted);font-size:16px;line-height:1.6;max-width:380px;margin:0;">Satu tempat untuk jadwal, peserta, absensi, dan rotationan coach — tersinkron langsung dengan Admin Hub Arena.</p>
+        <p style="color:var(--muted);font-size:16px;line-height:1.6;max-width:380px;margin:0;">Satu tempat untuk jadwal, peserta, absensi, dan penggantian coach — tersinkron langsung dengan Admin Hub Arena.</p>
       </div>
       <div style="display:flex;gap:36px;position:relative;">
         <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">8</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Coach Aktif</div></div>
@@ -143,12 +513,12 @@
         <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Email</label>
         <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:18px;">
           <span style="color:var(--muted2);font-size:15px;">@</span>
-          <input id="loginEmail" placeholder="username atau email" value="" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:15px;padding:14px 0;">
+          <input value="rheza@20fit.id" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:15px;padding:14px 0;">
         </div>
         <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Password</label>
         <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:26px;">
           <span style="color:var(--muted2);font-size:15px;">••</span>
-          <input id="loginPassword" type="password" placeholder="password" value="" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'JetBrains Mono';font-size:15px;padding:14px 0;letter-spacing:.1em;">
+          <input value="rheza456" type="password" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'JetBrains Mono';font-size:15px;padding:14px 0;letter-spacing:.1em;">
         </div>
         <button onclick="{{ login }}" style="width:100%;background:var(--volt);color:#08090B;border:0;border-radius:12px;padding:16px;font-family:'Archivo';font-weight:800;font-size:16px;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;transition:transform .12s,box-shadow .2s;box-shadow:0 10px 30px -10px rgba(214,255,61,.5);" style-hover="transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(214,255,61,.6);">Masuk ke Portal</button>
         <p style="text-align:center;color:var(--muted2);font-size:13px;margin-top:20px;line-height:1.6;">Lupa password? Password dibuat &amp; direset oleh <span style="color:var(--muted);">Admin</span>. Hubungi Admin untuk bantuan.</p>
@@ -171,13 +541,13 @@
       <nav style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:3px;">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:8px 10px 6px;">COACH</div>
         <button onclick="{{ goDash }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.dash.bg }};color:{{ nav.dash.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.dash.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Dashboard</button>
-        <button onclick="{{ goEmail }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.email.bg }};color:{{ nav.email.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.email.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Feedback</button><sc-if value="{{ isCoachView }}"><button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><sc-if value="{{ hasIncoming }}"><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ incomingCount }}</span></sc-if></button></sc-if>
+        <button onclick="{{ goEmail }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.email.bg }};color:{{ nav.email.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.email.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Email Apresiasi</button>
 
         <sc-if value="{{ isHC }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;">HEAD COACH</div>
         <button onclick="{{ goOverview }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.overview.bg }};color:{{ nav.overview.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.overview.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Overview</button>
-        <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Schedule</button>
-        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
+        <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Jadwal Tim</button>
+        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Penggantian</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
         <button onclick="{{ goMonitor }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monitor.bg }};color:{{ nav.monitor.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monitor.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring Coach</button>
         <button onclick="{{ goReports }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reports.bg }};color:{{ nav.reports.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reports.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Laporan</button>
         </sc-if>
@@ -212,8 +582,8 @@
           <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 13px;border:1px solid var(--border);border-radius:100px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulseDot 1.8s infinite;"></span>Sinkron dengan Admin Hub</div>
           <div style="display:flex;background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:3px;">
             <button onclick="{{ setRoleCoach }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.coach.bg }};color:{{ rseg.coach.fg }};transition:background-color .15s,color .15s;">Coach</button>
-            <sc-if value="{{ canHC }}"><button onclick="{{ setRoleHC }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.hc.bg }};color:{{ rseg.hc.fg }};transition:background-color .15s,color .15s;">Head Coach</button></sc-if>
-            <sc-if value="{{ canAdmin }}"><button onclick="{{ setRoleAdmin }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.admin.bg }};color:{{ rseg.admin.fg }};transition:background-color .15s,color .15s;">Admin</button></sc-if>
+            <button onclick="{{ setRoleHC }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.hc.bg }};color:{{ rseg.hc.fg }};transition:background-color .15s,color .15s;">Head Coach</button>
+            <button onclick="{{ setRoleAdmin }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.admin.bg }};color:{{ rseg.admin.fg }};transition:background-color .15s,color .15s;">Admin</button>
           </div>
         </div>
       </header>
@@ -247,8 +617,8 @@
               <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
               <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> peserta · {{ c.cap }} slot</div>
               <div style="display:flex;gap:10px;margin-top:18px;">
-                <button onclick="{{ c.openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button>
-                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ c.openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
+                <button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button>
+                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
               </div>
             </div>
             </sc-for>
@@ -319,9 +689,9 @@
         <div style="max-width:620px;margin:0 auto;">
           <button onclick="{{ openClass }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Kembali ke Detail Kelas</button>
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;">
-            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Ajukan Rotation Coach</h2>
-            <div style="color:var(--muted);font-size:14px;margin-bottom:22px;">HYROX Complete · Senin, 07:00 — kelas dipindahkan sepenuhnya ke coach rotation.</div>
-            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">PILIH COACH ROTATION</div>
+            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Ajukan Penggantian Coach</h2>
+            <div style="color:var(--muted);font-size:14px;margin-bottom:22px;">HYROX Complete · Senin, 07:00 — kelas dipindahkan sepenuhnya ke coach pengganti.</div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">PILIH COACH PENGGANTI</div>
             <div style="display:flex;flex-direction:column;gap:10px;">
               <sc-for list="{{ subOptions }}" as="o" hint-placeholder-count="4">
               <button onclick="{{ o.pick }}" disabled="{{ o.disabled }}" style="display:flex;align-items:center;gap:13px;padding:14px;border-radius:12px;border:1px solid {{ o.border }};background:{{ o.bg }};cursor:{{ o.cursor }};text-align:left;width:100%;transition:border-color .15s;">
@@ -334,7 +704,7 @@
             <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin:22px 0 10px;">ALASAN (OPSIONAL)</div>
             <textarea placeholder="mis. Sakit / ada keperluan mendadak…" style="width:100%;min-height:84px;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
             <button onclick="{{ submitSub }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Ajukan ke Head Coach</button>
-            <p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:14px;">Permintaan akan berstatus <span style="color:var(--amber);font-weight:700;">Menunggu</span> sampai coach rotation menyetujui.</p>
+            <p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:14px;">Permintaan akan berstatus <span style="color:var(--amber);font-weight:700;">Menunggu</span> sampai Head Coach menyetujui.</p>
           </div>
         </div>
         </sc-if>
@@ -344,7 +714,7 @@
         <div style="max-width:760px;margin:0 auto;">
           <div style="background:linear-gradient(135deg,rgba(214,255,61,.1),transparent);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px;display:flex;align-items:center;gap:16px;">
             <div style="font-size:30px;">✉️</div>
-            <div><div style="font-family:'Archivo';font-weight:800;font-size:18px;">Feedback Otomatis</div><div style="color:var(--muted);font-size:13.5px;margin-top:3px;max-width:520px;">Setiap kelas selesai, sistem otomatis mengirim pesan menyemangati ke peserta yang hadir. Kamu hanya melihat riwayatnya — tidak bisa mengedit atau membatalkan.</div></div>
+            <div><div style="font-family:'Archivo';font-weight:800;font-size:18px;">Email Apresiasi Otomatis</div><div style="color:var(--muted);font-size:13.5px;margin-top:3px;max-width:520px;">Setiap kelas selesai, sistem otomatis mengirim pesan menyemangati ke peserta yang hadir. Kamu hanya melihat riwayatnya — tidak bisa mengedit atau membatalkan.</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Riwayat Pengiriman — Kelas Saya</div>
@@ -382,14 +752,14 @@
               </sc-for>
             </div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;height:fit-content;">
-              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Rotation</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Menunggu</span></div>
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Penggantian</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Menunggu</span></div>
               <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
               <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
                 <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px;">{{ p.from }} <span style="color:var(--volt);">→</span> {{ p.to }}</div>
                 <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">{{ p.cls }} · {{ p.time }} · Alasan: {{ p.reason }}</div>
                 <div style="display:flex;gap:9px;">
-                  <sc-if value="{{ p.canDecide }}"><button onclick="{{ p.approve }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:9px;font-weight:800;font-size:13px;cursor:pointer;font-family:'Archivo';">Setujui</button></sc-if>
-                  <sc-if value="{{ p.canDecide }}"><button onclick="{{ p.cancel }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:9px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Tolak</button></sc-if><sc-if value="{{ p.notify }}"><span style="color:var(--amber);font-size:12.5px;font-weight:700;">⏳ Menunggu {{ p.to }}</span></sc-if>
+                  <button onclick="{{ p.approve }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:9px;font-weight:800;font-size:13px;cursor:pointer;font-family:'Archivo';">Setujui</button>
+                  <button onclick="{{ p.cancel }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:9px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Tolak</button>
                 </div>
               </div>
               </sc-for>
@@ -430,7 +800,7 @@
         <!-- ===== SUB REVIEW ===== -->
         <sc-if value="{{ s.subrev }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:820px;margin:0 auto;">
-          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--amber);margin-bottom:12px;">{{ rotHeader }} ({{ pendingCount }})</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--amber);margin-bottom:12px;">MENUNGGU TINDAKAN ({{ pendingCount }})</div>
           <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid rgba(255,176,32,.28);border-radius:16px;padding:20px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
@@ -441,15 +811,15 @@
                 <div style="padding-left:8px;border-left:1px solid var(--border);"><div style="font-weight:700;font-size:15px;">{{ p.cls }}</div><div style="font-size:13px;color:var(--muted);">{{ p.time }}</div><div style="font-size:13px;color:var(--muted);margin-top:2px;">Alasan: <span style="color:var(--text);">{{ p.reason }}</span></div></div>
               </div>
               <div style="display:flex;gap:10px;">
-                <sc-if value="{{ p.canDecide }}"><button onclick="{{ p.approve }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 22px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Approve</button></sc-if>
-                <sc-if value="{{ p.canDecide }}"><button onclick="{{ p.cancel }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px 22px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Cancel</button></sc-if><sc-if value="{{ p.notify }}"><span style="color:var(--amber);font-size:12.5px;font-weight:700;">⏳ Menunggu {{ p.to }}</span></sc-if>
+                <button onclick="{{ p.approve }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 22px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Approve</button>
+                <button onclick="{{ p.cancel }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px 22px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Cancel</button>
               </div>
             </div>
           </div>
           </sc-for>
           <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:36px;text-align:center;color:var(--muted);">Semua permintaan sudah ditindak ✓</div></sc-if>
 
-          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">RIWAYAT ROTATION</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">RIWAYAT PENGGANTIAN</div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
             <sc-for list="{{ subHistory }}" as="h" hint-placeholder-count="3">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);">
@@ -498,7 +868,7 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Kelas</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Peserta</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Tepat Waktu</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--green);">{{ sel.punctual }}%</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Rotation</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Penggantian</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — Juni 2026</div>
@@ -529,7 +899,7 @@
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Kelas (tim)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Rotation Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Penggantian Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Laporan Seluruh Coach — Juni 2026</div>
@@ -673,7 +1043,7 @@
       <h2 style="font-family:'Archivo';font-weight:800;font-size:20px;margin:0 0 6px;">Reset Password</h2>
       <p style="color:var(--muted);font-size:13.5px;margin:0 0 20px;">untuk <span style="color:var(--text);font-weight:700;">{{ resetName }}</span> — password lama langsung tidak berlaku.</p>
       <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Baru (nama + angka)</label>
-      <input data-reset value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
+      <input value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
       <div style="display:flex;gap:11px;">
         <button onclick="{{ closeReset }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;">Batal</button>
         <button onclick="{{ confirmReset }}" style="flex:1.3;background:var(--cyan);border:0;color:#08090B;border-radius:11px;padding:12px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Set Password</button>
@@ -689,13 +1059,293 @@
   </div>
   </sc-if>
 
-</div></template>
-<script src="sc-runtime.js"></script>
-<script src="app.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  window.__app = new Component();
-  SC.mount(document.getElementById('tpl'), window.__app, document.getElementById('app'));
-});
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = {
+    loggedIn: false,
+    role: 'coach',
+    screen: 'dash',
+    selCoach: 'rheza',
+    absen: false,
+    reset: null,
+    resetPwd: '',
+    toast: '',
+    started: false,
+    pending: [
+      { id:'s1', from:'Coach Gilang', to:'Coach Brian', cls:'HYROX Foundation', time:'Sen, 17:00', reason:'Sakit' }
+    ],
+    coachesExtra: []
+  };
+
+  C = { volt:'#D6FF3D', voltDim:'rgba(214,255,61,.13)', green:'#3ED598', amber:'#FFB020', red:'#FF5247', cyan:'#4DD4F2', muted:'#888F9C', muted2:'#5B616E', raised:'#1D212A', border2:'#323845', text:'#F3F5F7' };
+
+  ini(name){ const p=name.replace('Coach ','').trim().split(' '); return (p[0][0]+(p[1]?p[1][0]:p[0][1]||'')).toUpperCase(); }
+
+  baseCoaches(){
+    return [
+      { id:'nando', name:'Coach Nando', role:'Head Coach', phone:'0812-1100-0001', email:'nando@20fit.id', classes:16, peserta:198, punctual:96, subs:1, status:'Active' },
+      { id:'rheza', name:'Coach Rheza', role:'Coach', phone:'0812-1100-0002', email:'rheza@20fit.id', classes:14, peserta:162, punctual:93, subs:2, status:'Active' },
+      { id:'elsen', name:'Coach Elsen', role:'Coach', phone:'0812-1100-0003', email:'elsen@20fit.id', classes:12, peserta:140, punctual:90, subs:1, status:'Active' },
+      { id:'calysta', name:'Coach Calysta', role:'Coach', phone:'0812-1100-0004', email:'calysta@20fit.id', classes:15, peserta:175, punctual:97, subs:0, status:'Active' },
+      { id:'yokae', name:'Coach Yokae', role:'Coach', phone:'0812-1100-0005', email:'yokae@20fit.id', classes:13, peserta:151, punctual:88, subs:1, status:'Active' },
+      { id:'gilang', name:'Coach Gilang', role:'Coach', phone:'0812-1100-0006', email:'gilang@20fit.id', classes:11, peserta:129, punctual:91, subs:3, status:'Active' },
+      { id:'brian', name:'Coach Brian', role:'Coach', phone:'0812-1100-0007', email:'brian@20fit.id', classes:10, peserta:118, punctual:89, subs:1, status:'Active' },
+      { id:'mae', name:'Coach Mae', role:'Coach', phone:'0812-1100-0008', email:'mae@20fit.id', classes:9, peserta:104, punctual:94, subs:0, status:'Active' }
+    ].concat(this.state.coachesExtra);
+  }
+
+  avatar(id){
+    const map={ nando:['#D6FF3D','#08090B'], rheza:['rgba(77,212,242,.18)','#4DD4F2'], elsen:['rgba(62,213,152,.18)','#3ED598'], calysta:['rgba(255,176,32,.18)','#FFB020'], yokae:['rgba(214,255,61,.16)','#D6FF3D'], gilang:['rgba(77,212,242,.16)','#4DD4F2'], brian:['rgba(62,213,152,.16)','#3ED598'], mae:['rgba(255,82,71,.16)','#FF5247'] };
+    return map[id]||['#1D212A','#888F9C'];
+  }
+
+  go(screen){ this.setState({ screen }); }
+
+  decide(id, action){
+    this.setState({ pending: this.state.pending.filter(p=>p.id!==id) });
+    this.toastMsg(action==='Approved' ? 'Penggantian disetujui · disinkron ke Admin Hub' : 'Permintaan dibatalkan');
+  }
+
+  toastMsg(msg){ this.setState({ toast: msg }); clearTimeout(this._t); this._t=setTimeout(()=>this.setState({toast:''}),2600); }
+
+  setRole(role){
+    let screen = role==='coach' ? 'dash' : 'overview';
+    this.setState({ role, screen });
+  }
+
+  navMeta(key, active){
+    return active
+      ? { bg:'var(--volt-dim)', fg:'var(--volt)', bar:'var(--volt)' }
+      : { bg:'transparent', fg:'var(--muted)', bar:'transparent' };
+  }
+
+  statusPill(status){
+    const C=this.C;
+    const m={
+      'Confirmed':[ 'rgba(136,143,156,.14)', C.muted ],
+      'Checked-in':[ 'rgba(62,213,152,.14)', C.green ],
+      'No-show':[ 'rgba(255,82,71,.14)', C.red ],
+      'Akan Datang':[ 'rgba(136,143,156,.14)', C.muted ],
+      'Sedang Berlangsung':[ C.voltDim, C.volt ],
+      'Selesai':[ 'rgba(62,213,152,.14)', C.green ],
+      'Approved':[ 'rgba(62,213,152,.14)', C.green ],
+      'Cancelled':[ 'rgba(255,82,71,.14)', C.red ],
+      'Terkirim':[ 'rgba(62,213,152,.14)', C.green ],
+      'Gagal':[ 'rgba(255,82,71,.14)', C.red ]
+    };
+    const v=m[status]||['rgba(136,143,156,.14)',C.muted];
+    return { bg:v[0], col:v[1] };
+  }
+
+  renderVals(){
+    const C=this.C, st=this.state;
+    const isHC = st.role==='hc' || st.role==='admin';
+    const isAdmin = st.role==='admin';
+    const scr = st.screen;
+
+    // user
+    const userMap={ coach:{name:'Coach Rheza',role:'Coach',first:'Coach Rheza'}, hc:{name:'Coach Nando',role:'Head Coach',first:'Coach Nando'}, admin:{name:'Admin 20FIT',role:'Administrator',first:'Admin'} };
+    const u=userMap[st.role];
+    const user={ name:u.name, role:u.role, first:u.first.replace('Coach ',''), initials:this.ini(u.name.replace('Admin','AD ')) };
+    if(st.role==='admin') user.initials='AD';
+    if(st.role==='hc') user.initials='ND';
+    if(st.role==='coach') user.initials='RZ';
+
+    // nav active
+    const A=(k)=>this.navMeta(k, scr===k);
+    const nav={
+      dash:A('dash'), email:A('email'), overview:A('overview'), schedule:A('schedule'),
+      subrev:A('subrev'), monitor:A('monitor'), reports:A('reports'),
+      accounts:A('accounts'), templates:A('templates'), settings:A('settings'), perms:A('perms')
+    };
+    // detail/stats/subreq highlight their parent
+    if(scr==='detail'||scr==='subreq') Object.assign(nav.dash,this.navMeta('dash',true));
+    if(scr==='stats') Object.assign(nav.monitor,this.navMeta('monitor',true));
+    if(scr==='addcoach') Object.assign(nav.accounts,this.navMeta('accounts',true));
+
+    // role segmented
+    const seg=(on)=>on?{bg:'var(--volt)',fg:'#08090B'}:{bg:'transparent',fg:'var(--muted)'};
+    const rseg={ coach:seg(st.role==='coach'), hc:seg(st.role==='hc'), admin:seg(st.role==='admin') };
+
+    // page title
+    const titles={ dash:['Coach','Dashboard'], detail:['Coach','Detail Kelas'], subreq:['Coach','Penggantian Coach'], email:['Coach','Email Apresiasi'], overview:['Head Coach','Overview'], schedule:['Head Coach','Jadwal Tim'], subrev:['Head Coach','Permintaan Penggantian'], monitor:['Head Coach','Monitoring Coach'], stats:['Head Coach','Statistik Bulanan'], reports:['Head Coach','Laporan Coach'], accounts:['Admin','Kelola Akun Coach'], addcoach:['Admin','Tambah Coach'], templates:['Admin','Template Email Apresiasi'], settings:['Admin','Pengaturan Sistem'], perms:['Admin','Hak Akses Role'] };
+    const tt=titles[scr]||['',''];
+
+    // screen flags
+    const s={ dash:scr==='dash', detail:scr==='detail', subreq:scr==='subreq', email:scr==='email', overview:scr==='overview', schedule:scr==='schedule', subrev:scr==='subrev', monitor:scr==='monitor', stats:scr==='stats', reports:scr==='reports', accounts:scr==='accounts', addcoach:scr==='addcoach', templates:scr==='templates', settings:scr==='settings', perms:scr==='perms' };
+
+    // coach today
+    const started=st.started;
+    const coachToday=[
+      { time:'07:00', end:'– 08:00', type:'HYROX Complete', peserta:12, cap:16, accent:started?C.volt:'#4DD4F2', status:started?'Sedang Berlangsung':'Akan Datang', canAbsen:!started },
+      { time:'17:00', end:'– 18:00', type:'HYROX Foundation', peserta:8, cap:12, accent:'#888F9C', status:'Akan Datang', canAbsen:false }
+    ].map(c=>{ const p=this.statusPill(c.status); return {...c, statusBg:p.bg, statusCol:p.col, openClass:()=>this.go('detail'), openAbsen:()=>this.setState({absen:true}) }; });
+
+    // week calendar
+    const week=[
+      {dow:'SEN',day:'23',label:'2 kls'},{dow:'SEL',day:'24',label:'1 kls'},{dow:'RAB',day:'25',label:'2 kls'},
+      {dow:'KAM',day:'26',label:'1 kls'},{dow:'JUM',day:'27',label:'2 kls'},{dow:'SAB',day:'28',label:'—'},{dow:'MIN',day:'29',label:'—'}
+    ].map((d,i)=>({ ...d, bg:i===0?'var(--volt-dim)':'transparent', border:i===0?'rgba(214,255,61,.3)':'var(--border)', numCol:i===0?'var(--volt)':(d.label==='—'?'var(--muted2)':'var(--text)') }));
+
+    const recentClasses=[
+      {type:'HYROX Complete',date:'28 Jun',time:'07:00',peserta:14},
+      {type:'HYROX Foundation',date:'27 Jun',time:'17:00',peserta:9},
+      {type:'HYROX Complete',date:'25 Jun',time:'07:00',peserta:13}
+    ];
+
+    // participants
+    const pnames=[['Andra Wijaya','Confirmed'],['Sari Putri','Checked-in'],['Bima Saputra','Confirmed'],['Nadia Rahma','Checked-in'],['Reza Pratama','Confirmed'],['Maya Anjani','No-show'],['Dimas Aulia','Confirmed'],['Putri Larasati','Checked-in'],['Fajar Nugroho','Confirmed'],['Intan Permata','Confirmed'],['Yoga Saputra','Checked-in'],['Citra Dewi','Confirmed']];
+    const participants=pnames.map((p,i)=>{ const m=this.statusPill(p[1]); return { n:i+1, name:p[0], booking:'#BK-'+(1029+i), status:p[1], bg:m.bg, col:m.col }; });
+
+    // sub options
+    const subRaw=[ ['Coach Calysta','Tersedia',false],['Coach Elsen','Tersedia',false],['Coach Yokae','Tersedia',false],['Coach Gilang','Bentrok 07:00',true] ];
+    const subOptions=subRaw.map((o,i)=>{ const av=this.avatar(o[0].replace('Coach ','').toLowerCase()); return {
+      name:o[0], avail:o[1], disabled:o[2], initials:this.ini(o[0]),
+      border:o[2]?'var(--border)':'var(--border2)', bg:o[2]?'rgba(255,82,71,.04)':'var(--panel)',
+      cursor:o[2]?'not-allowed':'pointer', nameCol:o[2]?'var(--muted2)':'var(--text)',
+      subCol:o[2]?'var(--red)':'var(--green)', avBg:o[2]?'#1D212A':'rgba(214,255,61,.12)', avFg:o[2]?'#5B616E':'var(--volt)',
+      radioBorder:o[2]?'var(--border2)':'var(--muted)', radioFill:'transparent', pick:()=>{}
+    }; });
+
+    // email log
+    const emailLog=[
+      {class:'HYROX Complete · 07:00',date:'01 Jun 2026',recipients:12,status:'Terkirim'},
+      {class:'HYROX Foundation · 17:00',date:'01 Jun 2026',recipients:8,status:'Terkirim'},
+      {class:'HYROX Complete · 07:00',date:'03 Jun 2026',recipients:14,status:'Terkirim'},
+      {class:'HYROX Complete · 09:00',date:'05 Jun 2026',recipients:11,status:'Terkirim'},
+      {class:'HYROX Foundation · 17:00',date:'08 Jun 2026',recipients:9,status:'Gagal'}
+    ].map(e=>{ const m=this.statusPill(e.status); return {...e, bg:m.bg, col:m.col, icon:e.status==='Gagal'?'⚠':'✓', iconBg:e.status==='Gagal'?'rgba(255,82,71,.12)':'var(--volt-dim)'}; });
+
+    // HC today all
+    const todayAll=[
+      {time:'07:00',coach:'Coach Elsen',type:'HYROX Complete',status:'Hadir',kind:'ok'},
+      {time:'07:00',coach:'Coach Rheza',type:'HYROX Foundation',status:'Belum Absen',kind:'warn'},
+      {time:'09:00',coach:'Coach Calysta',type:'HYROX Complete',status:'Mengajar',kind:'live'},
+      {time:'12:00',coach:'Coach Yokae',type:'HYROX Foundation',status:'Akan Datang',kind:'idle'},
+      {time:'17:00',coach:'Coach Gilang',type:'HYROX Complete',status:'Belum Absen',kind:'warn'},
+      {time:'19:00',coach:'Coach Brian',type:'HYROX Foundation',status:'Akan Datang',kind:'idle'}
+    ].map(t=>{
+      const kc={ ok:['rgba(62,213,152,.14)',C.green,'✓ '], warn:['rgba(255,176,32,.14)',C.amber,'⚠ '], live:[C.voltDim,C.volt,''], idle:['rgba(136,143,156,.1)',C.muted,''] }[t.kind];
+      return {...t, bg:kc[0], col:kc[1], dot:t.kind==='live'?'● ':kc[2] };
+    });
+
+    // pending subs
+    const pendingSubs=st.pending.map((p,i)=>({ ...p, fromIni:this.ini(p.from), toIni:this.ini(p.to), approve:()=>this.decide(p.id,'Approved'), cancel:()=>this.decide(p.id,'Cancelled') }));
+    const pendingCount=st.pending.length;
+    const noPending=pendingCount===0;
+
+    // sub history
+    const subHistory=[
+      {from:'Coach Rheza',to:'Coach Calysta',cls:'HYROX Complete',time:'12 Jun, 07:00',status:'Approved'},
+      {from:'Coach Elsen',to:'Coach Yokae',cls:'HYROX Foundation',time:'08 Jun, 17:00',status:'Cancelled'},
+      {from:'Coach Brian',to:'Coach Mae',cls:'HYROX Complete',time:'03 Jun, 09:00',status:'Approved'}
+    ].map(h=>{ const m=this.statusPill(h.status); return {...h, bg:m.bg, col:m.col}; });
+
+    // schedule grid
+    const coachCols=['Elsen','Rheza','Calysta','Yokae','Gilang','Brian'].map(n=>({name:n}));
+    const times=['07:00','09:00','12:00','15:00','17:00','19:00'];
+    const grid={
+      '07:00':[['HYROX Complete',12],null,null,null,['HYROX Complete',10],null],
+      '09:00':[null,null,['HYROX Complete',11],null,null,null],
+      '12:00':[null,['HYROX Foundation',8],null,['HYROX Foundation',9],null,null],
+      '15:00':[null,null,null,null,['HYROX Complete',13],null],
+      '17:00':[['HYROX Foundation',7],['HYROX Foundation',8],null,null,['HYROX Complete',14],['HYROX Foundation',9]],
+      '19:00':[null,null,['HYROX Complete',12],null,null,['HYROX Foundation',10]]
+    };
+    const scheduleRows=times.map(tm=>({
+      time:tm,
+      cells:grid[tm].map(cell=>{
+        if(!cell) return { has:false };
+        const comp=cell[0].includes('Complete');
+        return { has:true, type:cell[0].replace('HYROX ',''), peserta:cell[1], accent:comp?C.volt:C.cyan, bg:comp?'rgba(214,255,61,.07)':'rgba(77,212,242,.07)' };
+      })
+    }));
+
+    // coaches enriched
+    const roleColor=(r)=> r==='Head Coach'?{bg:C.voltDim,col:C.volt}:{bg:'rgba(136,143,156,.14)',col:C.muted};
+    const coaches=this.baseCoaches().map(c=>{
+      const av=this.avatar(c.id); const rc=roleColor(c.role); const sp=this.statusPill(c.status==='Active'?'Checked-in':'No-show');
+      return { ...c, initials:this.ini(c.name), avBg:av[0], avFg:av[1],
+        roleCol:c.role==='Head Coach'?C.volt:C.muted, roleBg:rc.bg,
+        statusCol:c.status==='Active'?C.green:C.red, statusBg:c.status==='Active'?'rgba(62,213,152,.12)':'rgba(255,82,71,.12)',
+        punctCol:c.punctual>=93?C.green:(c.punctual>=90?C.text:C.amber),
+        toggleLabel:c.status==='Active'?'Nonaktifkan':'Aktifkan',
+        open:()=>this.setState({selCoach:c.id,screen:'stats'}),
+        reset:()=>this.setState({reset:c.name,resetPwd:c.name.replace('Coach ','').toLowerCase()+Math.floor(100+Math.random()*900)}),
+        toggle:()=>this.toastMsg('Status '+c.name+' diperbarui') };
+    });
+    const reportRows=coaches.slice(0,8).map(c=>({ ...c }));
+
+    // selected coach stats
+    const sel=coaches.find(c=>c.id===st.selCoach)||coaches[1];
+    const statRows=[
+      ['01 Jun','07:00','HYROX Complete',12],['01 Jun','17:00','HYROX Foundation',8],['03 Jun','07:00','HYROX Complete',14],
+      ['05 Jun','09:00','HYROX Complete',11],['08 Jun','17:00','HYROX Foundation',9],['10 Jun','07:00','HYROX Complete',13],
+      ['12 Jun','07:00','HYROX Complete',12],['15 Jun','09:00','HYROX Complete',10],['18 Jun','17:00','HYROX Foundation',8],
+      ['22 Jun','07:00','HYROX Complete',14],['25 Jun','07:00','HYROX Complete',13]
+    ].map(r=>({date:r[0],time:r[1],type:r[2],peserta:r[3]}));
+
+    // templates
+    const templates=[
+      {id:'01',text:'“Kelas hari ini kelar! Otot pegel itu tandanya kamu makin kuat. Sampai jumpa di kelas berikutnya 💪”'},
+      {id:'02',text:'“Selamat, kamu baru aja menang lawan rasa malas hari ini. 20FIT bangga sama kamu!”'},
+      {id:'03',text:'“Keringet udah keluar, semangat juga makin nambah. Jangan lupa minum air putih ya!”'}
+    ];
+
+    // permissions
+    const Y='✓', N='·';
+    const permRaw=[
+      ['Lihat jadwal & peserta kelas sendiri',1,1,1],
+      ['Absen kelas sendiri',1,1,1],
+      ['Ajukan penggantian (kelas sendiri)',1,1,1],
+      ['Lihat jadwal seluruh coach',0,1,1],
+      ['Ubah coach pengajar (kelas mana pun)',0,1,1],
+      ['Approve / Cancel penggantian',0,1,1],
+      ['Lihat absensi seluruh coach',0,1,1],
+      ['Akses & ekspor laporan seluruh coach',0,1,1],
+      ['Kelola template pesan apresiasi',0,0,1],
+      ['Tambah akun & set password awal',0,0,1],
+      ['Reset password coach',0,0,1],
+      ['Nonaktifkan akun coach',0,0,1],
+      ['Atur role pengguna',0,0,1]
+    ];
+    const perms=permRaw.map(p=>({ act:p[0],
+      c:p[1]?Y:N, cCol:p[1]?C.volt:C.muted2,
+      h:p[2]?Y:N, hCol:p[2]?C.volt:C.muted2,
+      a:p[3]?Y:N, aCol:p[3]?C.volt:C.muted2 }));
+
+    return {
+      notLoggedIn:!st.loggedIn, loggedIn:st.loggedIn,
+      login:()=>this.setState({loggedIn:true,role:'coach',screen:'dash'}),
+      logout:()=>this.setState({loggedIn:false}),
+      isHC, isAdmin, user, nav, rseg, s,
+      pageKicker:tt[0], pageTitle:tt[1],
+      setRoleCoach:()=>this.setRole('coach'), setRoleHC:()=>this.setRole('hc'), setRoleAdmin:()=>this.setRole('admin'),
+      goDash:()=>this.go('dash'), goEmail:()=>this.go('email'), goOverview:()=>this.go('overview'),
+      goSchedule:()=>this.go('schedule'), goSubReview:()=>this.go('subrev'), goMonitor:()=>this.go('monitor'),
+      goReports:()=>this.go('reports'), goAccounts:()=>this.go('accounts'), goTemplates:()=>this.go('templates'),
+      goSettings:()=>this.go('settings'), goPerms:()=>this.go('perms'),
+      openClass:()=>this.go('detail'), goSubReq:()=>this.go('subreq'),
+      coachToday, week, recentClasses, participants, subOptions, emailLog,
+      todayAll, pendingSubs, pendingCount, noPending, subHistory,
+      coachCols, scheduleRows, coaches, reportRows, sel, statRows, templates, perms,
+      openAbsen:()=>this.setState({absen:true}),
+      showAbsen:st.absen, closeAbsen:()=>this.setState({absen:false}),
+      confirmAbsen:()=>{ this.setState({absen:false,started:true}); this.toastMsg('Kelas dimulai · status Tepat Waktu'); },
+      submitSub:()=>{ this.setState({pending:[...st.pending,{id:'s'+Date.now(),from:'Coach Rheza',to:'Coach Calysta',cls:'HYROX Complete',time:'Sen, 07:00',reason:'Diajukan dari portal'}]}); this.toastMsg('Permintaan terkirim ke Head Coach'); this.go('dash'); },
+      submitAddCoach:()=>{ this.setState({coachesExtra:[...st.coachesExtra,{id:'baru'+Date.now(),name:'Coach Baru',role:'Coach',phone:'0812-1100-0009',email:'baru@20fit.id',classes:0,peserta:0,punctual:100,subs:0,status:'Active'}]}); this.toastMsg('Coach baru ditambahkan · Active'); this.go('accounts'); },
+      goAddCoach:()=>this.go('addcoach'),
+      exportToast:()=>this.toastMsg('File sedang disiapkan untuk diunduh'),
+      showReset:!!st.reset, resetName:st.reset||'', resetPwd:st.resetPwd,
+      closeReset:()=>this.setState({reset:null}),
+      confirmReset:()=>{ this.setState({reset:null}); this.toastMsg('Password direset · sampaikan ke coach'); },
+      hasToast:!!st.toast, toast:st.toast
+    };
+  }
+}
 </script>
+
+
 </body></html>
