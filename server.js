@@ -109,6 +109,25 @@ async function coachSchedules(coach, from, to) {
   return (await sb(q + '&order=schedule_date.asc,start_time.asc')) || [];
 }
 
+// 7-day calendar strip starting at weekStartISO (a Monday), with per-day class counts.
+async function coachWeek(coach, weekStartISO, today) {
+  const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  const ws = new Date(weekStartISO + 'T00:00:00');
+  const we = new Date(ws); we.setDate(ws.getDate() + 6);
+  const sched = await coachSchedules(coach, iso(ws), iso(we));
+  const week = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(ws); dt.setDate(ws.getDate() + i);
+    const ds = iso(dt);
+    const cnt = sched.filter((x) => x.schedule_date === ds).length;
+    week.push({ dow: DOW[dt.getDay()], day: String(dt.getDate()), date: ds, count: cnt, label: cnt ? cnt + ' kls' : '—', isToday: ds === today });
+  }
+  const range = ws.getMonth() === we.getMonth()
+    ? `${ws.getDate()}–${we.getDate()} ${MON[we.getMonth()]}`
+    : `${ws.getDate()} ${MON[ws.getMonth()]} – ${we.getDate()} ${MON[we.getMonth()]}`;
+  return { week, range, start: iso(ws) };
+}
+
 // ---------- HTTP ----------
 function send(res, status, body, headers = {}) {
   const payload = typeof body === 'string' ? body : JSON.stringify(body);
@@ -215,20 +234,28 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
   const todayCount = upcomingSched.filter((x) => x.schedule_date === today).length;
   const todayLabel = `${DOW_FULL[d0.getDay()]}, ${d0.getDate()} ${MON_FULL[d0.getMonth()]} ${d0.getFullYear()} · ` + (todayCount > 0 ? `${todayCount} kelas hari ini` : `${todayList.length} kelas mendatang`);
 
-  // week strip
-  const week = [];
-  for (let i = 0; i < 7; i++) {
-    const dt = new Date(weekStart); dt.setDate(weekStart.getDate() + i);
-    const ds = iso(dt);
-    const cnt = monthSched.filter((x) => x.schedule_date === ds).length;
-    week.push({ dow: DOW[dt.getDay()], day: String(dt.getDate()), date: ds, count: cnt, label: cnt ? cnt + ' kls' : '—', isToday: ds === today });
-  }
+  // week strip (navigable)
+  const wk = await coachWeek(s.c, iso(weekStart), today);
+  const week = wk.week;
   // recent (past classes)
   const recent = monthSched.filter((x) => x.schedule_date < today).slice(-3).reverse().map((x) => {
     const t = types[x.class_type_id] || {};
     return { type: shortType(t.name), date: fmtDMon(x.schedule_date), time: hhmm(x.start_time), peserta: (counts[x.id] || {}).confirmed || 0 };
   });
-  return send(res, 200, { today: todayList, week, recent, month: { classes: monthClasses, peserta: monthPeserta }, todayLabel });
+  return send(res, 200, { today: todayList, week, recent, month: { classes: monthClasses, peserta: monthPeserta }, todayLabel, weekRange: wk.range, weekStart: wk.start });
+});
+
+// Navigable weekly calendar (browse forward to December, etc.)
+route('GET', '/api/coach/week', async (req, res, s, q) => {
+  const today = todayJakarta();
+  let start = q.start;
+  if (!start) {
+    const d0 = new Date(today + 'T00:00:00'); const dow = (d0.getDay() + 6) % 7;
+    const ws = new Date(d0); ws.setDate(d0.getDate() - dow);
+    start = `${ws.getFullYear()}-${String(ws.getMonth() + 1).padStart(2, '0')}-${String(ws.getDate()).padStart(2, '0')}`;
+  }
+  const wk = await coachWeek(s.c, start, today);
+  return send(res, 200, { week: wk.week, range: wk.range, start: wk.start });
 });
 
 // ===== COACH: class detail + participants =====

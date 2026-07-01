@@ -287,7 +287,7 @@
 
           <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Kalender Minggu Ini</div><div style="font-size:13px;color:var(--muted);">23–29 Jun</div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Kalender</div><div style="display:flex;align-items:center;gap:8px;"><button onclick="{{ prevWeek }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;padding:0;">‹</button><div style="font-size:13px;color:var(--muted);min-width:104px;text-align:center;">{{ weekRange }}</div><button onclick="{{ nextWeek }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;padding:0;">›</button></div></div>
               <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
                 <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
                 <div style="text-align:center;padding:12px 4px;border-radius:11px;background:{{ d.bg }};border:1px solid {{ d.border }};">
