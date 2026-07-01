@@ -171,9 +171,11 @@ function serveStatic(req, res) {
   if (p === '/') p = '/index.html';
   const fp = path.normalize(path.join(PUBLIC_DIR, p));
   if (!fp.startsWith(PUBLIC_DIR)) return send(res, 403, 'Forbidden');
+  const cacheFor = (ext) => (ext === '.html' || ext === '.js') ? 'no-cache' : 'public, max-age=3600';
   fs.readFile(fp, (err, data) => {
-    if (err) return fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (e2, d2) => e2 ? send(res, 404, 'Not found') : (res.writeHead(200, { 'Content-Type': MIME['.html'] }), res.end(d2)));
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream' });
+    if (err) return fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (e2, d2) => e2 ? send(res, 404, 'Not found') : (res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' }), res.end(d2)));
+    const ext = path.extname(fp).toLowerCase();
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cacheFor(ext) });
     res.end(data);
   });
 }
