@@ -24,9 +24,17 @@ template = template.replace('value="{{ resetPwd }}"', 'data-reset value="{{ rese
   const start = template.indexOf('<sc-for list="{{ coachToday }}"');
   if (start < 0) return;
   const end = template.indexOf('</sc-for>', start) + '</sc-for>'.length;
-  const block = template.slice(start, end).replace(/\{\{ openClass \}\}/g, '{{ c.openClass }}').replace(/\{\{ openAbsen \}\}/g, '{{ c.openAbsen }}');
+  const block = template.slice(start, end)
+    .replace(/\{\{ openClass \}\}/g, '{{ c.openClass }}')
+    .replace(/\{\{ openAbsen \}\}/g, '{{ c.openAbsen }}')
+    .replace('{{ c.end }}</span>', '{{ c.end }} · {{ c.dateLabel }}</span>');
   template = template.slice(0, start) + block + template.slice(end);
 })();
+// Dashboard: show upcoming classes (not just today) + bind the greeting/stat numbers to real data
+template = template.replace('JADWAL HARI INI', 'JADWAL MENDATANG');
+template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
+template = template.replace('line-height:1.1;">18</div>', 'line-height:1.1;">{{ monthClasses }}</div>');
+template = template.replace('line-height:1.1;">162</div>', 'line-height:1.1;">{{ monthPeserta }}</div>');
 // Hide Head Coach / Admin role buttons unless the account allows them
 template = template.replace(/(<button onclick="\{\{ setRoleHC \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canHC }}">$1</sc-if>');
 template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canAdmin }}">$1</sc-if>');

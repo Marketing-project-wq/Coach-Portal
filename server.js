@@ -70,8 +70,11 @@ async function sb(q, options = {}) {
 function todayJakarta() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()); }
 function hhmm(t) { return t ? String(t).slice(0, 5) : ''; }
 const DOW = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
+const DOW_FULL = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const MON_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 function fmtDMon(d) { const dt = new Date(d + 'T00:00:00'); return dt.getDate() + ' ' + MON[dt.getMonth()]; }
+function dLabel(d) { const dt = new Date(d + 'T00:00:00'); return DOW[dt.getDay()].charAt(0) + DOW[dt.getDay()].slice(1).toLowerCase() + ' ' + dt.getDate() + ' ' + MON[dt.getMonth()]; }
 
 // ---------- data helpers ----------
 let _typeCache = null;
@@ -187,22 +190,30 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
   const monthSched = await coachSchedules(s.c, monthStart, monthEnd);
   const ids = monthSched.map((x) => x.id);
   const counts = await bookingCounts(ids);
-  const started = await startedSet(ids.filter((_, i) => monthSched[i].schedule_date === today));
 
   // month totals
   const pastOrToday = monthSched.filter((x) => x.schedule_date <= today);
   const monthClasses = pastOrToday.length;
   const monthPeserta = pastOrToday.reduce((a, x) => a + ((counts[x.id] || {}).confirmed || 0), 0);
 
-  // today
-  const todayList = monthSched.filter((x) => x.schedule_date === today).map((x) => {
-    const c = counts[x.id] || { confirmed: 0, pending: 0 };
+  // upcoming classes (today onward) — so participants are always reachable
+  const upcomingSched = (await coachSchedules(s.c, today, null)).slice(0, 8);
+  const upIds = upcomingSched.map((x) => x.id);
+  const upCounts = await bookingCounts(upIds);
+  const upStarted = await startedSet(upIds);
+  const todayList = upcomingSched.map((x) => {
+    const c = upCounts[x.id] || { confirmed: 0, pending: 0 };
     const t = types[x.class_type_id] || {};
-    const isStarted = started.has(x.id);
+    const isToday = x.schedule_date === today;
+    const isStarted = upStarted.has(x.id);
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
-      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted, accent: isStarted ? '#D6FF3D' : '#4DD4F2',
-      status: isStarted ? 'Sedang Berlangsung' : 'Akan Datang', canAbsen: !isStarted };
+      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted,
+      accent: isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C'),
+      status: isStarted ? 'Sedang Berlangsung' : (isToday ? 'Akan Datang' : 'Terjadwal'),
+      canAbsen: isToday && !isStarted, dateLabel: dLabel(x.schedule_date) };
   });
+  const todayCount = upcomingSched.filter((x) => x.schedule_date === today).length;
+  const todayLabel = `${DOW_FULL[d0.getDay()]}, ${d0.getDate()} ${MON_FULL[d0.getMonth()]} ${d0.getFullYear()} · ` + (todayCount > 0 ? `${todayCount} kelas hari ini` : `${todayList.length} kelas mendatang`);
 
   // week strip
   const week = [];
@@ -217,7 +228,7 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
     const t = types[x.class_type_id] || {};
     return { type: shortType(t.name), date: fmtDMon(x.schedule_date), time: hhmm(x.start_time), peserta: (counts[x.id] || {}).confirmed || 0 };
   });
-  return send(res, 200, { today: todayList, week, recent, month: { classes: monthClasses, peserta: monthPeserta } });
+  return send(res, 200, { today: todayList, week, recent, month: { classes: monthClasses, peserta: monthPeserta }, todayLabel });
 });
 
 // ===== COACH: class detail + participants =====
