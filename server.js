@@ -239,12 +239,14 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   if (s.r === 'coach' && sc.instructor !== s.c) return send(res, 403, { error: 'Bukan kelas Anda.' });
   const types = await classTypes();
   const t = types[sc.class_type_id] || {};
-  const bookings = await sb(`arena_class_bookings?select=id,booking_code,full_name,phone,status,created_at&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
+  // Note: participant contact (phone/email) is intentionally NOT selected/returned —
+  // coaches and head coaches must not see customer contact details.
+  const bookings = await sb(`arena_class_bookings?select=id,booking_code,full_name,status,created_at&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
   const att = await sb(`arena_class_attendance?select=booking_id,status&schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; for (const a of att || []) attMap[a.booking_id] = a.status;
   const started = (await sb(`arena_class_sessions?select=schedule_id&schedule_id=eq.${enc(params.id)}&limit=1`) || []).length > 0;
   const participants = (bookings || []).filter((b) => b.status !== 'cancelled').map((b) => ({
-    booking_id: b.id, booking: b.booking_code, name: b.full_name || '(tanpa nama)', phone: b.phone || '',
+    booking_id: b.id, booking: b.booking_code, name: b.full_name || '(tanpa nama)',
     bookingStatus: b.status, attendance: attMap[b.id] || null,
     status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
   }));

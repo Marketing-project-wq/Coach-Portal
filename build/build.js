@@ -60,6 +60,40 @@ const renames = [
 ];
 for (const [a, b] of renames) template = template.split(a).join(b);
 
+// Full-bleed + mobile responsiveness. Targets the design's inline-styled containers
+// via [style*=...] selectors so no markup classes are needed; !important beats inline styles.
+const responsiveCss = `
+  html, body { margin:0; padding:0; background:#08090B; }
+  @media (max-width: 860px) {
+    /* login: stack, hide the big hero, show only the form */
+    [style*="grid-template-columns:1.05fr .95fr"] { grid-template-columns:minmax(0,1fr) !important; }
+    [style*="linear-gradient(160deg,#0C0E12,#101319)"] { display:none !important; }
+    [style*="justify-content:center;padding:40px"] { padding:22px !important; }
+    /* app shell: stack sidebar above content */
+    [style*="grid-template-columns:248px 1fr"] { grid-template-columns:minmax(0,1fr) !important; }
+    aside { position:static !important; height:auto !important; max-width:100vw !important; overflow:hidden !important; border-right:0 !important; border-bottom:1px solid var(--border) !important; }
+    aside nav { flex-direction:row !important; overflow-x:auto !important; overflow-y:hidden !important; gap:6px !important; padding:8px 10px !important; }
+    aside nav > div { display:none !important; }
+    aside nav button { white-space:nowrap !important; flex-shrink:0 !important; border-left-width:0 !important; padding:8px 12px !important; }
+    main { height:auto !important; overflow:visible !important; }
+    header { padding:12px 16px !important; flex-wrap:wrap !important; gap:10px !important; }
+    header div:has(> span[style*="pulseDot"]) { display:none !important; }   /* hide 'Sinkron' pill */
+    [style*="align-items:center;gap:14px"] { flex-wrap:wrap !important; }     /* topbar right group */
+    [style*="overflow-y:auto;padding:28px"] { padding:16px !important; overflow-x:auto !important; }
+    /* two-column blocks -> single column */
+    [style*="grid-template-columns:1fr 1fr"],
+    [style*="grid-template-columns:1.55fr 1fr"],
+    [style*="grid-template-columns:1.4fr 1fr"] { grid-template-columns:minmax(0,1fr) !important; }
+    /* four stat cards -> 2x2 */
+    [style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+    /* class-card action buttons stack full width */
+    [style*="display:flex;gap:10px;margin-top:18px"] { flex-direction:column !important; }
+    /* team schedule grid: keep width, scroll horizontally */
+    [style*="70px repeat(6,1fr)"] { min-width:520px; }
+    [style*="border-radius:18px"]:has([style*="70px repeat(6,1fr)"]) { overflow-x:auto !important; }
+  }
+`;
+
 const googleFonts = `  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">`;
@@ -72,6 +106,7 @@ const out = `<!DOCTYPE html>
 ${googleFonts}
 <style>
 ${baseCss}
+${responsiveCss}
 </style>
 </head>
 <body>
