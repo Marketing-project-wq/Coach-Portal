@@ -47,7 +47,7 @@ class Component extends DCLogic {
   }
   statusPill(status) {
     const C = this.C;
-    const m = { 'Confirmed': ['rgba(136,143,156,.14)', C.muted], 'Checked-in': ['rgba(62,213,152,.14)', C.green], 'No-show': ['rgba(255,82,71,.14)', C.red], 'Akan Datang': ['rgba(136,143,156,.14)', C.muted], 'Sedang Berlangsung': [C.voltDim, C.volt], 'Selesai': ['rgba(62,213,152,.14)', C.green], 'Approved': ['rgba(62,213,152,.14)', C.green], 'Cancelled': ['rgba(255,82,71,.14)', C.red], 'Terkirim': ['rgba(62,213,152,.14)', C.green], 'Gagal': ['rgba(255,82,71,.14)', C.red] };
+    const m = { 'Confirmed': ['rgba(136,143,156,.14)', C.muted], 'Checked-in': ['rgba(62,213,152,.14)', C.green], 'No-show': ['rgba(255,82,71,.14)', C.red], 'Akan Datang': ['rgba(136,143,156,.14)', C.muted], 'Sedang Berlangsung': [C.voltDim, C.volt], 'Selesai': ['rgba(62,213,152,.14)', C.green], 'Approved': ['rgba(62,213,152,.14)', C.green], 'Cancelled': ['rgba(255,82,71,.14)', C.red], 'Ditolak': ['rgba(255,82,71,.14)', C.red], 'Terkirim': ['rgba(62,213,152,.14)', C.green], 'Gagal': ['rgba(255,82,71,.14)', C.red] };
     const v = m[status] || ['rgba(136,143,156,.14)', C.muted]; return { bg: v[0], col: v[1] };
   }
   navMeta(active) { return active ? { bg: 'var(--volt-dim)', fg: 'var(--volt)', bar: 'var(--volt)' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
