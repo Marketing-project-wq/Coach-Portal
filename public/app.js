@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], week: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
+    return { today: [], todayLabel: '', week: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
   }
   boot() {
     if (this.MOCK) {
@@ -81,7 +81,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month })).catch(fail); this.loadRotations(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadRotations(); }
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
@@ -248,6 +248,7 @@ class Component extends DCLogic {
       login: () => this.login(), logout: () => this.logout(),
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
       isCoachView, hasIncoming, incomingCount, rotHeader,
+      monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
@@ -265,7 +266,8 @@ class Component extends DCLogic {
   // ---------- mock sample data (for ?mock=1 render tests) ----------
   mockData() {
     const d = this.emptyData();
-    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#4DD4F2', status: 'Akan Datang', canAbsen: true }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Akan Datang', canAbsen: false }];
+    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#4DD4F2', status: 'Akan Datang', canAbsen: true, dateLabel: 'Rab 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Terjadwal', canAbsen: false, dateLabel: 'Kam 2 Jul' }];
+    d.todayLabel = 'Rabu, 1 Juli 2026 · 1 kelas hari ini';
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
