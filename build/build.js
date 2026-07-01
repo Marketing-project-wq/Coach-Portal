@@ -22,6 +22,12 @@ template = template.replace('value="{{ resetPwd }}"', 'data-reset value="{{ rese
 // Login card copy: neutral heading + rename the first field label (Email -> Name)
 template = template.replace('Masuk sebagai Coach', 'Masuk ke Akun Anda');
 template = template.replace('>Email</label>', '>Name</label>');
+// Remove the promo hero panel; center the login form as a single column
+template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');
+template = template.replace('grid-template-columns:1.05fr .95fr', 'grid-template-columns:1fr');
+// Rebrand "Coach Portal" -> Coach Workspace (sidebar); submit label reflects the rotation-coach flow
+template = template.replace('>COACH PORTAL</div>', '>Coach Workspace</div>');
+template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation');
 // coachToday card: Detail/Absen buttons become per-item (scoped to that loop)
 (() => {
   const start = template.indexOf('<sc-for list="{{ coachToday }}"');
@@ -102,7 +108,7 @@ const out = `<!DOCTYPE html>
 <html lang="id"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>20FIT Arena · Coach Portal</title>
+<title>20FIT Coach Workspace</title>
 ${googleFonts}
 <style>
 ${baseCss}
