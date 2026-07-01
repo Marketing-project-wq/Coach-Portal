@@ -2,7 +2,7 @@
   "name": "coach-portal",
   "version": "1.0.0",
   "private": true,
-  "description": "20FIT Arena Coach Portal - static site served for Railway deployment",
+  "description": "20FIT Arena Coach Portal - backend + UI (reads Supabase Arena tables)",
   "scripts": {
     "start": "node server.js"
   },
