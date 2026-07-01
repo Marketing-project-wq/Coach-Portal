@@ -2,7 +2,7 @@
 <html lang="id"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>20FIT Arena · Coach Portal</title>
+<title>20FIT Coach Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -149,8 +149,8 @@
 
   <!-- ============ LOGIN ============ -->
   <sc-if value="{{ notLoggedIn }}" hint-placeholder-val="{{ true }}">
-  <div style="position:relative;z-index:2;min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr;">
-    <div style="position:relative;overflow:hidden;border-right:1px solid var(--border);padding:56px 60px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(160deg,#0C0E12,#101319);">
+  <div style="position:relative;z-index:2;min-height:100vh;display:grid;grid-template-columns:1fr;">
+    <div style="position:relative;overflow:hidden;border-right:1px solid var(--border);padding:56px 60px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(160deg,#0C0E12,#101319);display:none;">
       <div style="position:absolute;right:-120px;top:-60px;font-family:'Archivo';font-weight:900;font-size:420px;line-height:.8;color:rgba(214,255,61,.04);letter-spacing:-.04em;pointer-events:none;">HX</div>
       <div style="display:flex;align-items:center;gap:13px;position:relative;">
         <div style="width:40px;height:40px;border-radius:10px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:900;font-size:20px;color:#08090B;">20</div>
@@ -196,7 +196,7 @@
     <aside style="border-right:1px solid var(--border);background:rgba(13,15,19,.7);backdrop-filter:blur(8px);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;">
       <div style="padding:22px 20px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);">
         <div style="width:34px;height:34px;border-radius:9px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:900;font-size:16px;color:#08090B;">20</div>
-        <div style="font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>
+        <div style="font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">Coach Workspace</div></div>
       </div>
 
       <nav style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:3px;">
@@ -364,7 +364,7 @@
             </div>
             <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin:22px 0 10px;">ALASAN (OPSIONAL)</div>
             <textarea placeholder="mis. Sakit / ada keperluan mendadak…" style="width:100%;min-height:84px;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
-            <button onclick="{{ submitSub }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Ajukan ke Head Coach</button>
+            <button onclick="{{ submitSub }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Kirim Permintaan Rotation</button>
             <p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:14px;">Permintaan akan berstatus <span style="color:var(--amber);font-weight:700;">Menunggu</span> sampai coach rotation menyetujui.</p>
           </div>
         </div>

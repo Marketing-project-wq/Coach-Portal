@@ -14,6 +14,8 @@
   }
   var HAS = function (s) { return s.indexOf('{{') >= 0; };
   function firstExpr(str) { var m = str.match(/\{\{([\s\S]*?)\}\}/); return m ? m[1].trim() : str; }
+  // Boolean attributes must be OMITTED when false — `disabled="false"` still disables in HTML.
+  var BOOL_ATTRS = { disabled: 1, checked: 1, readonly: 1, required: 1, selected: 1, multiple: 1, hidden: 1, autofocus: 1 };
 
   function processNodes(nodes, scope, out) {
     for (var i = 0; i < nodes.length; i++) processNode(nodes[i], scope, out);
@@ -54,6 +56,11 @@
           el.addEventListener('mouseenter', function () { el.style.cssText = baseStyle + ';' + interpolate(hoverCss, scope); });
           el.addEventListener('mouseleave', function () { el.style.cssText = baseStyle; });
         })(val, HAS(node.getAttribute('style') || '') ? interpolate(node.getAttribute('style'), scope) : (node.getAttribute('style') || ''));
+        continue;
+      }
+      if (BOOL_ATTRS[name.toLowerCase()] && HAS(val)) {
+        var bv = evalExpr(firstExpr(val), scope);
+        if (bv && bv !== 'false') el.setAttribute(name, '');
         continue;
       }
       el.setAttribute(name, HAS(val) ? interpolate(val, scope) : val);
