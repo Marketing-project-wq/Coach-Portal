@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, coaches: [], stats: [] };
   }
   boot() {
     if (this.MOCK) {
@@ -81,7 +81,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadRotations(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year })).catch(() => {}); this.loadRotations(); }
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
@@ -149,6 +149,12 @@ class Component extends DCLogic {
     this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
   }
   resetRange() { if (this.MOCK) return this.setD({ jadwalLabel: 'MENDATANG' }); this.loadScreen('dash'); }
+  showDay(date) {
+    if (!date) return;
+    const label = this.fmtD(date).toUpperCase();
+    if (this.MOCK) return this.setD({ jadwalLabel: label });
+    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
+  }
   decideRotation(id, action) {
     if (this.MOCK) { const inc = this.state.d.rotations.incoming.filter((p) => p.id !== id); this.setD({ rotations: Object.assign({}, this.state.d.rotations, { incoming: inc }) }); return this.toastMsg(action === 'approve' ? 'Rotation disetujui' : 'Rotation ditolak'); }
     this.api('/api/coach/rotations/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
@@ -211,7 +217,11 @@ class Component extends DCLogic {
       return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c) });
     });
     // week
-    const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(214,255,61,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)') }));
+    const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(214,255,61,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
+    // monthly monitoring bars
+    const monthlyRaw = D.monthly || [];
+    const maxM = Math.max(1, ...monthlyRaw.map((x) => x.count));
+    const monthly = monthlyRaw.map((x) => ({ month: x.month, count: x.count, h: Math.round((x.count / maxM) * 56), bar: x.isCurrent ? 'var(--volt)' : (x.count ? 'rgba(77,212,242,.55)' : 'var(--border2)'), col: x.isCurrent ? 'var(--volt)' : (x.count ? 'var(--text)' : 'var(--muted2)') }));
     const recentClasses = D.recent || [];
     // participants
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col }; });
@@ -269,6 +279,7 @@ class Component extends DCLogic {
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
+      monthly, monthlyYear: D.monthlyYear || '',
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
@@ -289,6 +300,8 @@ class Component extends DCLogic {
     d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#4DD4F2', status: 'Akan Datang', canAbsen: true, dateLabel: 'Rab 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Terjadwal', canAbsen: false, dateLabel: 'Kam 2 Jul' }];
     d.todayLabel = 'Rabu, 1 Juli 2026 · 1 kelas hari ini';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
+    d.monthlyYear = '2026';
+    d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: [12, 14, 10, 16, 13, 18, 8, 0, 0, 0, 0, 0][i], isCurrent: i === 6 }));
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };

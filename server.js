@@ -275,6 +275,18 @@ route('GET', '/api/coach/classes', async (req, res, s, q) => {
   return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today), from, to });
 });
 
+// Per-month class count for the coach across the current year (monitoring bar chart).
+route('GET', '/api/coach/monthly', async (req, res, s) => {
+  const today = todayJakarta();
+  const year = today.slice(0, 4);
+  const curMon = parseInt(today.slice(5, 7), 10) - 1;
+  const sched = await coachSchedules(s.c, year + '-01-01', year + '-12-31');
+  const counts = new Array(12).fill(0);
+  for (const x of sched) counts[parseInt(x.schedule_date.slice(5, 7), 10) - 1]++;
+  const months = counts.map((c, i) => ({ month: MON[i], count: c, isCurrent: i === curMon }));
+  return send(res, 200, { months, year });
+});
+
 // ===== COACH: class detail + participants =====
 route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&id=eq.${enc(params.id)}&limit=1`);
