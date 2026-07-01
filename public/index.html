@@ -1,483 +1,701 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>20FIT Arena · Coach Portal</title>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20FIT Arena · Coach Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #08090B; --surface: #121418; --surface-2: #191C22; --border: #23272F;
-      --lime: #D6FF3D; --text: #F3F5F7; --muted: #888F9C; --muted-2: #5A616D;
-      --green: #35D07F; --amber: #FFC24B; --red: #FF5C5C;
-      --radius: 16px;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: var(--bg); color: var(--text); min-height: 100vh;
-      font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    .hidden { display: none !important; }
-    button { font-family: inherit; cursor: pointer; }
-    input { font-family: inherit; }
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* vietnamese */
 
-    /* ---------- Login ---------- */
-    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .login-card {
-      width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 24px; padding: 36px 30px;
-    }
-    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
-    .brand-badge {
-      width: 46px; height: 46px; border-radius: 12px; background: var(--lime); color: #08090B;
-      font-weight: 900; font-size: 20px; display: flex; align-items: center; justify-content: center;
-    }
-    .brand-name { font-weight: 800; font-size: 15px; letter-spacing: .5px; }
-    .brand-sub { color: var(--muted); font-size: 12px; font-weight: 500; }
-    h1.title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
-    .subtitle { color: var(--muted); font-size: 13.5px; margin-bottom: 24px; }
-    label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 7px; font-weight: 600; }
-    .field { margin-bottom: 16px; }
-    input[type=text], input[type=password] {
-      width: 100%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
-      border-radius: 12px; padding: 13px 14px; font-size: 14.5px; outline: none; transition: border-color .15s;
-    }
-    input:focus { border-color: var(--lime); }
-    .btn-primary {
-      width: 100%; background: var(--lime); color: #08090B; border: none; border-radius: 12px;
-      padding: 14px; font-size: 15px; font-weight: 800; margin-top: 8px; transition: opacity .15s;
-    }
-    .btn-primary:hover { opacity: .9; }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .error-msg { color: var(--red); font-size: 13px; margin-top: 14px; text-align: center; min-height: 18px; }
+/* latin-ext */
 
-    /* ---------- App ---------- */
-    .topbar {
-      position: sticky; top: 0; z-index: 20; background: rgba(8,9,11,.85); backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border); padding: 14px 20px;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    }
-    .topbar .brand { margin: 0; }
-    .topbar-actions { display: flex; align-items: center; gap: 10px; }
-    .coach-chip {
-      display: flex; align-items: center; gap: 9px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 999px; padding: 6px 6px 6px 14px; font-size: 13px; font-weight: 600;
-    }
-    .coach-avatar {
-      width: 30px; height: 30px; border-radius: 50%; background: var(--lime); color: #08090B;
-      display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;
-    }
-    .icon-btn {
-      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-      border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600;
-    }
-    .icon-btn:hover { color: var(--text); border-color: var(--muted-2); }
+/* latin */
 
-    .container { max-width: 860px; margin: 0 auto; padding: 22px 20px 60px; }
-    .page-head { margin-bottom: 20px; }
-    .page-head h2 { font-size: 20px; font-weight: 800; }
-    .page-head p { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+/* vietnamese */
 
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-    .stat {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
-    }
-    .stat .num { font-size: 26px; font-weight: 900; line-height: 1; }
-    .stat .lbl { color: var(--muted); font-size: 12px; margin-top: 8px; font-weight: 600; }
-    .stat.green .num { color: var(--green); }
-    .stat.amber .num { color: var(--amber); }
+/* latin-ext */
 
-    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .toolbar label { margin: 0; }
-    .toolbar input[type=date] {
-      background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
-      border-radius: 10px; padding: 9px 11px; font-size: 13px; outline: none;
-    }
+/* latin */
 
-    .class-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 16px 18px; margin-bottom: 12px; transition: border-color .15s;
-    }
-    .class-card:hover { border-color: var(--muted-2); }
-    .cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .cc-date { display: flex; align-items: center; gap: 12px; }
-    .cc-daybox {
-      width: 52px; text-align: center; background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: 12px; padding: 8px 0;
-    }
-    .cc-daybox .d { font-size: 20px; font-weight: 900; line-height: 1; }
-    .cc-daybox .m { font-size: 10.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-top: 3px; }
-    .cc-info .name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-    .color-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .cc-info .time { color: var(--muted); font-size: 13px; margin-top: 5px; }
-    .cc-info .weekday { color: var(--muted-2); font-size: 12px; margin-top: 2px; }
-    .cc-counts { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-    .badge { border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .badge.confirmed { background: rgba(53,208,127,.12); color: var(--green); }
-    .badge.pending { background: rgba(255,194,75,.12); color: var(--amber); }
-    .badge.quota { background: var(--surface-2); color: var(--muted); }
-    .cc-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
-    .capacity-bar { flex: 1; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-right: 14px; }
-    .capacity-fill { height: 100%; background: var(--lime); border-radius: 999px; }
-    .btn-view {
-      background: transparent; border: 1px solid var(--border); color: var(--text);
-      border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700; white-space: nowrap;
-    }
-    .btn-view:hover { border-color: var(--lime); color: var(--lime); }
+/* vietnamese */
 
-    .empty { text-align: center; color: var(--muted); padding: 60px 20px; }
-    .empty .big { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+/* latin-ext */
 
-    /* ---------- Modal ---------- */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
-      display: flex; align-items: flex-end; justify-content: center; z-index: 50; padding: 0;
-    }
-    @media (min-width: 640px) { .modal-overlay { align-items: center; padding: 24px; } }
-    .modal {
-      background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 560px;
-      max-height: 88vh; border-radius: 22px 22px 0 0; display: flex; flex-direction: column;
-    }
-    @media (min-width: 640px) { .modal { border-radius: 22px; } }
-    .modal-head { padding: 20px 22px; border-bottom: 1px solid var(--border); }
-    .modal-head .mh-title { font-size: 16px; font-weight: 800; }
-    .modal-head .mh-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-    .modal-close { position: absolute; top: 16px; right: 18px; background: none; border: none; color: var(--muted); font-size: 22px; }
-    .modal-body { overflow-y: auto; padding: 8px 22px 22px; }
-    .p-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 13px 0; border-bottom: 1px solid var(--border);
-    }
-    .p-row:last-child { border-bottom: none; }
-    .p-left { min-width: 0; }
-    .p-name { font-weight: 700; font-size: 14px; }
-    .p-meta { color: var(--muted); font-size: 12.5px; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .p-meta a { color: var(--muted); text-decoration: none; }
-    .p-meta a:hover { color: var(--lime); }
+/* latin */
 
-    .modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); }
-    .link-btn { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: underline; }
-    .link-btn:hover { color: var(--lime); }
-    .cp-field { margin-top: 12px; }
-    .cp-msg { font-size: 13px; margin-top: 10px; min-height: 16px; }
-    .cp-msg.ok { color: var(--green); } .cp-msg.err { color: var(--red); }
-    .spinner { text-align: center; color: var(--muted); padding: 30px; font-size: 14px; }
-  </style>
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* cyrillic */
+
+/* greek */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* cyrillic */
+
+/* greek */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+/* cyrillic-ext */
+
+/* cyrillic */
+
+/* greek */
+
+/* vietnamese */
+
+/* latin-ext */
+
+/* latin */
+
+
+</style>
 </head>
 <body>
+<div id="app"></div>
+<template id="tpl"><div style="--bg:#08090B;--panel:#121419;--panel2:#171A21;--raised:#1D212A;--border:#262B35;--border2:#323845;--text:#F3F5F7;--muted:#888F9C;--muted2:#5B616E;--volt:#D6FF3D;--volt-dim:rgba(214,255,61,.13);--green:#3ED598;--amber:#FFB020;--red:#FF5247;--cyan:#4DD4F2;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--text);background:var(--bg);min-height:100vh;position:relative;-webkit-font-smoothing:antialiased;">
 
-  <!-- ===================== LOGIN ===================== -->
-  <div id="loginScreen" class="login-wrap">
-    <div class="login-card">
-      <div class="brand">
-        <div class="brand-badge">20</div>
+  <!-- atmosphere -->
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(900px 600px at 12% -8%,rgba(214,255,61,.07),transparent 60%),radial-gradient(800px 700px at 108% 110%,rgba(77,212,242,.05),transparent 55%);"></div>
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.4;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:46px 46px;"></div>
+
+  <!-- ============ LOGIN ============ -->
+  <sc-if value="{{ notLoggedIn }}" hint-placeholder-val="{{ true }}">
+  <div style="position:relative;z-index:2;min-height:100vh;display:grid;grid-template-columns:1.05fr .95fr;">
+    <div style="position:relative;overflow:hidden;border-right:1px solid var(--border);padding:56px 60px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(160deg,#0C0E12,#101319);">
+      <div style="position:absolute;right:-120px;top:-60px;font-family:'Archivo';font-weight:900;font-size:420px;line-height:.8;color:rgba(214,255,61,.04);letter-spacing:-.04em;pointer-events:none;">HX</div>
+      <div style="display:flex;align-items:center;gap:13px;position:relative;">
+        <div style="width:40px;height:40px;border-radius:10px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:900;font-size:20px;color:#08090B;">20</div>
+        <div style="font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:.02em;">20FIT<span style="color:var(--volt);"> ARENA</span></div>
+      </div>
+      <div style="position:relative;">
+        <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border2);border-radius:100px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--volt);margin-bottom:26px;">Official HYROX Training Club</div>
+        <h1 style="font-family:'Archivo';font-weight:900;font-size:64px;line-height:.96;letter-spacing:-.03em;margin:0 0 18px;text-transform:uppercase;">Coach<br>Portal</h1>
+        <p style="color:var(--muted);font-size:16px;line-height:1.6;max-width:380px;margin:0;">Satu tempat untuk jadwal, peserta, absensi, dan penggantian coach — tersinkron langsung dengan Admin Hub Arena.</p>
+      </div>
+      <div style="display:flex;gap:36px;position:relative;">
+        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">8</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Coach Aktif</div></div>
+        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">1</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Lokasi · Menteng</div></div>
+        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">HYROX</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Complete · Foundation</div></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;padding:40px;">
+      <div style="width:100%;max-width:380px;">
+        <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Selamat datang kembali</div>
+        <h2 style="font-family:'Archivo';font-weight:800;font-size:30px;margin:0 0 30px;letter-spacing:-.01em;">Masuk sebagai Coach</h2>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Email</label>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:18px;">
+          <span style="color:var(--muted2);font-size:15px;">@</span>
+          <input id="loginEmail" placeholder="username atau email" value="" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:15px;padding:14px 0;">
+        </div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Password</label>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:26px;">
+          <span style="color:var(--muted2);font-size:15px;">••</span>
+          <input id="loginPassword" type="password" placeholder="password" value="" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'JetBrains Mono';font-size:15px;padding:14px 0;letter-spacing:.1em;">
+        </div>
+        <button onclick="{{ login }}" style="width:100%;background:var(--volt);color:#08090B;border:0;border-radius:12px;padding:16px;font-family:'Archivo';font-weight:800;font-size:16px;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;transition:transform .12s,box-shadow .2s;box-shadow:0 10px 30px -10px rgba(214,255,61,.5);" style-hover="transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(214,255,61,.6);">Masuk ke Portal</button>
+        <p style="text-align:center;color:var(--muted2);font-size:13px;margin-top:20px;line-height:1.6;">Lupa password? Password dibuat &amp; direset oleh <span style="color:var(--muted);">Admin</span>. Hubungi Admin untuk bantuan.</p>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ APP SHELL ============ -->
+  <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ true }}">
+  <div style="position:relative;z-index:2;display:grid;grid-template-columns:248px 1fr;min-height:100vh;">
+
+    <!-- SIDEBAR -->
+    <aside style="border-right:1px solid var(--border);background:rgba(13,15,19,.7);backdrop-filter:blur(8px);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;">
+      <div style="padding:22px 20px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border);">
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:900;font-size:16px;color:#08090B;">20</div>
+        <div style="font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>
+      </div>
+
+      <nav style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:3px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:8px 10px 6px;">COACH</div>
+        <button onclick="{{ goDash }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.dash.bg }};color:{{ nav.dash.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.dash.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Dashboard</button>
+        <button onclick="{{ goEmail }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.email.bg }};color:{{ nav.email.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.email.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Email Apresiasi</button>
+
+        <sc-if value="{{ isHC }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;">HEAD COACH</div>
+        <button onclick="{{ goOverview }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.overview.bg }};color:{{ nav.overview.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.overview.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Overview</button>
+        <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Jadwal Tim</button>
+        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Penggantian</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
+        <button onclick="{{ goMonitor }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monitor.bg }};color:{{ nav.monitor.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monitor.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring Coach</button>
+        <button onclick="{{ goReports }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reports.bg }};color:{{ nav.reports.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reports.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Laporan</button>
+        </sc-if>
+
+        <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;display:flex;align-items:center;gap:7px;">ADMIN <span style="width:5px;height:5px;border-radius:50%;background:var(--volt);"></span></div>
+        <button onclick="{{ goAccounts }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.accounts.bg }};color:{{ nav.accounts.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.accounts.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Akun Coach</button>
+        <button onclick="{{ goTemplates }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.templates.bg }};color:{{ nav.templates.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.templates.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Template Email</button>
+        <button onclick="{{ goSettings }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.settings.bg }};color:{{ nav.settings.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.settings.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Pengaturan</button>
+        <button onclick="{{ goPerms }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.perms.bg }};color:{{ nav.perms.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.perms.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Hak Akses</button>
+        </sc-if>
+      </nav>
+
+      <div style="padding:14px;border-top:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:11px;padding:8px;border-radius:11px;background:var(--panel);">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:#08090B;">{{ user.initials }}</div>
+          <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.name }}</div><div style="font-size:11px;color:var(--muted);">{{ user.role }}</div></div>
+          <button onclick="{{ logout }}" title="Keluar" style="background:transparent;border:0;color:var(--muted2);cursor:pointer;font-size:16px;padding:4px;" style-hover="color:var(--red);">⏻</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main style="min-width:0;display:flex;flex-direction:column;height:100vh;overflow:hidden;">
+      <!-- TOPBAR -->
+      <header style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);background:rgba(8,9,11,.6);backdrop-filter:blur(6px);">
         <div>
-          <div class="brand-name">ARENA</div>
-          <div class="brand-sub">Coach Portal</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em;">{{ pageKicker }}</div>
+          <h1 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:2px 0 0;letter-spacing:-.01em;">{{ pageTitle }}</h1>
         </div>
-      </div>
-      <h1 class="title">Masuk ke portal</h1>
-      <p class="subtitle">Lihat jadwal kelas & peserta yang terdaftar.</p>
-      <form id="loginForm" autocomplete="off">
-        <div class="field">
-          <label for="username">Username</label>
-          <input type="text" id="username" placeholder="mis. rheza" autocapitalize="none" required>
-        </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <input type="password" id="password" placeholder="••••••••" required>
-        </div>
-        <button type="submit" class="btn-primary" id="loginBtn">Masuk</button>
-        <div class="error-msg" id="loginError"></div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ===================== APP ===================== -->
-  <div id="appScreen" class="hidden">
-    <div class="topbar">
-      <div class="brand">
-        <div class="brand-badge">20</div>
-        <div>
-          <div class="brand-name">ARENA</div>
-          <div class="brand-sub">Coach Portal</div>
-        </div>
-      </div>
-      <div class="topbar-actions">
-        <div class="coach-chip">
-          <span id="coachName">Coach</span>
-          <span class="coach-avatar" id="coachAvatar">C</span>
-        </div>
-        <button class="icon-btn" id="logoutBtn">Keluar</button>
-      </div>
-    </div>
-
-    <div class="container">
-      <div class="page-head">
-        <h2>Jadwal Kelas Saya</h2>
-        <p>Daftar kelas mendatang beserta jumlah peserta terdaftar.</p>
-      </div>
-
-      <div class="stats">
-        <div class="stat"><div class="num" id="statClasses">0</div><div class="lbl">Kelas mendatang</div></div>
-        <div class="stat green"><div class="num" id="statConfirmed">0</div><div class="lbl">Peserta confirmed</div></div>
-        <div class="stat amber"><div class="num" id="statPending">0</div><div class="lbl">Menunggu bayar</div></div>
-      </div>
-
-      <div class="toolbar">
-        <label for="fromDate">Dari tanggal</label>
-        <input type="date" id="fromDate">
-        <label for="toDate">s/d</label>
-        <input type="date" id="toDate">
-        <button class="icon-btn" id="refreshBtn">Terapkan</button>
-        <button class="link-btn" id="changePwBtn" style="margin-left:auto;">Ganti password</button>
-      </div>
-
-      <div id="scheduleList"></div>
-    </div>
-  </div>
-
-  <!-- ===================== PARTICIPANTS MODAL ===================== -->
-  <div id="participantsModal" class="modal-overlay hidden">
-    <div class="modal" style="position:relative;">
-      <button class="modal-close" id="closeModal">&times;</button>
-      <div class="modal-head">
-        <div class="mh-title" id="modalTitle">Peserta</div>
-        <div class="mh-sub" id="modalSub"></div>
-      </div>
-      <div class="modal-body" id="modalBody"></div>
-    </div>
-  </div>
-
-  <!-- ===================== CHANGE PASSWORD MODAL ===================== -->
-  <div id="pwModal" class="modal-overlay hidden">
-    <div class="modal" style="position:relative; max-width:420px;">
-      <button class="modal-close" id="closePwModal">&times;</button>
-      <div class="modal-head">
-        <div class="mh-title">Ganti Password</div>
-        <div class="mh-sub">Minimal 6 karakter.</div>
-      </div>
-      <div class="modal-body">
-        <form id="pwForm" autocomplete="off">
-          <div class="cp-field">
-            <label for="curPw">Password lama</label>
-            <input type="password" id="curPw" required>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 13px;border:1px solid var(--border);border-radius:100px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulseDot 1.8s infinite;"></span>Sinkron dengan Admin Hub</div>
+          <div style="display:flex;background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:3px;">
+            <button onclick="{{ setRoleCoach }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.coach.bg }};color:{{ rseg.coach.fg }};transition:background-color .15s,color .15s;">Coach</button>
+            <sc-if value="{{ canHC }}"><button onclick="{{ setRoleHC }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.hc.bg }};color:{{ rseg.hc.fg }};transition:background-color .15s,color .15s;">Head Coach</button></sc-if>
+            <sc-if value="{{ canAdmin }}"><button onclick="{{ setRoleAdmin }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.admin.bg }};color:{{ rseg.admin.fg }};transition:background-color .15s,color .15s;">Admin</button></sc-if>
           </div>
-          <div class="cp-field">
-            <label for="newPw">Password baru</label>
-            <input type="password" id="newPw" required>
+        </div>
+      </header>
+
+      <!-- SCROLL AREA -->
+      <div style="flex:1;overflow-y:auto;padding:28px;">
+
+        <!-- ===== COACH DASHBOARD ===== -->
+        <sc-if value="{{ s.dash }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1080px;margin:0 auto;">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:14px;">
+            <div>
+              <div style="font-family:'Archivo';font-weight:900;font-size:32px;letter-spacing:-.02em;">Halo, {{ user.first }} 👋</div>
+              <div style="color:var(--muted);font-size:15px;margin-top:4px;">Senin, 30 Juni 2026 · 2 kelas hari ini</div>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 20px;min-width:120px;"><div style="font-size:12px;color:var(--muted);font-weight:600;">Kelas Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);line-height:1.1;">18</div></div>
+              <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 20px;min-width:120px;"><div style="font-size:12px;color:var(--muted);font-weight:600;">Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;line-height:1.1;">162</div></div>
+            </div>
           </div>
-          <button type="submit" class="btn-primary" id="pwSubmit">Simpan</button>
-          <div class="cp-msg" id="pwMsg"></div>
-        </form>
-      </div>
-    </div>
-  </div>
 
-  <script>
-    const API = '';
-    const TOKEN_KEY = 'arena_coach_token';
-    let coach = null;
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL HARI INI</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <sc-for list="{{ coachToday }}" as="c" hint-placeholder-count="2">
+            <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:20px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:{{ c.accent }};"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <div style="display:flex;align-items:baseline;gap:10px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:24px;color:var(--text);">{{ c.time }}</span><span style="font-size:13px;color:var(--muted);">{{ c.end }}</span></div>
+                <span style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};">{{ c.status }}</span>
+              </div>
+              <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
+              <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> peserta · {{ c.cap }} slot</div>
+              <div style="display:flex;gap:10px;margin-top:18px;">
+                <button onclick="{{ c.openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button>
+                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ c.openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
+              </div>
+            </div>
+            </sc-for>
+          </div>
 
-    const $ = (id) => document.getElementById(id);
-    const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
-      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-    ));
-
-    function getToken() { return localStorage.getItem(TOKEN_KEY); }
-    function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
-    function clearToken() { localStorage.removeItem(TOKEN_KEY); }
-
-    async function api(path, options = {}) {
-      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-      const token = getToken();
-      if (token) headers['Authorization'] = 'Bearer ' + token;
-      const res = await fetch(API + path, { ...options, headers });
-      if (res.status === 401 && !path.includes('/auth/login')) { logout(); throw new Error('unauthorized'); }
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan.');
-      return data;
-    }
-
-    const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
-    const WEEKDAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    function parseDate(d) { const [y, m, day] = d.split('-').map(Number); return new Date(y, m - 1, day); }
-    function fmtTime(t) { return t ? t.slice(0, 5) : ''; }
-
-    // ---------- Login ----------
-    $('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = $('loginBtn'); const err = $('loginError');
-      err.textContent = ''; btn.disabled = true; btn.textContent = 'Memproses…';
-      try {
-        const data = await api('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ username: $('username').value.trim(), password: $('password').value }),
-        });
-        setToken(data.token); coach = data.coach; showApp();
-      } catch (ex) {
-        err.textContent = ex.message || 'Login gagal.';
-      } finally {
-        btn.disabled = false; btn.textContent = 'Masuk';
-      }
-    });
-
-    function logout() { clearToken(); coach = null; $('appScreen').classList.add('hidden'); $('loginScreen').classList.remove('hidden'); }
-    $('logoutBtn').addEventListener('click', logout);
-
-    function showApp() {
-      $('loginScreen').classList.add('hidden');
-      $('appScreen').classList.remove('hidden');
-      const name = coach.display_name || coach.coach_name;
-      $('coachName').textContent = name;
-      $('coachAvatar').textContent = (name || 'C').charAt(0).toUpperCase();
-      loadSchedules();
-    }
-
-    // ---------- Schedules ----------
-    async function loadSchedules() {
-      const list = $('scheduleList');
-      list.innerHTML = '<div class="spinner">Memuat jadwal…</div>';
-      try {
-        let q = [];
-        if ($('fromDate').value) q.push('from=' + $('fromDate').value);
-        if ($('toDate').value) q.push('to=' + $('toDate').value);
-        const data = await api('/api/coach/schedules' + (q.length ? '?' + q.join('&') : ''));
-        if (!$('fromDate').value && data.from) $('fromDate').value = data.from;
-        renderSchedules(data.schedules);
-      } catch (ex) {
-        list.innerHTML = '<div class="empty"><div class="big">Gagal memuat</div>' + escapeHtml(ex.message) + '</div>';
-      }
-    }
-
-    function renderSchedules(schedules) {
-      let totalConfirmed = 0, totalPending = 0;
-      schedules.forEach((s) => { totalConfirmed += s.confirmed_count; totalPending += s.pending_count; });
-      $('statClasses').textContent = schedules.length;
-      $('statConfirmed').textContent = totalConfirmed;
-      $('statPending').textContent = totalPending;
-
-      const list = $('scheduleList');
-      if (!schedules.length) {
-        list.innerHTML = '<div class="empty"><div class="big">Belum ada jadwal</div>Tidak ada kelas pada rentang tanggal ini.</div>';
-        return;
-      }
-      list.innerHTML = schedules.map((s) => {
-        const dt = parseDate(s.schedule_date);
-        const pct = s.quota ? Math.min(100, Math.round((s.booked_total / s.quota) * 100)) : 0;
-        return `
-          <div class="class-card">
-            <div class="cc-top">
-              <div class="cc-date">
-                <div class="cc-daybox">
-                  <div class="d">${dt.getDate()}</div>
-                  <div class="m">${MONTHS[dt.getMonth()]}</div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Kalender Minggu Ini</div><div style="font-size:13px;color:var(--muted);">23–29 Jun</div></div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
+                <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+                <div style="text-align:center;padding:12px 4px;border-radius:11px;background:{{ d.bg }};border:1px solid {{ d.border }};">
+                  <div style="font-size:11px;color:var(--muted);font-weight:600;">{{ d.dow }}</div>
+                  <div style="font-family:'Archivo';font-weight:800;font-size:17px;margin:4px 0;color:{{ d.numCol }};">{{ d.day }}</div>
+                  <div style="font-size:10px;font-weight:700;color:{{ d.numCol }};">{{ d.label }}</div>
                 </div>
-                <div class="cc-info">
-                  <div class="name"><span class="color-dot" style="background:${escapeHtml(s.class_color)}"></span>${escapeHtml(s.class_name)}</div>
-                  <div class="time">${fmtTime(s.start_time)} – ${fmtTime(s.end_time)} WIB</div>
-                  <div class="weekday">${WEEKDAYS[dt.getDay()]}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
+              <div style="font-weight:800;font-family:'Archivo';font-size:16px;margin-bottom:14px;">Riwayat Terakhir</div>
+              <sc-for list="{{ recentClasses }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                <div><div style="font-weight:700;font-size:14px;">{{ r.type }}</div><div style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono';">{{ r.date }} · {{ r.time }}</div></div>
+                <div style="text-align:right;"><div style="font-weight:700;font-size:14px;">{{ r.peserta }}</div><div style="font-size:11px;color:var(--green);">Selesai</div></div>
+              </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== CLASS DETAIL ===== -->
+        <sc-if value="{{ s.detail }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:920px;margin:0 auto;">
+          <button onclick="{{ goDash }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Kembali ke Dashboard</button>
+          <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div>
+              <div style="display:flex;align-items:center;gap:12px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--volt);">07:00</span><h2 style="font-family:'Archivo';font-weight:800;font-size:24px;margin:0;">HYROX Complete</h2></div>
+              <div style="color:var(--muted);font-size:14px;margin-top:6px;">Senin, 30 Jun 2026 · 07:00–08:00 · <span style="color:var(--text);font-weight:700;">12 dari 16 slot terisi</span></div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Ganti Coach</button>
+              <button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 20px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button>
+            </div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;">
+              <div style="font-weight:800;font-family:'Archivo';font-size:16px;">Daftar Peserta</div>
+              <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Cari peserta…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:13.5px;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
+              <div>#</div><div>NAMA PESERTA</div><div>BOOKING</div><div>STATUS</div>
+            </div>
+            <sc-for list="{{ participants }}" as="p" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
+              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;">{{ p.n }}</div>
+              <div style="font-weight:600;">{{ p.name }}</div>
+              <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ p.booking }}</div>
+              <div><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:{{ p.bg }};color:{{ p.col }};">{{ p.status }}</span></div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== SUBSTITUTION REQUEST ===== -->
+        <sc-if value="{{ s.subreq }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:620px;margin:0 auto;">
+          <button onclick="{{ openClass }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Kembali ke Detail Kelas</button>
+          <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;">
+            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Ajukan Penggantian Coach</h2>
+            <div style="color:var(--muted);font-size:14px;margin-bottom:22px;">HYROX Complete · Senin, 07:00 — kelas dipindahkan sepenuhnya ke coach pengganti.</div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">PILIH COACH PENGGANTI</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-for list="{{ subOptions }}" as="o" hint-placeholder-count="4">
+              <button onclick="{{ o.pick }}" disabled="{{ o.disabled }}" style="display:flex;align-items:center;gap:13px;padding:14px;border-radius:12px;border:1px solid {{ o.border }};background:{{ o.bg }};cursor:{{ o.cursor }};text-align:left;width:100%;transition:border-color .15s;">
+                <div style="width:38px;height:38px;border-radius:50%;background:{{ o.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:{{ o.avFg }};">{{ o.initials }}</div>
+                <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:{{ o.nameCol }};">{{ o.name }}</div><div style="font-size:12.5px;color:{{ o.subCol }};">{{ o.avail }}</div></div>
+                <div style="width:20px;height:20px;border-radius:50%;border:2px solid {{ o.radioBorder }};display:flex;align-items:center;justify-content:center;"><div style="width:10px;height:10px;border-radius:50%;background:{{ o.radioFill }};"></div></div>
+              </button>
+              </sc-for>
+            </div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin:22px 0 10px;">ALASAN (OPSIONAL)</div>
+            <textarea placeholder="mis. Sakit / ada keperluan mendadak…" style="width:100%;min-height:84px;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
+            <button onclick="{{ submitSub }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Ajukan ke Head Coach</button>
+            <p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:14px;">Permintaan akan berstatus <span style="color:var(--amber);font-weight:700;">Menunggu</span> sampai Head Coach menyetujui.</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== EMAIL APRESIASI (COACH) ===== -->
+        <sc-if value="{{ s.email }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:760px;margin:0 auto;">
+          <div style="background:linear-gradient(135deg,rgba(214,255,61,.1),transparent);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px;display:flex;align-items:center;gap:16px;">
+            <div style="font-size:30px;">✉️</div>
+            <div><div style="font-family:'Archivo';font-weight:800;font-size:18px;">Email Apresiasi Otomatis</div><div style="color:var(--muted);font-size:13.5px;margin-top:3px;max-width:520px;">Setiap kelas selesai, sistem otomatis mengirim pesan menyemangati ke peserta yang hadir. Kamu hanya melihat riwayatnya — tidak bisa mengedit atau membatalkan.</div></div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Riwayat Pengiriman — Kelas Saya</div>
+            <sc-for list="{{ emailLog }}" as="e" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--border);">
+              <div style="width:38px;height:38px;border-radius:10px;background:{{ e.iconBg }};display:flex;align-items:center;justify-content:center;font-size:16px;">{{ e.icon }}</div>
+              <div style="flex:1;"><div style="font-weight:700;font-size:14.5px;">{{ e.class }}</div><div style="font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';">{{ e.date }} · {{ e.recipients }} penerima</div></div>
+              <span style="font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:100px;background:{{ e.bg }};color:{{ e.col }};">{{ e.status }}</span>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== HEAD COACH OVERVIEW ===== -->
+        <sc-if value="{{ s.overview }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1140px;margin:0 auto;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Coach Aktif</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;">7</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Kelas Hari Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--volt);">14</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Sedang Mengajar</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--green);">3</div></div>
+            <div style="background:linear-gradient(160deg,rgba(255,176,32,.12),var(--panel));border:1px solid rgba(255,176,32,.3);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--amber);font-weight:600;">⚠ Belum Absen</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--amber);">2</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Jadwal Hari Ini — Seluruh Coach</div><div style="font-size:12px;color:var(--muted);border:1px solid var(--border2);padding:5px 11px;border-radius:8px;">Filter ▾</div></div>
+              <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>JAM</div><div>COACH · KELAS</div><div>ABSEN</div></div>
+              <sc-for list="{{ todayAll }}" as="t" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;">
+                <div style="font-family:'JetBrains Mono';font-weight:700;font-size:14px;">{{ t.time }}</div>
+                <div><div style="font-weight:700;font-size:14px;">{{ t.coach }}</div><div style="font-size:12px;color:var(--muted);">{{ t.type }}</div></div>
+                <div><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:{{ t.bg }};color:{{ t.col }};display:inline-flex;align-items:center;gap:5px;">{{ t.dot }}{{ t.status }}</span></div>
+              </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;height:fit-content;">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Penggantian</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Menunggu</span></div>
+              <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
+                <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px;">{{ p.from }} <span style="color:var(--volt);">→</span> {{ p.to }}</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">{{ p.cls }} · {{ p.time }} · Alasan: {{ p.reason }}</div>
+                <div style="display:flex;gap:9px;">
+                  <button onclick="{{ p.approve }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:9px;font-weight:800;font-size:13px;cursor:pointer;font-family:'Archivo';">Setujui</button>
+                  <button onclick="{{ p.cancel }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:9px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Tolak</button>
                 </div>
               </div>
-              <div class="cc-counts">
-                <span class="badge confirmed">${s.confirmed_count} confirmed</span>
-                <span class="badge pending">${s.pending_count} pending</span>
+              </sc-for>
+              <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 20px;text-align:center;color:var(--muted2);font-size:13px;">Tidak ada permintaan menunggu ✓</div></sc-if>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== JADWAL TIM ===== -->
+        <sc-if value="{{ s.schedule }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1140px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+            <div style="color:var(--muted);font-size:14px;">Tampilan kalender lintas coach · Senin 30 Jun</div>
+            <div style="display:flex;gap:9px;"><div style="font-size:12.5px;color:var(--muted);border:1px solid var(--border2);padding:8px 13px;border-radius:9px;">Per Coach ▾</div><div style="font-size:12.5px;color:var(--muted);border:1px solid var(--border2);padding:8px 13px;border-radius:9px;">Jenis Kelas ▾</div></div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <div style="display:grid;grid-template-columns:70px repeat(6,1fr);">
+              <div style="padding:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted2);">JAM</div>
+              <sc-for list="{{ coachCols }}" as="cc" hint-placeholder-count="6">
+              <div style="padding:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;"><div style="font-weight:700;font-size:13px;">{{ cc.name }}</div></div>
+              </sc-for>
+            </div>
+            <sc-for list="{{ scheduleRows }}" as="row" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:70px repeat(6,1fr);">
+              <div style="padding:14px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:var(--muted);">{{ row.time }}</div>
+              <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="6">
+              <div style="padding:7px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:54px;">
+                <sc-if value="{{ cell.has }}" hint-placeholder-val="{{ false }}"><div style="background:{{ cell.bg }};border-left:3px solid {{ cell.accent }};border-radius:7px;padding:7px 9px;height:100%;"><div style="font-size:11.5px;font-weight:700;color:{{ cell.accent }};">{{ cell.type }}</div><div style="font-size:10.5px;color:var(--muted);margin-top:2px;">{{ cell.peserta }} pax</div></div></sc-if>
+              </div>
+              </sc-for>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== SUB REVIEW ===== -->
+        <sc-if value="{{ s.subrev }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:820px;margin:0 auto;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--amber);margin-bottom:12px;">MENUNGGU TINDAKAN ({{ pendingCount }})</div>
+          <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
+          <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid rgba(255,176,32,.28);border-radius:16px;padding:20px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+              <div style="display:flex;align-items:center;gap:18px;">
+                <div style="text-align:center;"><div style="width:46px;height:46px;border-radius:50%;background:var(--raised);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:15px;margin:0 auto;">{{ p.fromIni }}</div><div style="font-size:12px;color:var(--muted);margin-top:6px;">{{ p.from }}</div></div>
+                <div style="font-family:'Archivo';font-size:22px;color:var(--volt);">→</div>
+                <div style="text-align:center;"><div style="width:46px;height:46px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:15px;color:var(--volt);margin:0 auto;">{{ p.toIni }}</div><div style="font-size:12px;color:var(--muted);margin-top:6px;">{{ p.to }}</div></div>
+                <div style="padding-left:8px;border-left:1px solid var(--border);"><div style="font-weight:700;font-size:15px;">{{ p.cls }}</div><div style="font-size:13px;color:var(--muted);">{{ p.time }}</div><div style="font-size:13px;color:var(--muted);margin-top:2px;">Alasan: <span style="color:var(--text);">{{ p.reason }}</span></div></div>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button onclick="{{ p.approve }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 22px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Approve</button>
+                <button onclick="{{ p.cancel }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px 22px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Cancel</button>
               </div>
             </div>
-            <div class="cc-bottom">
-              <div class="capacity-bar"><div class="capacity-fill" style="width:${pct}%"></div></div>
-              <span class="badge quota" style="margin-right:12px;">${s.booked_total}/${s.quota || '∞'}</span>
-              <button class="btn-view" data-id="${escapeHtml(s.id)}" data-name="${escapeHtml(s.class_name)}"
-                data-date="${escapeHtml(s.schedule_date)}" data-start="${escapeHtml(s.start_time || '')}">Lihat peserta</button>
+          </div>
+          </sc-for>
+          <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:36px;text-align:center;color:var(--muted);">Semua permintaan sudah ditindak ✓</div></sc-if>
+
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">RIWAYAT PENGGANTIAN</div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+            <sc-for list="{{ subHistory }}" as="h" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-weight:700;font-size:14px;">{{ h.from }}</span><span style="color:var(--volt);">→</span><span style="font-weight:700;font-size:14px;">{{ h.to }}</span><span style="color:var(--muted);font-size:13px;margin-left:6px;">{{ h.cls }} · {{ h.time }}</span></div>
+              <span style="font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ h.bg }};color:{{ h.col }};">{{ h.status }}</span>
             </div>
-          </div>`;
-      }).join('');
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
 
-      list.querySelectorAll('.btn-view').forEach((b) => {
-        b.addEventListener('click', () => openParticipants(b.dataset));
-      });
-    }
-
-    $('refreshBtn').addEventListener('click', loadSchedules);
-
-    // ---------- Participants ----------
-    async function openParticipants(ds) {
-      const modal = $('participantsModal');
-      const dt = parseDate(ds.date);
-      $('modalTitle').textContent = ds.name;
-      $('modalSub').textContent = `${WEEKDAYS[dt.getDay()]}, ${dt.getDate()} ${MONTHS[dt.getMonth()]} · ${fmtTime(ds.start)} WIB`;
-      $('modalBody').innerHTML = '<div class="spinner">Memuat peserta…</div>';
-      modal.classList.remove('hidden');
-      try {
-        const data = await api('/api/coach/schedules/' + encodeURIComponent(ds.id) + '/participants');
-        renderParticipants(data.participants);
-      } catch (ex) {
-        $('modalBody').innerHTML = '<div class="empty">' + escapeHtml(ex.message) + '</div>';
-      }
-    }
-
-    function statusBadge(st) {
-      if (st === 'confirmed') return '<span class="badge confirmed">Confirmed</span>';
-      if (st === 'pending_payment') return '<span class="badge pending">Pending</span>';
-      return '<span class="badge quota">' + escapeHtml(st) + '</span>';
-    }
-
-    function renderParticipants(list) {
-      if (!list || !list.length) {
-        $('modalBody').innerHTML = '<div class="empty"><div class="big">Belum ada peserta</div>Belum ada yang booking kelas ini.</div>';
-        return;
-      }
-      // Confirmed & pending first, cancelled last.
-      const order = { confirmed: 0, pending_payment: 1 };
-      list.sort((a, b) => (order[a.status] ?? 2) - (order[b.status] ?? 2));
-      $('modalBody').innerHTML = list.map((p) => {
-        const phone = p.phone ? p.phone.replace(/[^0-9+]/g, '') : '';
-        return `
-          <div class="p-row">
-            <div class="p-left">
-              <div class="p-name">${escapeHtml(p.full_name || '(tanpa nama)')}</div>
-              <div class="p-meta">
-                <span>${escapeHtml(p.booking_code || '')}</span>
-                ${p.phone ? `<a href="https://wa.me/${escapeHtml(phone.replace(/^0/, '62'))}" target="_blank" rel="noopener">${escapeHtml(p.phone)}</a>` : ''}
+        <!-- ===== MONITORING LIST ===== -->
+        <sc-if value="{{ s.monitor }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1140px;margin:0 auto;">
+          <div style="color:var(--muted);font-size:14px;margin-bottom:18px;">Klik coach untuk melihat statistik bulanan per kelas.</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+            <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="8">
+            <button onclick="{{ c.open }}" style="text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;cursor:pointer;transition:border-color .15s,transform .15s;" style-hover="border-color:var(--volt);transform:translateY(-3px);">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:{{ c.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:15px;color:{{ c.avFg }};">{{ c.initials }}</div>
+                <div><div style="font-weight:700;font-size:14.5px;">{{ c.name }}</div><div style="font-size:11.5px;color:{{ c.roleCol }};font-weight:600;">{{ c.role }}</div></div>
               </div>
+              <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.classes }}</div><div style="font-size:11px;color:var(--muted);">kelas</div></div>
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.peserta }}</div><div style="font-size:11px;color:var(--muted);">peserta</div></div>
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;color:{{ c.punctCol }};">{{ c.punctual }}%</div><div style="font-size:11px;color:var(--muted);">tepat</div></div>
+              </div>
+            </button>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== COACH STATS DETAIL ===== -->
+        <sc-if value="{{ s.stats }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:920px;margin:0 auto;">
+          <button onclick="{{ goMonitor }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Kembali ke Monitoring</button>
+          <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div style="display:flex;align-items:center;gap:16px;">
+              <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:20px;color:#08090B;">{{ sel.initials }}</div>
+              <div><h2 style="font-family:'Archivo';font-weight:800;font-size:24px;margin:0;">{{ sel.name }}</h2><div style="color:var(--muted);font-size:13.5px;margin-top:3px;">{{ sel.role }} · {{ sel.phone }} · {{ sel.email }}</div></div>
             </div>
-            <div>${statusBadge(p.status)}</div>
-          </div>`;
-      }).join('');
-    }
+            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:9px 14px;border-radius:10px;">Bulan: Juni 2026 ▾</div><button onclick="{{ exportToast }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ Ekspor</button></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Kelas</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Peserta</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Tepat Waktu</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--green);">{{ sel.punctual }}%</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Penggantian</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — Juni 2026</div>
+            <div style="display:grid;grid-template-columns:90px 80px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PESERTA</div></div>
+            <sc-for list="{{ statRows }}" as="r" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:90px 80px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
+              <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ r.date }}</div>
+              <div style="font-family:'JetBrains Mono';font-size:13px;">{{ r.time }}</div>
+              <div style="font-weight:600;">{{ r.type }}</div>
+              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.peserta }}</div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
 
-    $('closeModal').addEventListener('click', () => $('participantsModal').classList.add('hidden'));
-    $('participantsModal').addEventListener('click', (e) => { if (e.target === $('participantsModal')) $('participantsModal').classList.add('hidden'); });
+        <!-- ===== REPORTS ===== -->
+        <sc-if value="{{ s.reports }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1000px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;gap:8px;">
+              <div style="font-size:13px;font-weight:700;color:#08090B;background:var(--volt);padding:8px 14px;border-radius:9px;">Bulan Ini</div>
+              <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">Minggu Ini</div>
+              <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">Custom ▾</div>
+            </div>
+            <button onclick="{{ exportToast }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 20px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Ekspor Excel / PDF</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Kelas (tim)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Penggantian Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Laporan Seluruh Coach — Juni 2026</div>
+            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">KELAS</div><div style="text-align:right;">PESERTA</div><div style="text-align:right;">DIGANTI</div><div style="text-align:right;"></div></div>
+            <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
+              <div style="display:flex;align-items:center;gap:11px;"><div style="width:32px;height:32px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:12px;color:{{ r.avFg }};">{{ r.initials }}</div><div><span style="font-weight:700;">{{ r.name }}</span> <span style="font-size:11px;color:var(--muted);">{{ r.role }}</span></div></div>
+              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.classes }}</div>
+              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.peserta }}</div>
+              <div style="text-align:right;color:var(--muted);">{{ r.subs }}×</div>
+              <div style="text-align:right;"><button onclick="{{ r.open }}" style="background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--volt);">Detail</button></div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
 
-    // ---------- Change password ----------
-    $('changePwBtn').addEventListener('click', () => { $('pwMsg').textContent = ''; $('pwForm').reset(); $('pwModal').classList.remove('hidden'); });
-    $('closePwModal').addEventListener('click', () => $('pwModal').classList.add('hidden'));
-    $('pwForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = $('pwMsg'); const btn = $('pwSubmit');
-      msg.textContent = ''; msg.className = 'cp-msg'; btn.disabled = true;
-      try {
-        await api('/api/coach/change-password', {
-          method: 'POST',
-          body: JSON.stringify({ current_password: $('curPw').value, new_password: $('newPw').value }),
-        });
-        msg.textContent = 'Password berhasil diganti.'; msg.className = 'cp-msg ok'; $('pwForm').reset();
-        setTimeout(() => $('pwModal').classList.add('hidden'), 1200);
-      } catch (ex) {
-        msg.textContent = ex.message; msg.className = 'cp-msg err';
-      } finally { btn.disabled = false; }
-    });
+        <!-- ===== MANAGE ACCOUNTS (ADMIN) ===== -->
+        <sc-if value="{{ s.accounts }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:920px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div style="color:var(--muted);font-size:14px;">Password dibuat &amp; dibagikan manual oleh Admin (format: nama + angka).</div>
+            <button onclick="{{ goAddCoach }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">+ Tambah Coach</button>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="8">
+            <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--border);">
+              <div style="width:40px;height:40px;border-radius:50%;background:{{ c.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:{{ c.avFg }};">{{ c.initials }}</div>
+              <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ c.name }}</div><div style="font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';">{{ c.email }} · {{ c.phone }}</div></div>
+              <span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.roleBg }};color:{{ c.roleCol }};">{{ c.role }}</span>
+              <span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};display:inline-flex;align-items:center;gap:5px;"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.statusCol }};"></span>{{ c.status }}</span>
+              <button onclick="{{ c.reset }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--cyan);color:var(--cyan);">Reset Password</button>
+              <button onclick="{{ c.toggle }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">{{ c.toggleLabel }}</button>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
 
-    // ---------- Boot ----------
-    (async function boot() {
-      if (getToken()) {
-        try { coach = await api('/api/coach/me'); showApp(); }
-        catch (_e) { logout(); }
-      }
-    })();
-  </script>
-</body>
-</html>
+        <!-- ===== ADD COACH (ADMIN) ===== -->
+        <sc-if value="{{ s.addcoach }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:560px;margin:0 auto;">
+          <button onclick="{{ goAccounts }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Kembali ke Akun Coach</button>
+          <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:26px;">
+            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 22px;">Tambah Coach Baru</h2>
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Nama Lengkap</label>
+            <input placeholder="mis. Coach Dimas" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Email</label>
+            <input placeholder="dimas@20fit.id" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Nomor Telepon</label>
+            <input placeholder="0812-xxxx-xxxx" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Awal <span style="color:var(--muted2);font-weight:400;">(nama + angka)</span></label>
+            <div style="display:flex;gap:10px;margin-bottom:8px;"><input value="dimas123" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:14.5px;outline:0;"><button style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;">↻ Acak</button></div>
+            <div style="background:rgba(77,212,242,.07);border:1px solid rgba(77,212,242,.2);border-radius:10px;padding:12px;font-size:12.5px;color:var(--muted);margin-bottom:22px;">ℹ️ Akun langsung <span style="color:var(--text);font-weight:700;">Active</span>. Bagikan email &amp; password ini ke coach secara manual (WhatsApp).</div>
+            <button onclick="{{ submitAddCoach }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Simpan Coach Baru</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== TEMPLATES (ADMIN) ===== -->
+        <sc-if value="{{ s.templates }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:760px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <div style="color:var(--muted);font-size:14px;">Sistem memilih satu template secara acak tiap kelas selesai.</div>
+            <button onclick="{{ exportToast }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:10px 16px;font-family:'Archivo';font-weight:800;font-size:13px;cursor:pointer;">+ Tambah Template</button>
+          </div>
+          <sc-for list="{{ templates }}" as="t" hint-placeholder-count="3">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start;">
+            <div style="font-family:'JetBrains Mono';font-size:12px;color:var(--volt);font-weight:700;padding-top:2px;">#{{ t.id }}</div>
+            <div style="flex:1;font-size:14.5px;line-height:1.55;color:var(--text);">{{ t.text }}</div>
+            <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:var(--volt-dim);color:var(--volt);">Aktif</span>
+          </div>
+          </sc-for>
+          <div style="background:rgba(255,176,32,.06);border:1px solid rgba(255,176,32,.2);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);margin-top:6px;">⚠ Hanya <span style="color:var(--text);font-weight:700;">Admin</span> yang dapat mengelola template. Coach &amp; Head Coach hanya melihat riwayat pengiriman.</div>
+        </div>
+        </sc-if>
+
+        <!-- ===== SETTINGS (ADMIN) ===== -->
+        <sc-if value="{{ s.settings }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:760px;margin:0 auto;">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
+              <div><div style="font-weight:700;font-size:15px;">Rentang Waktu Tombol Absen</div><div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:440px;">Aktif mulai H-1 jam; batas wajar H-10 menit sebelum kelas. Lewat dari itu berstatus <span style="color:var(--amber);">Terlambat</span> (tombol tetap aktif).</div></div>
+              <span style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;">Ditetapkan</span>
+            </div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
+              <div><div style="font-weight:700;font-size:15px;">Validasi Lokasi saat Absen</div><div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:440px;">Validasi GPS terhadap koordinat 20FIT Arena. Default tanpa GPS (lebih sederhana untuk v1).</div></div>
+              <div style="width:48px;height:27px;border-radius:100px;background:var(--border2);position:relative;cursor:pointer;flex-shrink:0;"><div style="width:21px;height:21px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;"></div></div>
+            </div>
+          </div>
+          <div style="background:rgba(214,255,61,.05);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);">20FIT Arena beroperasi di <span style="color:var(--text);font-weight:700;">satu lokasi</span> (Menteng Prada) — pemilihan studio dihapus dari seluruh portal.</div>
+        </div>
+        </sc-if>
+
+        <!-- ===== PERMISSIONS (ADMIN) ===== -->
+        <sc-if value="{{ s.perms }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:860px;margin:0 auto;">
+          <div style="color:var(--muted);font-size:14px;margin-bottom:18px;">Admin adalah superset Head Coach + kewenangan kelola akun.</div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+            <div style="display:grid;grid-template-columns:1fr 90px 110px 90px;gap:8px;padding:13px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>AKSI</div><div style="text-align:center;">COACH</div><div style="text-align:center;">HEAD COACH</div><div style="text-align:center;">ADMIN</div></div>
+            <sc-for list="{{ perms }}" as="p" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:1fr 90px 110px 90px;gap:8px;padding:12px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
+              <div>{{ p.act }}</div>
+              <div style="text-align:center;font-family:'Archivo';font-weight:800;font-size:15px;color:{{ p.cCol }};">{{ p.c }}</div>
+              <div style="text-align:center;font-family:'Archivo';font-weight:800;font-size:15px;color:{{ p.hCol }};">{{ p.h }}</div>
+              <div style="text-align:center;font-family:'Archivo';font-weight:800;font-size:15px;color:{{ p.aCol }};">{{ p.a }}</div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+      </div>
+    </main>
+  </div>
+  </sc-if>
+
+  <!-- ===== ABSEN MODAL ===== -->
+  <sc-if value="{{ showAbsen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeAbsen }}">
+    <div style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:420px;width:100%;text-align:center;">
+      <div style="width:60px;height:60px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;">⏱️</div>
+      <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 8px;">Mulai Kelas Sekarang?</h2>
+      <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">HYROX Complete · 07:00 · 12 peserta</p>
+      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Tepat Waktu · timestamp &amp; device tercatat</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · waktu server</div>
+      <div style="display:flex;gap:11px;">
+        <button onclick="{{ closeAbsen }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Batal</button>
+        <button onclick="{{ confirmAbsen }}" style="flex:1.4;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Mulai Kelas</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== RESET MODAL ===== -->
+  <sc-if value="{{ showReset }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeReset }}">
+    <div style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:400px;width:100%;">
+      <h2 style="font-family:'Archivo';font-weight:800;font-size:20px;margin:0 0 6px;">Reset Password</h2>
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 20px;">untuk <span style="color:var(--text);font-weight:700;">{{ resetName }}</span> — password lama langsung tidak berlaku.</p>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Baru (nama + angka)</label>
+      <input data-reset value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
+      <div style="display:flex;gap:11px;">
+        <button onclick="{{ closeReset }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;">Batal</button>
+        <button onclick="{{ confirmReset }}" style="flex:1.3;background:var(--cyan);border:0;color:#08090B;border-radius:11px;padding:12px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Set Password</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== TOAST ===== -->
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:60;background:var(--raised);border:1px solid var(--border2);border-left:4px solid var(--volt);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:11px;box-shadow:0 18px 50px -12px rgba(0,0,0,.7);font-weight:600;font-size:14px;">
+    <span style="color:var(--volt);font-size:17px;">✓</span>{{ toast }}
+  </div>
+  </sc-if>
+
+</div></template>
+<script src="sc-runtime.js"></script>
+<script src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  window.__app = new Component();
+  SC.mount(document.getElementById('tpl'), window.__app, document.getElementById('app'));
+});
+</script>
+</body></html>

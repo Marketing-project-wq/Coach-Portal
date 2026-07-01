@@ -1,0 +1,265 @@
+'use strict';
+/* Coach Portal — real-data component (extends DCLogic from sc-runtime.js).
+ * Sources every screen from the backend API; falls back to sample data with ?mock=1. */
+class Component extends DCLogic {
+  constructor() {
+    super();
+    this.C = { volt: '#D6FF3D', voltDim: 'rgba(214,255,61,.13)', green: '#3ED598', amber: '#FFB020', red: '#FF5247', cyan: '#4DD4F2', muted: '#888F9C', muted2: '#5B616E', raised: '#1D212A', border2: '#323845', text: '#F3F5F7' };
+    this.accountRole = 'coach';
+    this._t = null;
+    this.state = {
+      loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
+      user: { name: '', role: '', first: '', initials: '' },
+      absen: false, absenClass: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
+      toast: '',
+      d: this.emptyData(),
+    };
+    this.MOCK = /[?&]mock=1/.test(location.search);
+    this.boot();
+  }
+  emptyData() {
+    return { today: [], week: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, coaches: [], stats: [] };
+  }
+  boot() {
+    if (this.MOCK) {
+      const role = (location.search.match(/role=(\w+)/) || [])[1] || 'coach';
+      this.accountRole = role;
+      this.state.loggedIn = true; this.state.role = role; this.state.screen = role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts';
+      this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role });
+      this.state.d = this.mockData();
+      return;
+    }
+    if (this.state.token) {
+      this.api('/api/coach/me').then((me) => {
+        this.accountRole = me.role;
+        this.state.user = this.userObj(me); this.state.loggedIn = true;
+        this.applyRole(me.role);
+      }).catch(() => this.logout());
+    }
+  }
+
+  // ---------- helpers ----------
+  ini(name) { const p = String(name || '').replace('Coach ', '').trim().split(' '); return ((p[0] && p[0][0] || 'C') + (p[1] ? p[1][0] : (p[0] && p[0][1]) || '')).toUpperCase(); }
+  avatar(id) {
+    const map = { nando: ['#D6FF3D', '#08090B'], rheza: ['rgba(77,212,242,.18)', '#4DD4F2'], elsen: ['rgba(62,213,152,.18)', '#3ED598'], calysta: ['rgba(255,176,32,.18)', '#FFB020'], yokae: ['rgba(214,255,61,.16)', '#D6FF3D'], gilang: ['rgba(77,212,242,.16)', '#4DD4F2'], brian: ['rgba(62,213,152,.16)', '#3ED598'], mae: ['rgba(255,82,71,.16)', '#FF5247'] };
+    return map[String(id || '').toLowerCase()] || ['#1D212A', '#888F9C'];
+  }
+  statusPill(status) {
+    const C = this.C;
+    const m = { 'Confirmed': ['rgba(136,143,156,.14)', C.muted], 'Checked-in': ['rgba(62,213,152,.14)', C.green], 'No-show': ['rgba(255,82,71,.14)', C.red], 'Akan Datang': ['rgba(136,143,156,.14)', C.muted], 'Sedang Berlangsung': [C.voltDim, C.volt], 'Selesai': ['rgba(62,213,152,.14)', C.green], 'Approved': ['rgba(62,213,152,.14)', C.green], 'Cancelled': ['rgba(255,82,71,.14)', C.red], 'Terkirim': ['rgba(62,213,152,.14)', C.green], 'Gagal': ['rgba(255,82,71,.14)', C.red] };
+    const v = m[status] || ['rgba(136,143,156,.14)', C.muted]; return { bg: v[0], col: v[1] };
+  }
+  navMeta(active) { return active ? { bg: 'var(--volt-dim)', fg: 'var(--volt)', bar: 'var(--volt)' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
+  userObj(me) {
+    const nm = me.display_name || me.coach_name || 'User';
+    const roleLabel = me.role === 'hc' ? 'Head Coach' : me.role === 'admin' ? 'Administrator' : 'Coach';
+    const name = me.role === 'admin' ? 'Admin 20FIT' : (/^coach/i.test(nm) ? nm : 'Coach ' + nm);
+    return { name, role: roleLabel, first: nm.replace(/^coach\s*/i, ''), initials: me.role === 'admin' ? 'AD' : this.ini(nm) };
+  }
+
+  // ---------- api + nav ----------
+  api(path, opts) {
+    opts = opts || {};
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    if (this.state.token) headers.Authorization = 'Bearer ' + this.state.token;
+    return fetch(path, Object.assign({}, opts, { headers })).then(async (r) => {
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 401 && path.indexOf('/auth/login') < 0) { this.logout(); throw new Error('unauthorized'); }
+      if (!r.ok) throw new Error(data.error || 'Terjadi kesalahan.');
+      return data;
+    });
+  }
+  setD(patch) { this.setState({ d: Object.assign({}, this.state.d, patch) }); }
+  toastMsg(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
+  go(screen) { this.setState({ screen }); if (!this.MOCK) this.loadScreen(screen); }
+  applyRole(role) { const screen = role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts'; this.setState({ role, screen }); if (!this.MOCK) this.loadScreen(screen); }
+  setRole(role) {
+    const rank = { coach: 0, hc: 1, admin: 2 };
+    if (rank[role] > rank[this.accountRole]) return this.toastMsg('Tidak punya akses ke area ini.');
+    this.applyRole(role);
+  }
+  loadScreen(screen) {
+    const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
+    if (screen === 'dash') this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month })).catch(fail);
+    else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
+    else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
+    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
+    else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
+    else if (screen === 'subrev') this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail);
+    else if (screen === 'reports') this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
+    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats })).catch(fail); }
+    else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
+    else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
+  }
+
+  // ---------- actions ----------
+  login() {
+    const email = (document.getElementById('loginEmail') || {}).value || '';
+    const pw = (document.getElementById('loginPassword') || {}).value || '';
+    if (!email || !pw) return this.toastMsg('Email/username & password wajib diisi.');
+    this.api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: email.trim(), password: pw }) })
+      .then((res) => {
+        if (window.localStorage) localStorage.setItem('arena_token', res.token);
+        this.accountRole = res.coach.role;
+        this.setState({ token: res.token, loggedIn: true, user: this.userObj(res.coach) });
+        this.applyRole(res.coach.role);
+      }).catch((e) => this.toastMsg(e.message || 'Login gagal.'));
+  }
+  logout() { if (window.localStorage) localStorage.removeItem('arena_token'); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
+  openClass(id) {
+    if (this.MOCK) return this.go('detail');
+    this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => { this.setState({ currentClass: d, screen: 'detail' }); this.setD({ classDetail: d }); }).catch((e) => this.toastMsg(e.message));
+  }
+  openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
+  confirmAbsen() {
+    const cls = this.state.absenClass; const id = cls && cls.schedule_id;
+    if (this.MOCK || !id) { this.setState({ absen: false }); return this.toastMsg('Kelas dimulai · status Tepat Waktu'); }
+    this.api('/api/coach/class/' + encodeURIComponent(id) + '/start', { method: 'POST' })
+      .then(() => { this.setState({ absen: false }); this.toastMsg('Kelas dimulai · status Tepat Waktu'); this.loadScreen('dash'); })
+      .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
+  }
+  submitSub() {
+    if (!this.state.selSub) return this.toastMsg('Pilih coach pengganti dulu.');
+    const cur = this.state.currentClass && this.state.currentClass.schedule;
+    const reasonEl = document.querySelector('#app textarea');
+    const payload = { to_coach: this.state.selSub, schedule_id: cur ? cur.schedule_id : null, class_label: cur ? cur.type : null, time_label: cur ? cur.time : null, reason: reasonEl ? reasonEl.value : '' };
+    if (this.MOCK) { this.toastMsg('Permintaan terkirim ke Head Coach'); return this.go('dash'); }
+    this.api('/api/coach/subs', { method: 'POST', body: JSON.stringify(payload) })
+      .then(() => { this.setState({ selSub: '' }); this.toastMsg('Permintaan terkirim ke Head Coach'); this.go('dash'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  decideSub(id, action) {
+    if (this.MOCK) { this.setState({ d: Object.assign({}, this.state.d, { subs: { pending: this.state.d.subs.pending.filter((p) => p.id !== id), history: this.state.d.subs.history } }) }); return this.toastMsg(action === 'approve' ? 'Penggantian disetujui' : 'Permintaan dibatalkan'); }
+    this.api('/api/hc/subs/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
+      .then(() => { this.toastMsg(action === 'approve' ? 'Penggantian disetujui · disinkron ke Admin Hub' : 'Permintaan dibatalkan'); this.loadScreen('subrev'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  openReset(c) { this.setState({ reset: c.name, resetId: c.id, resetPwd: (c.name || '').replace(/^coach\s*/i, '').toLowerCase() + Math.floor(100 + Math.random() * 900) }); }
+  confirmReset() {
+    const el = document.querySelector('#app input[data-reset]');
+    const pw = el ? el.value : this.state.resetPwd;
+    if (this.MOCK) { this.setState({ reset: null }); return this.toastMsg('Password direset · sampaikan ke coach'); }
+    this.api('/api/admin/coaches/' + encodeURIComponent(this.state.resetId) + '/reset', { method: 'POST', body: JSON.stringify({ password: pw }) })
+      .then((r) => { this.setState({ reset: null }); this.toastMsg('Password direset: ' + (r.password || pw)); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  toggleCoach(c) {
+    if (this.MOCK) return this.toastMsg('Status ' + c.name + ' diperbarui');
+    this.api('/api/admin/coaches/' + encodeURIComponent(c.id) + '/toggle', { method: 'POST' })
+      .then(() => { this.toastMsg('Status ' + c.name + ' diperbarui'); this.loadScreen('accounts'); }).catch((e) => this.toastMsg(e.message));
+  }
+  submitAddCoach() {
+    const byPh = (ph) => { const els = document.querySelectorAll('#app input'); for (const e of els) if ((e.placeholder || '').indexOf(ph) >= 0) return e.value; return ''; };
+    const name = byPh('Dimas') || byPh('Coach');
+    if (!name) return this.toastMsg('Nama coach wajib diisi.');
+    const payload = { name, email: byPh('@20fit.id'), phone: byPh('0812'), password: byPh('nama + angka') || undefined };
+    if (this.MOCK) { this.toastMsg('Coach baru ditambahkan · Active'); return this.go('accounts'); }
+    this.api('/api/admin/coaches', { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => { this.toastMsg('Coach ditambahkan · user: ' + r.username + ' · pw: ' + r.password); this.go('accounts'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  exportToast() { this.toastMsg('File sedang disiapkan untuk diunduh'); }
+
+  // ---------- render ----------
+  renderVals() {
+    const C = this.C, st = this.state, D = st.d;
+    const isHC = st.role === 'hc' || st.role === 'admin';
+    const isAdmin = st.role === 'admin';
+    const scr = st.screen;
+    const user = st.user;
+
+    const A = (k) => this.navMeta(scr === k);
+    const nav = { dash: A('dash'), email: A('email'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
+    if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
+    if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
+
+    const seg = (on) => on ? { bg: 'var(--volt)', fg: '#08090B' } : { bg: 'transparent', fg: 'var(--muted)' };
+    const rseg = { coach: seg(st.role === 'coach'), hc: seg(st.role === 'hc'), admin: seg(st.role === 'admin') };
+    const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
+    const canAdmin = this.accountRole === 'admin';
+
+    const titles = { dash: ['Coach', 'Dashboard'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Penggantian Coach'], email: ['Coach', 'Email Apresiasi'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Jadwal Tim'], subrev: ['Head Coach', 'Permintaan Penggantian'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Email Apresiasi'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
+    const tt = titles[scr] || ['', ''];
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+
+    // coach today
+    const coachToday = (D.today || []).map((c) => {
+      const p = this.statusPill(c.status);
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c) });
+    });
+    // week
+    const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(214,255,61,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)') }));
+    const recentClasses = D.recent || [];
+    // participants
+    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col }; });
+    // sub options
+    const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; return { name: o.name, avail: o.avail, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(255,82,71,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: dis ? 'var(--red)' : 'var(--green)', avBg: dis ? '#1D212A' : 'rgba(214,255,61,.12)', avFg: dis ? '#5B616E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
+    // email log
+    const emailLog = (D.emailLog || []).map((e) => { const m = this.statusPill(e.status); return Object.assign({}, e, { bg: m.bg, col: m.col, icon: e.status === 'Gagal' ? '⚠' : '✓', iconBg: e.status === 'Gagal' ? 'rgba(255,82,71,.12)' : 'var(--volt-dim)' }); });
+    // HC today all
+    const todayAll = (D.hcToday || []).map((t) => { const kc = { ok: ['rgba(62,213,152,.14)', C.green, '✓ '], warn: ['rgba(255,176,32,.14)', C.amber, '⚠ '], live: [C.voltDim, C.volt, ''], idle: ['rgba(136,143,156,.1)', C.muted, ''] }[t.kind] || ['rgba(136,143,156,.1)', C.muted, '']; return Object.assign({}, t, { bg: kc[0], col: kc[1], dot: t.kind === 'live' ? '● ' : kc[2] }); });
+    // pending subs
+    const pendingSubs = ((D.subs && D.subs.pending) || []).map((p) => Object.assign({}, p, { fromIni: this.ini(p.from), toIni: this.ini(p.to), approve: () => this.decideSub(p.id, 'approve'), cancel: () => this.decideSub(p.id, 'cancel') }));
+    const pendingCount = pendingSubs.length; const noPending = pendingCount === 0;
+    const subHistory = ((D.subs && D.subs.history) || []).map((h) => { const m = this.statusPill(h.status); return Object.assign({}, h, { bg: m.bg, col: m.col }); });
+    // schedule grid
+    const coachCols = ((D.schedule && D.schedule.coaches) || []).map((n) => ({ name: n }));
+    const scheduleRows = ((D.schedule && D.schedule.times) || []).map((tm) => ({
+      time: tm,
+      cells: (D.schedule.grid[tm] || []).map((cell) => { if (!cell) return { has: false }; const comp = String(cell.type).includes('Complete'); return { has: true, type: String(cell.type).replace('HYROX ', ''), peserta: cell.peserta, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(214,255,61,.07)' : 'rgba(77,212,242,.07)' }; }),
+    }));
+    // coaches enriched
+    const roleColor = (r) => r === 'Head Coach' ? { bg: C.voltDim, col: C.volt } : { bg: 'rgba(136,143,156,.14)', col: C.muted };
+    const coaches = (D.coaches || []).map((c) => {
+      const av = this.avatar(c.id); const rc = roleColor(c.role);
+      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(62,213,152,.12)' : 'rgba(255,82,71,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
+    });
+    const reportRows = coaches.slice(0, 12);
+    const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 100, subs: 0 };
+    const statRows = D.stats || [];
+    // templates
+    const templates = D.templates || [];
+    // permissions (static matrix)
+    const Y = '✓', N = '·';
+    const permRaw = [['Lihat jadwal & peserta kelas sendiri', 1, 1, 1], ['Absen kelas sendiri', 1, 1, 1], ['Ajukan penggantian (kelas sendiri)', 1, 1, 1], ['Lihat jadwal seluruh coach', 0, 1, 1], ['Ubah coach pengajar (kelas mana pun)', 0, 1, 1], ['Approve / Cancel penggantian', 0, 1, 1], ['Lihat absensi seluruh coach', 0, 1, 1], ['Akses & ekspor laporan seluruh coach', 0, 1, 1], ['Kelola template pesan apresiasi', 0, 0, 1], ['Tambah akun & set password awal', 0, 0, 1], ['Reset password coach', 0, 0, 1], ['Nonaktifkan akun coach', 0, 0, 1], ['Atur role pengguna', 0, 0, 1]];
+    const perms = permRaw.map((p) => ({ act: p[0], c: p[1] ? Y : N, cCol: p[1] ? C.volt : C.muted2, h: p[2] ? Y : N, hCol: p[2] ? C.volt : C.muted2, a: p[3] ? Y : N, aCol: p[3] ? C.volt : C.muted2 }));
+
+    return {
+      notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
+      login: () => this.login(), logout: () => this.logout(),
+      isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
+      pageKicker: tt[0], pageTitle: tt[1],
+      setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
+      goDash: () => this.go('dash'), goEmail: () => this.go('email'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
+      openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
+      coachToday, week, recentClasses, participants, subOptions, emailLog,
+      todayAll, pendingSubs, pendingCount, noPending, subHistory,
+      coachCols, scheduleRows, coaches, reportRows, sel, statRows, templates, perms,
+      openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
+      submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
+      showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
+      hasToast: !!st.toast, toast: st.toast,
+    };
+  }
+
+  // ---------- mock sample data (for ?mock=1 render tests) ----------
+  mockData() {
+    const d = this.emptyData();
+    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#4DD4F2', status: 'Akan Datang', canAbsen: true }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Akan Datang', canAbsen: false }];
+    d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
+    d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
+    d.month = { classes: 18, peserta: 162 };
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in' }] };
+    d.subOptions = [{ name: 'Calysta', avail: 'Tersedia', disabled: false }, { name: 'Elsen', avail: 'Tersedia', disabled: false }];
+    d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Terkirim' }];
+    d.templates = [{ id: '01', text: 'Kelas hari ini kelar! Otot pegel itu tandanya kamu makin kuat.' }];
+    d.hcToday = [{ time: '07:00', coach: 'Elsen', type: 'HYROX Complete', status: 'Mengajar', kind: 'live' }, { time: '07:00', coach: 'Rheza', type: 'HYROX Foundation', status: 'Akan Datang', kind: 'idle' }];
+    d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
+    d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
+    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-' }];
+    d.stats = [{ date: '01 Jun', time: '07:00', type: 'HYROX Complete', peserta: 12 }];
+    return d;
+  }
+}
+window.Component = Component;
