@@ -44,6 +44,10 @@ template = template.replace('JADWAL HARI INI', 'JADWAL MENDATANG');
 template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
 template = template.replace('line-height:1.1;">18</div>', 'line-height:1.1;">{{ monthClasses }}</div>');
 template = template.replace('line-height:1.1;">162</div>', 'line-height:1.1;">{{ monthPeserta }}</div>');
+// Weekly calendar: replace the static range with prev/next navigation (browse to Dec, etc.)
+const calNav = '<div style="display:flex;align-items:center;gap:8px;"><button onclick="{{ prevWeek }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;padding:0;">‹</button><div style="font-size:13px;color:var(--muted);min-width:104px;text-align:center;">{{ weekRange }}</div><button onclick="{{ nextWeek }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;padding:0;">›</button></div>';
+template = template.replace(/(Kalender Minggu Ini<\/div>)<div style="font-size:13px;color:var\(--muted\);">[^<]*<\/div>/, '$1' + calNav);
+template = template.replace('Kalender Minggu Ini', 'Kalender');
 // Hide Head Coach / Admin role buttons unless the account allows them
 template = template.replace(/(<button onclick="\{\{ setRoleHC \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canHC }}">$1</sc-if>');
 template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canAdmin }}">$1</sc-if>');
