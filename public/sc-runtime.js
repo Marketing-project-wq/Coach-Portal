@@ -1,0 +1,82 @@
+'use strict';
+/* Tiny dependency-free template runtime for the recovered DC design.
+ * Supports: {{ expr }} interpolation, <sc-if value>, <sc-for list as>, on* handlers.
+ * A logic object provides state + renderVals(); setState() triggers a full re-render. */
+(function () {
+  function evalExpr(expr, scope) {
+    try { return new Function('$s', 'with($s){ return (' + expr + '); }')(scope); }
+    catch (e) { return undefined; }
+  }
+  function interpolate(str, scope) {
+    return str.replace(/\{\{([\s\S]*?)\}\}/g, function (_, e) {
+      var v = evalExpr(e.trim(), scope); return (v == null ? '' : String(v));
+    });
+  }
+  var HAS = function (s) { return s.indexOf('{{') >= 0; };
+  function firstExpr(str) { var m = str.match(/\{\{([\s\S]*?)\}\}/); return m ? m[1].trim() : str; }
+
+  function processNodes(nodes, scope, out) {
+    for (var i = 0; i < nodes.length; i++) processNode(nodes[i], scope, out);
+  }
+  function processNode(node, scope, out) {
+    if (node.nodeType === 3) { var t = node.nodeValue; out.push(document.createTextNode(HAS(t) ? interpolate(t, scope) : t)); return; }
+    if (node.nodeType === 8) return;
+    if (node.nodeType !== 1) { out.push(node.cloneNode(true)); return; }
+    var tag = node.tagName.toLowerCase();
+    if (tag === 'helmet') return;
+    if (tag === 'sc-if') {
+      if (evalExpr(firstExpr(node.getAttribute('value') || 'false'), scope)) processNodes(node.childNodes, scope, out);
+      return;
+    }
+    if (tag === 'sc-for') {
+      var list = evalExpr(firstExpr(node.getAttribute('list') || '[]'), scope) || [];
+      var as = node.getAttribute('as') || 'item';
+      for (var k = 0; k < list.length; k++) {
+        var cs = Object.create(scope); cs[as] = list[k]; cs[as + '_i'] = k;
+        processNodes(node.childNodes, cs, out);
+      }
+      return;
+    }
+    var el = document.createElement(node.tagName);
+    var attrs = node.attributes;
+    for (var a = 0; a < attrs.length; a++) {
+      var name = attrs[a].name, val = attrs[a].value;
+      if (/^on[a-z]+$/i.test(name) && HAS(val)) {
+        (function (evName, expr) {
+          el.addEventListener(evName.slice(2).toLowerCase(), function (e) {
+            var fn = evalExpr(expr, scope); if (typeof fn === 'function') fn.call(null, e);
+          });
+        })(name, firstExpr(val));
+        continue;
+      }
+      if (name === 'style-hover') {
+        (function (hoverCss, baseStyle) {
+          el.addEventListener('mouseenter', function () { el.style.cssText = baseStyle + ';' + interpolate(hoverCss, scope); });
+          el.addEventListener('mouseleave', function () { el.style.cssText = baseStyle; });
+        })(val, HAS(node.getAttribute('style') || '') ? interpolate(node.getAttribute('style'), scope) : (node.getAttribute('style') || ''));
+        continue;
+      }
+      el.setAttribute(name, HAS(val) ? interpolate(val, scope) : val);
+    }
+    if (el.tagName === 'INPUT' && el.hasAttribute('value')) el.value = el.getAttribute('value');
+    var kids = []; processNodes(node.childNodes, scope, kids);
+    for (var c = 0; c < kids.length; c++) el.appendChild(kids[c]);
+    out.push(el);
+  }
+
+  window.SC = {
+    mount: function (tplEl, logic, mountEl) {
+      var content = tplEl.content ? tplEl.content : tplEl;
+      logic.__render = function () {
+        var vals = logic.renderVals();
+        var out = []; processNodes(content.childNodes, vals, out);
+        mountEl.innerHTML = '';
+        for (var i = 0; i < out.length; i++) mountEl.appendChild(out[i]);
+      };
+      logic.__render();
+    },
+  };
+  window.DCLogic = class {
+    setState(patch) { Object.assign(this.state, patch); if (this.__render) this.__render(); }
+  };
+})();
