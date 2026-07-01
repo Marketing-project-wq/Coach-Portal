@@ -169,6 +169,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=u
 function serveStatic(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
+  if (p === '/review') p = '/review.html';
   const fp = path.normalize(path.join(PUBLIC_DIR, p));
   if (!fp.startsWith(PUBLIC_DIR)) return send(res, 403, 'Forbidden');
   const cacheFor = (ext) => (ext === '.html' || ext === '.js') ? 'no-cache' : 'public, max-age=3600';
@@ -287,6 +288,48 @@ route('GET', '/api/coach/monthly', async (req, res, s) => {
   for (const x of sched) counts[parseInt(x.schedule_date.slice(5, 7), 10) - 1]++;
   const months = counts.map((c, i) => ({ month: MON[i], count: c, isCurrent: i === curMon }));
   return send(res, 200, { months, year });
+});
+
+// ===== PUBLIC review (no login) — participants review the coach's class they attended =====
+async function bookingByCode(code) {
+  const rows = await sb(`arena_class_bookings?select=schedule_id,full_name,status&booking_code=eq.${enc(code)}&limit=1`);
+  return rows && rows[0];
+}
+route('POST', '/api/public/lookup', async (req, res) => {
+  const body = await readBody(req);
+  const code = body && String(body.booking_code || '').trim().toUpperCase();
+  if (!code) return send(res, 400, { error: 'Kode booking wajib diisi.' });
+  const b = await bookingByCode(code);
+  if (!b || !b.schedule_id) return send(res, 404, { error: 'Kode booking kelas tidak ditemukan.' });
+  const scs = await sb(`arena_class_schedules?select=instructor,class_type_id,schedule_date&id=eq.${enc(b.schedule_id)}&limit=1`);
+  const sc = scs && scs[0]; const types = await classTypes();
+  const already = ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
+  return send(res, 200, { found: true, coach: sc ? sc.instructor : '', class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
+});
+route('POST', '/api/public/review', async (req, res) => {
+  const body = await readBody(req);
+  const code = body && String(body.booking_code || '').trim().toUpperCase();
+  const rating = body && parseInt(body.rating, 10);
+  if (!code || !(rating >= 1 && rating <= 5)) return send(res, 400, { error: 'Kode booking & rating (1-5) wajib diisi.' });
+  const b = await bookingByCode(code);
+  if (!b || !b.schedule_id) return send(res, 404, { error: 'Kode booking kelas tidak ditemukan.' });
+  const dup = ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
+  if (dup) return send(res, 409, { error: 'Kode booking ini sudah pernah memberi review.' });
+  const scs = await sb(`arena_class_schedules?select=instructor,class_type_id&id=eq.${enc(b.schedule_id)}&limit=1`);
+  const sc = scs && scs[0]; const types = await classTypes();
+  await sb('arena_class_reviews', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: b.schedule_id, coach_name: sc ? sc.instructor : null, class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : null, reviewer_name: (String(body.name || b.full_name || '').slice(0, 80)) || null, booking_code: code, rating, comment: (String(body.comment || '').slice(0, 600)) || null }) });
+  return send(res, 200, { ok: true });
+});
+
+// Reviews for the portal (coach sees own; head coach/admin see all)
+route('GET', '/api/coach/reviews', async (req, res, s) => {
+  const isHC = s.r === 'hc' || s.r === 'admin';
+  let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,created_at&order=created_at.desc&limit=100';
+  if (!isHC) q += `&coach_name=eq.${enc(s.c)}`;
+  const rows = (await sb(q)) || [];
+  const avg = rows.length ? rows.reduce((a, x) => a + x.rating, 0) / rows.length : 0;
+  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Kelas', name: x.reviewer_name || 'Anonim', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', date: fmtDMon(String(x.created_at).slice(0, 10)) }));
+  return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length });
 });
 
 // ===== COACH: class detail + participants =====
@@ -499,7 +542,7 @@ route('POST', '/api/coach/change-password', async (req, res, s) => {
 });
 
 // ---------- server ----------
-const PUBLIC_ROUTES = new Set(['POST /api/auth/login']);
+const PUBLIC_ROUTES = new Set(['POST /api/auth/login', 'POST /api/public/lookup', 'POST /api/public/review']);
 const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   const query = Object.fromEntries(new URL(req.url, 'http://localhost').searchParams);
