@@ -297,6 +297,34 @@ route('GET', '/api/coach/monthly', async (req, res, s) => {
   return send(res, 200, { months, year, monthPeserta: peserta[curMon], monthClasses: counts[curMon], yearPeserta });
 });
 
+// ===== COACH: participants — how many times each attended + recency of last visit =====
+route('GET', '/api/coach/members', async (req, res, s) => {
+  const today = todayJakarta();
+  const scheds = await coachSchedules(s.c, '2000-01-01', today); // all classes up to today
+  const dateById = {}; const ids = [];
+  for (const x of scheds) { dateById[x.id] = x.schedule_date; ids.push(x.id); }
+  if (!ids.length) return send(res, 200, { members: [], total: 0, active30: 0 });
+  const rows = await sb(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${ids.map(enc).join(',')})`);
+  const map = {};
+  for (const b of rows || []) {
+    const nm = String(b.full_name || '').trim();
+    if (!nm) continue;
+    const key = nm.toLowerCase();
+    const d = dateById[b.schedule_id] || '';
+    if (!map[key]) map[key] = { name: nm, visits: 0, last: '' };
+    map[key].visits++;
+    if (d > map[key].last) { map[key].last = d; map[key].name = nm; }
+  }
+  const t0 = new Date(today + 'T00:00:00');
+  const members = Object.keys(map).map((k) => {
+    const m = map[k];
+    const dsince = m.last ? Math.round((t0 - new Date(m.last + 'T00:00:00')) / 86400000) : null;
+    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: dsince };
+  }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
+  const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
+  return send(res, 200, { members, total: members.length, active30 });
+});
+
 // ===== PUBLIC review (no login) — participants review the coach's class they attended =====
 async function bookingByCode(code) {
   const rows = await sb(`arena_class_bookings?select=schedule_id,full_name,status&booking_code=eq.${enc(code)}&limit=1`);

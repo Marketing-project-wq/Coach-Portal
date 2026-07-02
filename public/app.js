@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, coaches: [], stats: [], statMonth: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, coaches: [], stats: [], statMonth: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -83,6 +83,7 @@ class Component extends DCLogic {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadRotations(); }
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
+    else if (screen === 'members') this.api('/api/coach/members').then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30 })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count })).catch(fail);
@@ -199,7 +200,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -212,9 +213,10 @@ class Component extends DCLogic {
     const titles = { dash: ['Coach', 'Dashboard'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Feedback'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
     titles.monthly = ['Coach', 'Monitoring Kelas'];
+    titles.members = ['Coach', 'Peserta Kelas'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -227,6 +229,21 @@ class Component extends DCLogic {
     const monthlyRaw = D.monthly || [];
     const maxM = Math.max(1, ...monthlyRaw.map((x) => x.count));
     const monthly = monthlyRaw.map((x) => ({ month: x.month, count: x.count, peserta: x.peserta || 0, h: Math.round((x.count / maxM) * 56), bar: x.isCurrent ? 'var(--volt)' : (x.count ? 'rgba(77,212,242,.55)' : 'var(--border2)'), col: x.isCurrent ? 'var(--volt)' : (x.count ? 'var(--text)' : 'var(--muted2)') }));
+    // participants (attendance frequency + recency of last visit)
+    const members = (D.members || []).map((m, i) => {
+      const d = m.daysSince;
+      let lastLabel, lastCol;
+      if (d == null) { lastLabel = 'Belum ada'; lastCol = C.muted2; }
+      else if (d <= 0) { lastLabel = 'Hari ini'; lastCol = C.green; }
+      else if (d === 1) { lastLabel = 'Kemarin'; lastCol = C.green; }
+      else if (d <= 14) { lastLabel = d + ' hari lalu'; lastCol = C.green; }
+      else if (d <= 30) { lastLabel = d + ' hari lalu'; lastCol = C.text; }
+      else if (d <= 60) { lastLabel = d + ' hari lalu'; lastCol = C.amber; }
+      else { lastLabel = Math.round(d / 30) + ' bulan lalu'; lastCol = C.red; }
+      const av = this.avatar(m.name);
+      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel, lastCol, avBg: av[0], avFg: av[1], rank: i + 1 };
+    });
+    const noMembers = members.length === 0;
     // participant reviews
     const isHCView = st.role === 'hc' || st.role === 'admin';
     const reviews = (D.reviews || []).map((rv) => Object.assign({}, rv, { coachSuffix: (isHCView && rv.coach) ? ' · Coach ' + rv.coach : '' }));
@@ -296,6 +313,7 @@ class Component extends DCLogic {
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
       monthly, monthlyYear: D.monthlyYear || '',
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
+      members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
@@ -323,6 +341,15 @@ class Component extends DCLogic {
     const mPes = [148, 172, 121, 198, 160, 224, 96, 0, 0, 0, 0, 0];
     d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 6 }));
     d.mPesertaBulan = mPes[6]; d.mKelasBulan = mCount[6]; d.mPesertaTahun = mPes.reduce((a, b) => a + b, 0);
+    d.members = [
+      { name: 'Jordan', visits: 8, lastVisit: '5 Mei', daysSince: 58 },
+      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9 },
+      { name: 'Woro Liana', visits: 5, lastVisit: '30 Jun', daysSince: 2 },
+      { name: 'Fathan', visits: 5, lastVisit: '14 Jun', daysSince: 18 },
+      { name: 'Ayu Fitri', visits: 5, lastVisit: '11 Mei', daysSince: 52 },
+      { name: 'Indah Wulansari', visits: 4, lastVisit: '1 Jul', daysSince: 1 },
+    ];
+    d.membersTotal = 42; d.membersActive = 28;
     d.reviewAvg = 4.6; d.reviewCount = 2;
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'Coach-nya sabar & jelas, kelasnya seru!', date: '1 Jul' }, { coach: 'Rheza', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: 'Mantap, cuma agak cepat tempo-nya.', date: '28 Jun' }];
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
