@@ -52,14 +52,13 @@ class Component extends DCLogic {
   }
   navMeta(active) { return active ? { bg: 'var(--volt-dim)', fg: 'var(--volt)', bar: 'var(--volt)' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
   recencyLabel(d) {
-    const C = this.C;
-    if (d == null) return { label: 'Pertama kali', col: C.muted2 };
-    if (d <= 0) return { label: 'Hari ini', col: C.green };
-    if (d === 1) return { label: 'Kemarin', col: C.green };
-    if (d <= 14) return { label: d + ' hari lalu', col: C.green };
-    if (d <= 30) return { label: d + ' hari lalu', col: C.text };
-    if (d <= 60) return { label: d + ' hari lalu', col: C.amber };
-    return { label: Math.round(d / 30) + ' bulan lalu', col: C.red };
+    let label;
+    if (d == null) label = 'Pertama kali';
+    else if (d <= 0) label = 'Hari ini';
+    else if (d === 1) label = 'Kemarin';
+    else if (d <= 60) label = d + ' hari lalu';
+    else label = Math.round(d / 30) + ' bulan lalu';
+    return { label, col: this.C.text }; // plain white — the day/visit text already conveys recency
   }
   userObj(me) {
     const nm = me.display_name || me.coach_name || 'User';
