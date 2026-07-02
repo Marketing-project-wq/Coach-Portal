@@ -252,12 +252,11 @@ class Component extends DCLogic {
     const reviews = (D.reviews || []).map((rv) => Object.assign({}, rv, { coachSuffix: (isHCView && rv.coach) ? ' · Coach ' + rv.coach : '', tags: Array.isArray(rv.tags) ? rv.tags : [], hasComment: !!(rv.comment && rv.comment.length) }));
     const noReviews = reviews.length === 0;
     const reviewLink = (typeof location !== 'undefined' ? location.origin : '') + '/review';
-    // coach leaderboard (ranked by average participant rating)
+    // coach leaderboard (ranked by number of participants who booked the coach's classes)
     const leaderboard = (D.leaderboard || []).map((l) => {
-      const av = this.avatar(l.name); const r = Math.round(l.avg);
-      return { name: l.name, initials: this.ini(l.name), avg: (Math.round(l.avg * 10) / 10).toFixed(1), count: l.count, rank: l.rank,
+      const av = this.avatar(l.name);
+      return { name: l.name, initials: this.ini(l.name), peserta: l.peserta, classes: l.classes, rank: l.rank,
         medal: l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : String(l.rank),
-        stars: '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r),
         rankCol: l.rank <= 3 ? C.amber : C.muted2, avBg: av[0], avFg: av[1],
         rowBg: l.isMe ? 'var(--volt-dim)' : 'transparent', meLabel: l.isMe ? ' · Anda' : '' };
     });
@@ -368,12 +367,12 @@ class Component extends DCLogic {
     d.reviewCats = [{ label: 'Clear Instructions', avg: '4.8' }, { label: 'Technique Correction', avg: '4.5' }, { label: 'Member Support', avg: '4.9' }, { label: 'Professionalism', avg: '4.7' }, { label: 'Class Management', avg: '4.6' }];
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'Coach-nya sabar & jelas, kelasnya seru!', tags: ['Instruksi jelas', 'Sabar & suportif', 'Kelas seru'], date: '1 Jul' }, { coach: 'Rheza', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: '', tags: ['Tepat waktu', 'Bikin semangat'], date: '28 Jun' }];
     d.leaderboard = [
-      { name: 'Nando', avg: 4.9, count: 51, rank: 1, isMe: false },
-      { name: 'Rheza', avg: 4.8, count: 120, rank: 2, isMe: true },
-      { name: 'Calysta', avg: 4.7, count: 34, rank: 3, isMe: false },
-      { name: 'Gilang', avg: 4.6, count: 88, rank: 4, isMe: false },
-      { name: 'Elsen', avg: 4.4, count: 22, rank: 5, isMe: false },
-      { name: 'Mae', avg: 4.2, count: 40, rank: 6, isMe: false },
+      { name: 'Rheza', peserta: 386, classes: 28, rank: 1, isMe: true },
+      { name: 'Gilang', peserta: 221, classes: 19, rank: 2, isMe: false },
+      { name: 'Mae', peserta: 90, classes: 11, rank: 3, isMe: false },
+      { name: 'Nando', peserta: 52, classes: 8, rank: 4, isMe: false },
+      { name: 'Calysta', peserta: 48, classes: 7, rank: 5, isMe: false },
+      { name: 'Elsen', peserta: 28, classes: 6, rank: 6, isMe: false },
     ];
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];

@@ -391,18 +391,31 @@ route('GET', '/api/coach/reviews', async (req, res, s) => {
   return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length, categories });
 });
 
-// Coach leaderboard — ranked by average participant rating (then review count)
+// Exact row count via PostgREST Content-Range (no rows fetched) — avoids the 1000-row cap.
+async function sbCount(q) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${q}`, {
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, Prefer: 'count=exact', Range: '0-0' },
+  });
+  if (!res.ok) return 0;
+  const m = (res.headers.get('content-range') || '').match(/\/(\d+)\s*$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+// Coach leaderboard — ranked by number of participants who booked the coach's classes
 route('GET', '/api/coach/leaderboard', async (req, res, s) => {
-  const rows = (await sb('arena_class_reviews?select=coach_name,rating')) || [];
-  const agg = {};
-  for (const r of rows) {
-    const nm = r.coach_name || '';
-    if (!nm) continue;
-    if (!agg[nm]) agg[nm] = { sum: 0, count: 0 };
-    agg[nm].sum += r.rating; agg[nm].count++;
+  const scheds = (await sb('arena_class_schedules?select=id,instructor&is_cancelled=eq.false')) || [];
+  const byCoach = {};
+  for (const sc of scheds) { const nm = sc.instructor; if (!nm) continue; if (!byCoach[nm]) byCoach[nm] = { ids: [], classes: 0 }; byCoach[nm].ids.push(sc.id); byCoach[nm].classes++; }
+  const results = [];
+  for (const nm of Object.keys(byCoach)) {
+    const ids = byCoach[nm].ids;
+    let peserta = 0;
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      peserta += await sbCount(`arena_class_bookings?select=id&status=eq.confirmed&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    }
+    results.push({ name: nm, peserta, classes: byCoach[nm].classes });
   }
-  const board = Object.keys(agg).map((nm) => ({ name: nm, avg: Math.round((agg[nm].sum / agg[nm].count) * 10) / 10, count: agg[nm].count }))
-    .sort((a, b) => b.avg - a.avg || b.count - a.count)
+  const board = results.sort((a, b) => b.peserta - a.peserta || b.classes - a.classes)
     .map((x, i) => Object.assign({ rank: i + 1, isMe: x.name === s.c }, x));
   return send(res, 200, { board, me: s.c });
 });
