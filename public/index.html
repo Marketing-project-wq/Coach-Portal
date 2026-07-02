@@ -135,6 +135,9 @@
     /* team schedule grid: keep width, scroll horizontally */
     [style*="70px repeat(6,1fr)"] { min-width:520px; }
     [style*="border-radius:18px"]:has([style*="70px repeat(6,1fr)"]) { overflow-x:auto !important; }
+    /* per-class stats table (TGL/HARI/JAM/JENIS/PESERTA): keep columns, scroll horizontally */
+    [style*="80px 90px 70px 1fr 90px"] { min-width:520px; }
+    [style*="border-radius:18px"]:has([style*="80px 90px 70px 1fr 90px"]) { overflow-x:auto !important; }
   }
 
 </style>
@@ -525,11 +528,12 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Rotation</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — Juni 2026</div>
-            <div style="display:grid;grid-template-columns:90px 80px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PESERTA</div></div>
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — {{ statMonth }}</div>
+            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>HARI</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PESERTA</div></div>
             <sc-for list="{{ statRows }}" as="r" hint-placeholder-count="8">
-            <div style="display:grid;grid-template-columns:90px 80px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
+            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
               <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ r.date }}</div>
+              <div style="font-weight:600;color:var(--muted);">{{ r.day }}</div>
               <div style="font-family:'JetBrains Mono';font-size:13px;">{{ r.time }}</div>
               <div style="font-weight:600;">{{ r.type }}</div>
               <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.peserta }}</div>
