@@ -367,12 +367,12 @@ class Component extends DCLogic {
     d.reviewCats = [{ label: 'Clear Instructions', avg: '4.8' }, { label: 'Technique Correction', avg: '4.5' }, { label: 'Member Support', avg: '4.9' }, { label: 'Professionalism', avg: '4.7' }, { label: 'Class Management', avg: '4.6' }];
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'Coach-nya sabar & jelas, kelasnya seru!', tags: ['Instruksi jelas', 'Sabar & suportif', 'Kelas seru'], date: '1 Jul' }, { coach: 'Rheza', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: '', tags: ['Tepat waktu', 'Bikin semangat'], date: '28 Jun' }];
     d.leaderboard = [
-      { name: 'Rheza', peserta: 386, classes: 28, rank: 1, isMe: true },
-      { name: 'Gilang', peserta: 221, classes: 19, rank: 2, isMe: false },
-      { name: 'Mae', peserta: 90, classes: 11, rank: 3, isMe: false },
-      { name: 'Nando', peserta: 52, classes: 8, rank: 4, isMe: false },
-      { name: 'Calysta', peserta: 48, classes: 7, rank: 5, isMe: false },
-      { name: 'Elsen', peserta: 28, classes: 6, rank: 6, isMe: false },
+      { name: 'Elsen', peserta: 11, classes: 2, rank: 1, isMe: false },
+      { name: 'Brian', peserta: 7, classes: 2, rank: 2, isMe: false },
+      { name: 'Gilang', peserta: 6, classes: 2, rank: 3, isMe: false },
+      { name: 'Rheza', peserta: 4, classes: 2, rank: 4, isMe: true },
+      { name: 'Mae', peserta: 3, classes: 1, rank: 5, isMe: false },
+      { name: 'Calysta', peserta: 1, classes: 1, rank: 6, isMe: false },
     ];
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];

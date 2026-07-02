@@ -400,9 +400,11 @@ async function sbCount(q) {
   const m = (res.headers.get('content-range') || '').match(/\/(\d+)\s*$/);
   return m ? parseInt(m[1], 10) : 0;
 }
-// Coach leaderboard — ranked by number of participants who booked the coach's classes
+// Coach leaderboard — ranked by number of participants who booked the coach's classes.
+// Counts only classes from this date onward (the leaderboard "starts" here).
+const LEADERBOARD_SINCE = '2026-07-01';
 route('GET', '/api/coach/leaderboard', async (req, res, s) => {
-  const scheds = (await sb('arena_class_schedules?select=id,instructor&is_cancelled=eq.false')) || [];
+  const scheds = (await sb(`arena_class_schedules?select=id,instructor&is_cancelled=eq.false&schedule_date=gte.${LEADERBOARD_SINCE}`)) || [];
   const byCoach = {};
   for (const sc of scheds) { const nm = sc.instructor; if (!nm) continue; if (!byCoach[nm]) byCoach[nm] = { ids: [], classes: 0 }; byCoach[nm].ids.push(sc.id); byCoach[nm].classes++; }
   const results = [];
