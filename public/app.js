@@ -51,6 +51,16 @@ class Component extends DCLogic {
     const v = m[status] || ['rgba(136,143,156,.14)', C.muted]; return { bg: v[0], col: v[1] };
   }
   navMeta(active) { return active ? { bg: 'var(--volt-dim)', fg: 'var(--volt)', bar: 'var(--volt)' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
+  recencyLabel(d) {
+    const C = this.C;
+    if (d == null) return { label: 'Pertama kali', col: C.muted2 };
+    if (d <= 0) return { label: 'Hari ini', col: C.green };
+    if (d === 1) return { label: 'Kemarin', col: C.green };
+    if (d <= 14) return { label: d + ' hari lalu', col: C.green };
+    if (d <= 30) return { label: d + ' hari lalu', col: C.text };
+    if (d <= 60) return { label: d + ' hari lalu', col: C.amber };
+    return { label: Math.round(d / 30) + ' bulan lalu', col: C.red };
+  }
   userObj(me) {
     const nm = me.display_name || me.coach_name || 'User';
     const roleLabel = me.role === 'hc' ? 'Head Coach' : me.role === 'admin' ? 'Administrator' : 'Coach';
@@ -231,17 +241,9 @@ class Component extends DCLogic {
     const monthly = monthlyRaw.map((x) => ({ month: x.month, count: x.count, peserta: x.peserta || 0, h: Math.round((x.count / maxM) * 56), bar: x.isCurrent ? 'var(--volt)' : (x.count ? 'rgba(77,212,242,.55)' : 'var(--border2)'), col: x.isCurrent ? 'var(--volt)' : (x.count ? 'var(--text)' : 'var(--muted2)') }));
     // participants (attendance frequency + recency of last visit)
     const members = (D.members || []).map((m, i) => {
-      const d = m.daysSince;
-      let lastLabel, lastCol;
-      if (d == null) { lastLabel = 'Belum ada'; lastCol = C.muted2; }
-      else if (d <= 0) { lastLabel = 'Hari ini'; lastCol = C.green; }
-      else if (d === 1) { lastLabel = 'Kemarin'; lastCol = C.green; }
-      else if (d <= 14) { lastLabel = d + ' hari lalu'; lastCol = C.green; }
-      else if (d <= 30) { lastLabel = d + ' hari lalu'; lastCol = C.text; }
-      else if (d <= 60) { lastLabel = d + ' hari lalu'; lastCol = C.amber; }
-      else { lastLabel = Math.round(d / 30) + ' bulan lalu'; lastCol = C.red; }
+      const r = this.recencyLabel(m.daysSince);
       const av = this.avatar(m.name);
-      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel, lastCol, avBg: av[0], avFg: av[1], rank: i + 1 };
+      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1 };
     });
     const noMembers = members.length === 0;
     // participant reviews
@@ -251,7 +253,7 @@ class Component extends DCLogic {
     const reviewLink = (typeof location !== 'undefined' ? location.origin : '') + '/review';
     const recentClasses = D.recent || [];
     // participants
-    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col }; });
+    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col }; });
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; return { name: o.name, avail: o.avail, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(255,82,71,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: dis ? 'var(--red)' : 'var(--green)', avBg: dis ? '#1D212A' : 'rgba(214,255,61,.12)', avFg: dis ? '#5B616E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
@@ -355,7 +357,7 @@ class Component extends DCLogic {
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in' }] };
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2 }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null }] };
     d.subOptions = [{ name: 'Calysta', avail: 'Tersedia', disabled: false }, { name: 'Elsen', avail: 'Tersedia', disabled: false }];
     d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Terkirim' }];
     d.templates = [{ id: '01', text: 'Kelas hari ini kelar! Otot pegel itu tandanya kamu makin kuat.' }];

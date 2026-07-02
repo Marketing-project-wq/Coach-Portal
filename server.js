@@ -109,6 +109,30 @@ async function coachSchedules(coach, from, to) {
   return (await sb(q + '&order=schedule_date.asc,start_time.asc')) || [];
 }
 
+// normalized participant name -> { name, visits, last } across a coach's past classes (confirmed bookings)
+async function coachAttendanceMap(coach, today) {
+  const scheds = await coachSchedules(coach, '2000-01-01', today);
+  const dateById = {}; const ids = [];
+  for (const x of scheds) { dateById[x.id] = x.schedule_date; ids.push(x.id); }
+  const map = {};
+  if (!ids.length) return map;
+  const rows = await sb(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${ids.map(enc).join(',')})`);
+  for (const b of rows || []) {
+    const nm = String(b.full_name || '').trim();
+    if (!nm) continue;
+    const key = nm.toLowerCase();
+    const d = dateById[b.schedule_id] || '';
+    if (!map[key]) map[key] = { name: nm, visits: 0, last: '' };
+    map[key].visits++;
+    if (d > map[key].last) { map[key].last = d; map[key].name = nm; }
+  }
+  return map;
+}
+function daysSinceISO(dateISO, today) {
+  if (!dateISO) return null;
+  return Math.round((new Date(today + 'T00:00:00') - new Date(dateISO + 'T00:00:00')) / 86400000);
+}
+
 // 7-day calendar strip starting at weekStartISO (a Monday), with per-day class counts.
 async function coachWeek(coach, weekStartISO, today) {
   const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
@@ -300,26 +324,10 @@ route('GET', '/api/coach/monthly', async (req, res, s) => {
 // ===== COACH: participants — how many times each attended + recency of last visit =====
 route('GET', '/api/coach/members', async (req, res, s) => {
   const today = todayJakarta();
-  const scheds = await coachSchedules(s.c, '2000-01-01', today); // all classes up to today
-  const dateById = {}; const ids = [];
-  for (const x of scheds) { dateById[x.id] = x.schedule_date; ids.push(x.id); }
-  if (!ids.length) return send(res, 200, { members: [], total: 0, active30: 0 });
-  const rows = await sb(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${ids.map(enc).join(',')})`);
-  const map = {};
-  for (const b of rows || []) {
-    const nm = String(b.full_name || '').trim();
-    if (!nm) continue;
-    const key = nm.toLowerCase();
-    const d = dateById[b.schedule_id] || '';
-    if (!map[key]) map[key] = { name: nm, visits: 0, last: '' };
-    map[key].visits++;
-    if (d > map[key].last) { map[key].last = d; map[key].name = nm; }
-  }
-  const t0 = new Date(today + 'T00:00:00');
+  const map = await coachAttendanceMap(s.c, today);
   const members = Object.keys(map).map((k) => {
     const m = map[k];
-    const dsince = m.last ? Math.round((t0 - new Date(m.last + 'T00:00:00')) / 86400000) : null;
-    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: dsince };
+    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today) };
   }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
   const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
   return send(res, 200, { members, total: members.length, active30 });
@@ -381,11 +389,17 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const att = await sb(`arena_class_attendance?select=booking_id,status&schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; for (const a of att || []) attMap[a.booking_id] = a.status;
   const started = (await sb(`arena_class_sessions?select=schedule_id&schedule_id=eq.${enc(params.id)}&limit=1`) || []).length > 0;
-  const participants = (bookings || []).filter((b) => b.status !== 'cancelled').map((b) => ({
-    booking_id: b.id, booking: b.booking_code, name: b.full_name || '(tanpa nama)',
-    bookingStatus: b.status, attendance: attMap[b.id] || null,
-    status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
-  }));
+  const today = todayJakarta();
+  const attHist = await coachAttendanceMap(sc.instructor, today); // visit history for this class's coach
+  const participants = (bookings || []).filter((b) => b.status !== 'cancelled').map((b) => {
+    const h = attHist[String(b.full_name || '').trim().toLowerCase()] || null;
+    return {
+      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(tanpa nama)',
+      bookingStatus: b.status, attendance: attMap[b.id] || null,
+      status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
+      visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
+    };
+  });
   return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota }, started, participants });
 });
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
