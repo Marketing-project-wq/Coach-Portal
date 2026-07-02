@@ -3,37 +3,34 @@
 Dokumen untuk **tim Admin Hub**. Tujuan: mengirim link review coach ke peserta
 secara **otomatis lewat email**, **15 menit sebelum kelas berakhir**.
 
-Coach Workspace (project ini) **hanya menyediakan link & halaman review**.
-Pengiriman email dikerjakan di Admin Hub karena di sanalah data kontak peserta
-dan channel pengiriman berada.
+**Alur yang diinginkan:** email berisi link → peserta buka link → peserta
+**cukup memasukkan nomor HP** yang dipakai saat booking → beri rating.
+Tidak perlu kode booking.
+
+Coach Workspace (project ini) menyediakan halaman review + identifikasi via
+nomor HP. Pengiriman email dikerjakan di Admin Hub karena di sanalah data
+kontak peserta & channel email berada.
 
 ---
 
-## 1. Format link review
+## 1. Link yang dikirim di email
+
+Cukup link **halaman review polos** (tanpa kode):
 
 ```
-https://<COACH_WORKSPACE_URL>/review?code=<BOOKING_CODE>
+https://<COACH_WORKSPACE_URL>/review
 ```
 
 - `<COACH_WORKSPACE_URL>` = domain Coach Workspace. Saat ini:
   `https://coach-portal-production-8e81.up.railway.app`
   (ganti bila nanti pakai domain sendiri).
-- `<BOOKING_CODE>` = kolom **`arena_class_bookings.booking_code`** (format `CL-YYYYMMDD-NNNN`).
 
-Contoh:
+Di halaman itu peserta memasukkan **nomor HP** yang mereka pakai saat booking.
+Sistem otomatis mengarahkan ke **kelas terakhir yang sudah selesai & belum
+direview** milik nomor tersebut. Halaman ini publik (tanpa login) & mobile-friendly.
 
-```
-https://coach-portal-production-8e81.up.railway.app/review?code=CL-20260701-0001
-```
-
-Saat peserta membuka link ini, kode booking **otomatis terisi** dan form review
-langsung terbuka (peserta tidak perlu mengetik kode). Halaman ini **publik**
-(tanpa login) dan sudah mobile-friendly.
-
-> Catatan: satu `booking_code` hanya bisa memberi **1 review** (dijaga di sisi
-> Coach Workspace — kalau sudah pernah review, halaman menampilkan pesan
-> "sudah pernah review"). Jadi Admin Hub aman meski link terkirim ulang, tapi
-> tetap disarankan mencegah kirim ganda (lihat bagian 4).
+> Nomor HP dikenali dalam berbagai format (`+62…`, `62…`, `08…`, `8…`).
+> Satu booking hanya bisa diberi **1 review** (dijaga di sisi Coach Workspace).
 
 ---
 
@@ -46,25 +43,20 @@ Kirim email pada: **`waktu_berakhir − 15 menit`**.
 
 Jalankan scheduler/cron di Admin Hub (mis. tiap **5 menit**) yang mencari kelas
 yang akan berakhir ~15 menit lagi, lalu kirim ke tiap peserta **confirmed** yang
-belum dikirimi.
+punya email dan belum dikirimi.
 
 ---
 
-## 3. Data yang dibutuhkan (query rekomendasi)
-
-Jalankan query ini tiap beberapa menit untuk mendapat daftar penerima:
+## 3. Data penerima (query rekomendasi)
 
 ```sql
 -- Zona waktu: Asia/Jakarta. Jalankan tiap ~5 menit.
--- Ambil booking confirmed yang kelasnya berakhir ~15 menit lagi & belum dikirimi email.
+-- Ambil peserta confirmed yang kelasnya berakhir ~15 menit lagi & belum dikirimi email.
 select b.id            as booking_id,
-       b.booking_code,
        b.full_name,
        b.email,
        s.instructor    as coach,
-       ct.name         as class_name,
-       s.schedule_date,
-       s.end_time
+       ct.name         as class_name
 from arena_class_bookings b
 join arena_class_schedules s  on s.id = b.schedule_id
 left join arena_class_types ct on ct.id = s.class_type_id
@@ -77,14 +69,13 @@ where b.status = 'confirmed'
             and now() + interval '17 minutes';              -- jendela ~15 menit sebelum berakhir
 ```
 
-Jendela 13–17 menit memberi toleransi bila cron telat sedikit. Kolom
-`review_email_sent_at` (bagian 4) memastikan tiap peserta hanya dikirimi sekali.
+Catatan: link email tidak memerlukan `booking_code` — identifikasi peserta
+terjadi di halaman review lewat nomor HP. Query di atas hanya perlu untuk tahu
+**siapa yang dikirimi email** dan **kapan**.
 
 ---
 
 ## 4. Cegah kirim ganda (dedup)
-
-Tambahkan penanda "sudah dikirim" pada tabel booking:
 
 ```sql
 alter table public.arena_class_bookings
@@ -99,8 +90,8 @@ update public.arena_class_bookings
  where id = :booking_id;
 ```
 
-(Kolom nullable — aman, tidak mengganggu sistem lain. Alternatif: pakai tabel
-log tersendiri bila tidak ingin menambah kolom.)
+(Kolom nullable — aman, tidak mengganggu sistem lain. Alternatif: tabel log
+tersendiri bila tidak ingin menambah kolom.)
 
 ---
 
@@ -117,32 +108,32 @@ Gimana kelas {class_name} tadi? Kasih rating coach kamu ⭐
 <p>Terima kasih sudah ikut kelas <b>{class_name}</b> bareng
    <b>Coach {coach}</b> di 20FIT Arena hari ini! 💪</p>
 <p>Bantu coach kamu jadi lebih baik — kasih rating &amp; masukan singkat
-   (cuma 1 menit):</p>
+   (cuma 1 menit). Klik tombol di bawah, lalu masukkan
+   <b>nomor HP yang kamu pakai saat booking</b>:</p>
 <p>
-  <a href="https://coach-portal-production-8e81.up.railway.app/review?code={booking_code}"
+  <a href="https://coach-portal-production-8e81.up.railway.app/review"
      style="display:inline-block;background:#D6FF3D;color:#08090B;
             font-weight:700;text-decoration:none;padding:12px 22px;
             border-radius:10px;">Rate Your Coach</a>
 </p>
 <p style="color:#888;font-size:12px;">Atau buka link ini:
-   https://coach-portal-production-8e81.up.railway.app/review?code={booking_code}</p>
+   https://coach-portal-production-8e81.up.railway.app/review</p>
 <p>Sampai jumpa di kelas berikutnya!<br>20FIT Arena</p>
 ```
 
-Ganti `{full_name}`, `{class_name}`, `{coach}`, `{booking_code}` dengan nilai
-dari query di bagian 3.
+Ganti `{full_name}`, `{class_name}`, `{coach}` dengan nilai dari query bagian 3.
 
 ---
 
 ## 6. Ringkasan alur
 
-1. Peserta booking kelas di Admin Hub → tercatat di `arena_class_bookings`
-   (dengan `booking_code` & `email`).
+1. Peserta booking kelas di Admin Hub (dengan `email` & `phone`).
 2. Cron Admin Hub (tiap ~5 menit) menjalankan query bagian 3.
-3. Untuk tiap baris hasil: kirim email (template bagian 5) berisi link
-   `/review?code={booking_code}`, lalu set `review_email_sent_at = now()`.
-4. Peserta klik link → form "Rate Your Coach" terbuka otomatis → kirim rating.
+3. Untuk tiap penerima: kirim email (template bagian 5) berisi link
+   `https://<COACH_WORKSPACE_URL>/review`, lalu set `review_email_sent_at = now()`.
+4. Peserta klik link → halaman "Rate Your Coach" → **masukkan nomor HP** →
+   sistem mengarahkan ke kelas terakhirnya → beri rating per kategori + keseluruhan.
 5. Rating masuk ke Coach Workspace (`arena_class_reviews`) → tampil di menu
-   **Review** coach & memengaruhi data, sesuai konfigurasi Coach Workspace.
+   **Review** coach & memengaruhi data.
 
 Tidak ada API tambahan yang perlu dipanggil Admin Hub — cukup kirim link-nya.
