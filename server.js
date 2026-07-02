@@ -349,8 +349,15 @@ route('POST', '/api/public/lookup', async (req, res) => {
   const already = ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
   return send(res, 200, { found: true, coach: sc ? sc.instructor : '', class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
 });
-// Whitelisted "what was good" chips a participant can tap when reviewing a coach.
-const REVIEW_TAGS = ['Instruksi jelas', 'Sabar & suportif', 'Kelas seru', 'Tepat waktu', 'Bikin semangat', 'Perhatian ke teknik'];
+// Per-category star ratings a participant gives a coach (each 1-5). "Other" is free text.
+const REVIEW_CATS = [
+  { key: 'clear_instructions', label: 'Clear Instructions' },
+  { key: 'technique_correction', label: 'Technique Correction' },
+  { key: 'member_support', label: 'Member Support' },
+  { key: 'professionalism', label: 'Professionalism' },
+  { key: 'class_management', label: 'Class Management' },
+];
+const REVIEW_CAT_KEYS = REVIEW_CATS.map((c) => c.key);
 route('POST', '/api/public/review', async (req, res) => {
   const body = await readBody(req);
   const code = body && String(body.booking_code || '').trim().toUpperCase();
@@ -362,20 +369,26 @@ route('POST', '/api/public/review', async (req, res) => {
   if (dup) return send(res, 409, { error: 'Kode booking ini sudah pernah memberi review.' });
   const scs = await sb(`arena_class_schedules?select=instructor,class_type_id&id=eq.${enc(b.schedule_id)}&limit=1`);
   const sc = scs && scs[0]; const types = await classTypes();
-  const tags = Array.isArray(body.tags) ? body.tags.filter((t) => REVIEW_TAGS.includes(t)).slice(0, 6) : [];
-  await sb('arena_class_reviews', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: b.schedule_id, coach_name: sc ? sc.instructor : null, class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : null, reviewer_name: (String(body.name || b.full_name || '').slice(0, 80)) || null, booking_code: code, rating, comment: (String(body.comment || '').slice(0, 600)) || null, tags }) });
+  const ratings = {};
+  const inRatings = (body && body.ratings) || {};
+  for (const k of REVIEW_CAT_KEYS) { const v = parseInt(inRatings[k], 10); if (v >= 1 && v <= 5) ratings[k] = v; }
+  await sb('arena_class_reviews', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: b.schedule_id, coach_name: sc ? sc.instructor : null, class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : null, reviewer_name: (String(body.name || b.full_name || '').slice(0, 80)) || null, booking_code: code, rating, comment: (String(body.comment || '').slice(0, 600)) || null, ratings }) });
   return send(res, 200, { ok: true });
 });
 
 // Reviews for the portal (coach sees own; head coach/admin see all)
 route('GET', '/api/coach/reviews', async (req, res, s) => {
   const isHC = s.r === 'hc' || s.r === 'admin';
-  let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,tags,created_at&order=created_at.desc&limit=100';
+  let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,ratings,created_at&order=created_at.desc&limit=100';
   if (!isHC) q += `&coach_name=eq.${enc(s.c)}`;
   const rows = (await sb(q)) || [];
   const avg = rows.length ? rows.reduce((a, x) => a + x.rating, 0) / rows.length : 0;
-  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Kelas', name: x.reviewer_name || 'Anonim', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', tags: Array.isArray(x.tags) ? x.tags : [], date: fmtDMon(String(x.created_at).slice(0, 10)) }));
-  return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length });
+  // per-category averages across all shown reviews
+  const catSum = {}; const catCnt = {};
+  for (const x of rows) { const r = x.ratings || {}; for (const c of REVIEW_CATS) { const v = parseInt(r[c.key], 10); if (v >= 1 && v <= 5) { catSum[c.key] = (catSum[c.key] || 0) + v; catCnt[c.key] = (catCnt[c.key] || 0) + 1; } } }
+  const categories = REVIEW_CATS.filter((c) => catCnt[c.key]).map((c) => ({ label: c.label, avg: (Math.round((catSum[c.key] / catCnt[c.key]) * 10) / 10).toFixed(1) }));
+  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Kelas', name: x.reviewer_name || 'Anonim', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', tags: [], date: fmtDMon(String(x.created_at).slice(0, 10)) }));
+  return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length, categories });
 });
 
 // Coach leaderboard — ranked by average participant rating (then review count)
