@@ -20,7 +20,7 @@
   label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:7px; }
   input, textarea{ width:100%; background:var(--panel2); border:1px solid var(--border2); color:var(--text); border-radius:12px; padding:13px 14px; font-size:14.5px; font-family:inherit; outline:0; }
   input:focus, textarea:focus{ border-color:var(--volt); }
-  textarea{ min-height:96px; resize:vertical; }
+  textarea{ min-height:84px; resize:vertical; }
   .field{ margin-bottom:16px; }
   .btn{ width:100%; background:var(--volt); color:#08090B; border:0; border-radius:12px; padding:15px; font-family:'Archivo'; font-weight:800; font-size:15px; cursor:pointer; text-transform:uppercase; letter-spacing:.02em; }
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
@@ -28,9 +28,17 @@
   .msg{ font-size:13px; margin-top:14px; text-align:center; min-height:18px; } .msg.err{ color:var(--red); } .msg.ok{ color:var(--green); }
   .classbox{ background:var(--panel2); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px; }
   .classbox .cls{ font-family:'Archivo'; font-weight:800; font-size:17px; } .classbox .meta{ color:var(--muted); font-size:13px; margin-top:4px; }
-  .stars{ display:flex; gap:8px; justify-content:center; margin:6px 0 20px; }
-  .star{ font-size:38px; line-height:1; color:var(--border2); cursor:pointer; transition:transform .1s, color .1s; }
+  .rate-q{ text-align:center; font-family:'Archivo'; font-weight:800; font-size:17px; margin-bottom:2px; }
+  .rate-sub{ text-align:center; color:var(--muted); font-size:12.5px; margin-bottom:6px; }
+  .stars{ display:flex; gap:8px; justify-content:center; margin:6px 0 22px; }
+  .star{ font-size:40px; line-height:1; color:var(--border2); cursor:pointer; transition:transform .1s, color .1s; }
   .star.on{ color:var(--amber); } .star:hover{ transform:scale(1.12); }
+  .taghead{ font-family:'Archivo'; font-weight:800; font-size:16px; margin:4px 0 12px; }
+  .tags{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom:22px; }
+  .tag{ background:var(--panel2); border:1px solid var(--border2); color:var(--text); border-radius:100px; padding:9px 15px; font-size:13.5px; cursor:pointer; transition:background .12s,border-color .12s,color .12s; user-select:none; }
+  .tag:hover{ border-color:var(--muted); }
+  .tag.on{ background:var(--volt); border-color:var(--volt); color:#08090B; font-weight:700; }
+  .divider{ height:1px; background:var(--border); margin:6px 0 20px; }
   .hidden{ display:none; }
   .done{ text-align:center; padding:12px 0; }
   .done .big{ font-size:44px; margin-bottom:8px; } .done h2{ font-family:'Archivo'; font-weight:800; font-size:20px; margin-bottom:6px; }
@@ -53,22 +61,31 @@
       <div class="msg" id="msg1"></div>
     </div>
 
-    <!-- STEP 2: rate + comment -->
+    <!-- STEP 2: rate + tags + message -->
     <div class="card hidden" id="step2">
       <div class="classbox">
         <div class="cls" id="clsName">—</div>
         <div class="meta" id="clsMeta">—</div>
       </div>
-      <label style="text-align:center;">Beri Rating</label>
+
+      <div class="rate-q">Kasih rating ke coach?</div>
+      <div class="rate-sub">1 mengecewakan · 5 mantap!</div>
       <div class="stars" id="stars"></div>
+
+      <div class="divider"></div>
+
+      <div class="taghead">Apa yang oke dari coach?</div>
+      <div class="tags" id="tags"></div>
+
       <div class="field">
         <label for="rname">Nama (opsional)</label>
         <input id="rname" placeholder="Nama Anda">
       </div>
       <div class="field">
-        <label for="comment">Komentar (opsional)</label>
-        <textarea id="comment" placeholder="Bagaimana kelasnya? Beri masukan untuk coach…"></textarea>
+        <label for="comment">Ada pesan untuk coach?</label>
+        <textarea id="comment" placeholder="Ucapkan terima kasih…"></textarea>
       </div>
+
       <button class="btn" id="submitBtn">Kirim Review</button>
       <div class="msg" id="msg2"></div>
       <button class="btn ghost" id="backBtn" style="margin-top:10px;">← Ganti kode booking</button>
@@ -84,7 +101,9 @@
 
   <script>
     var $ = function(id){ return document.getElementById(id); };
-    var state = { code:'', rating:0 };
+    // Must match REVIEW_TAGS on the server.
+    var TAGS = ['Instruksi jelas','Sabar & suportif','Kelas seru','Tepat waktu','Bikin semangat','Perhatian ke teknik'];
+    var state = { code:'', rating:0, tags:{} };
 
     function show(step){ ['step1','step2','step3'].forEach(function(s){ $(s).classList.toggle('hidden', s!==step); }); }
 
@@ -92,6 +111,11 @@
     var starsEl = $('stars');
     for (var i=1;i<=5;i++){ (function(n){ var s=document.createElement('span'); s.className='star'; s.textContent='★'; s.onclick=function(){ setRating(n); }; starsEl.appendChild(s); })(i); }
     function setRating(n){ state.rating=n; var els=starsEl.children; for(var i=0;i<5;i++) els[i].classList.toggle('on', i<n); }
+
+    // build tag chips (multi-select)
+    var tagsEl = $('tags');
+    TAGS.forEach(function(t){ var el=document.createElement('div'); el.className='tag'; el.textContent=t; el.onclick=function(){ if(state.tags[t]){ delete state.tags[t]; el.classList.remove('on'); } else { state.tags[t]=true; el.classList.add('on'); } }; tagsEl.appendChild(el); });
+    function resetTags(){ state.tags={}; var c=tagsEl.children; for(var i=0;i<c.length;i++) c[i].classList.remove('on'); }
 
     async function api(path, body){
       var r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -108,7 +132,7 @@
       try{
         var d = await api('/api/public/lookup', { booking_code: code });
         if (d.already){ m.textContent='Kode ini sudah pernah memberi review. Terima kasih!'; m.className='msg err'; return; }
-        state.code = code; state.rating=0; setRating(0);
+        state.code = code; state.rating=0; setRating(0); resetTags();
         $('clsName').textContent = d.class_label + (d.coach ? ' · Coach ' + d.coach : '');
         $('clsMeta').textContent = 'Kode ' + code + (d.date ? ' · ' + d.date : '');
         $('rname').value = d.name || '';
@@ -122,7 +146,7 @@
       if (!state.rating){ m.textContent='Beri rating bintang dulu.'; m.className='msg err'; return; }
       this.disabled=true; this.textContent='Mengirim…';
       try{
-        await api('/api/public/review', { booking_code: state.code, rating: state.rating, name: $('rname').value.trim(), comment: $('comment').value.trim() });
+        await api('/api/public/review', { booking_code: state.code, rating: state.rating, tags: Object.keys(state.tags), name: $('rname').value.trim(), comment: $('comment').value.trim() });
         show('step3');
       }catch(e){ m.textContent=e.message; m.className='msg err'; this.disabled=false; this.textContent='Kirim Review'; }
     };

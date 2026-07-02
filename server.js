@@ -349,6 +349,8 @@ route('POST', '/api/public/lookup', async (req, res) => {
   const already = ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
   return send(res, 200, { found: true, coach: sc ? sc.instructor : '', class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
 });
+// Whitelisted "what was good" chips a participant can tap when reviewing a coach.
+const REVIEW_TAGS = ['Instruksi jelas', 'Sabar & suportif', 'Kelas seru', 'Tepat waktu', 'Bikin semangat', 'Perhatian ke teknik'];
 route('POST', '/api/public/review', async (req, res) => {
   const body = await readBody(req);
   const code = body && String(body.booking_code || '').trim().toUpperCase();
@@ -360,19 +362,36 @@ route('POST', '/api/public/review', async (req, res) => {
   if (dup) return send(res, 409, { error: 'Kode booking ini sudah pernah memberi review.' });
   const scs = await sb(`arena_class_schedules?select=instructor,class_type_id&id=eq.${enc(b.schedule_id)}&limit=1`);
   const sc = scs && scs[0]; const types = await classTypes();
-  await sb('arena_class_reviews', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: b.schedule_id, coach_name: sc ? sc.instructor : null, class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : null, reviewer_name: (String(body.name || b.full_name || '').slice(0, 80)) || null, booking_code: code, rating, comment: (String(body.comment || '').slice(0, 600)) || null }) });
+  const tags = Array.isArray(body.tags) ? body.tags.filter((t) => REVIEW_TAGS.includes(t)).slice(0, 6) : [];
+  await sb('arena_class_reviews', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: b.schedule_id, coach_name: sc ? sc.instructor : null, class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : null, reviewer_name: (String(body.name || b.full_name || '').slice(0, 80)) || null, booking_code: code, rating, comment: (String(body.comment || '').slice(0, 600)) || null, tags }) });
   return send(res, 200, { ok: true });
 });
 
 // Reviews for the portal (coach sees own; head coach/admin see all)
 route('GET', '/api/coach/reviews', async (req, res, s) => {
   const isHC = s.r === 'hc' || s.r === 'admin';
-  let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,created_at&order=created_at.desc&limit=100';
+  let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,tags,created_at&order=created_at.desc&limit=100';
   if (!isHC) q += `&coach_name=eq.${enc(s.c)}`;
   const rows = (await sb(q)) || [];
   const avg = rows.length ? rows.reduce((a, x) => a + x.rating, 0) / rows.length : 0;
-  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Kelas', name: x.reviewer_name || 'Anonim', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', date: fmtDMon(String(x.created_at).slice(0, 10)) }));
+  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Kelas', name: x.reviewer_name || 'Anonim', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', tags: Array.isArray(x.tags) ? x.tags : [], date: fmtDMon(String(x.created_at).slice(0, 10)) }));
   return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length });
+});
+
+// Coach leaderboard — ranked by average participant rating (then review count)
+route('GET', '/api/coach/leaderboard', async (req, res, s) => {
+  const rows = (await sb('arena_class_reviews?select=coach_name,rating')) || [];
+  const agg = {};
+  for (const r of rows) {
+    const nm = r.coach_name || '';
+    if (!nm) continue;
+    if (!agg[nm]) agg[nm] = { sum: 0, count: 0 };
+    agg[nm].sum += r.rating; agg[nm].count++;
+  }
+  const board = Object.keys(agg).map((nm) => ({ name: nm, avg: Math.round((agg[nm].sum / agg[nm].count) * 10) / 10, count: agg[nm].count }))
+    .sort((a, b) => b.avg - a.avg || b.count - a.count)
+    .map((x, i) => Object.assign({ rank: i + 1, isMe: x.name === s.c }, x));
+  return send(res, 200, { board, me: s.c });
 });
 
 // ===== COACH: class detail + participants =====
