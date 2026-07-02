@@ -449,7 +449,9 @@ route('GET', '/api/hc/schedule', async (req, res, s, q) => {
     const tm = hhmm(r.start_time); const ci = coachNames.indexOf(r.instructor);
     if (ci >= 0 && grid[tm]) { const t = types[r.class_type_id] || {}; grid[tm][ci] = { type: shortType(t.name), peserta: (counts[r.id] || {}).confirmed + (counts[r.id] || {}).pending || 0 }; }
   }
-  return send(res, 200, { coaches: coachNames, times, grid, date: day });
+  const dl = new Date(day + 'T00:00:00');
+  const dateLabel = `${DOW_FULL[dl.getDay()]} ${dl.getDate()} ${MON[dl.getMonth()]}`;
+  return send(res, 200, { coaches: coachNames, times, grid, date: day, dateLabel });
 });
 route('GET', '/api/hc/subs', async (req, res, s) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
