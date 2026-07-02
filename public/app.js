@@ -290,7 +290,7 @@ class Component extends DCLogic {
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
       login: () => this.login(), logout: () => this.logout(),
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
-      isCoachView, hasIncoming, incomingCount, rotHeader,
+      isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
@@ -307,6 +307,7 @@ class Component extends DCLogic {
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
+      stopProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
       hasToast: !!st.toast, toast: st.toast,
     };
   }

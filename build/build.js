@@ -71,13 +71,13 @@ template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\
 
 // ---- Rotation flow: rotation coach approves; head coach = notification only ----
 // Inject a "Rotation" nav item into the COACH group (only in coach view)
-const rotNav = '<sc-if value="{{ isCoachView }}"><button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><sc-if value="{{ hasIncoming }}"><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:\'Archivo\';">{{ incomingCount }}</span></sc-if></button></sc-if>';
+const rotNav = '<sc-if value="{{ showCoachNav }}"><button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><sc-if value="{{ hasIncoming }}"><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:\'Archivo\';">{{ incomingCount }}</span></sc-if></button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goEmail \}\}"[\s\S]*?<\/button>)/, '$1' + rotNav);
 // "Review" nav (peserta review) — always visible; screen is role-aware (coach=own, HC=all)
 const reviewNav = '<button onclick="{{ goReviews }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reviews.bg }};color:{{ nav.reviews.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reviews.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Review</button>';
 template = template.replace(/(<button onclick="\{\{ goEmail \}\}"[\s\S]*?<\/button>)/, '$1' + reviewNav);
 // "Monitoring" nav (coach-only) — monthly class count moved off the dashboard into its own screen
-const monthlyNav = '<sc-if value="{{ isCoachView }}"><button onclick="{{ goMonthly }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monthly.bg }};color:{{ nav.monthly.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monthly.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring</button></sc-if>';
+const monthlyNav = '<sc-if value="{{ showCoachNav }}"><button onclick="{{ goMonthly }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monthly.bg }};color:{{ nav.monthly.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monthly.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goReviews \}\}"[\s\S]*?<\/button>)/, '$1' + monthlyNav);
 // Approve/Reject buttons only when the current user may decide (the rotation coach)
 template = template.replace(/(<button onclick="\{\{ p\.approve \}\}"[\s\S]*?<\/button>)/g, '<sc-if value="{{ p.canDecide }}">$1</sc-if>');
@@ -89,7 +89,7 @@ template = template.replace('sampai Head Coach menyetujui', 'sampai coach rotati
 // ---- Label renames (longest/upper variants first) ----
 const renames = [
   ['PENGGANTIAN', 'ROTATION'], ['Penggantian', 'Rotation'], ['penggantian', 'rotation'], ['PENGGANTI', 'ROTATION'], ['pengganti', 'rotation'],
-  ['Jadwal Tim', 'Schedule'], ['Email Apresiasi', 'Feedback'],
+  ['Jadwal Tim', 'Schedule'], ['Email Apresiasi', 'Feedback'], ['Template Email', 'Template Feedback'],
 ];
 for (const [a, b] of renames) template = template.split(a).join(b);
 
