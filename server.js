@@ -335,19 +335,57 @@ route('GET', '/api/coach/members', async (req, res, s) => {
 
 // ===== PUBLIC review (no login) — participants review the coach's class they attended =====
 async function bookingByCode(code) {
-  const rows = await sb(`arena_class_bookings?select=schedule_id,full_name,status&booking_code=eq.${enc(code)}&limit=1`);
+  const rows = await sb(`arena_class_bookings?select=booking_code,schedule_id,full_name,status&booking_code=eq.${enc(code)}&limit=1`);
   return rows && rows[0];
+}
+// Normalise an Indonesian phone number to a consistent "08..." digit string.
+function normPhone(p) {
+  let d = String(p || '').replace(/\D/g, '');
+  if (d.startsWith('62')) d = '0' + d.slice(2);
+  else if (d.startsWith('8')) d = '0' + d;
+  return d;
+}
+async function reviewed(code) {
+  return ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
+}
+// Resolve a participant's booking to review from a phone number: the most recent
+// class they attended (already happened) that hasn't been reviewed yet.
+async function bookingByPhone(phone, today) {
+  const norm = normPhone(phone);
+  if (norm.length < 8) return { error: 'Nomor HP tidak valid.' };
+  const last4 = norm.slice(-4);
+  const cands = (await sb(`arena_class_bookings?select=booking_code,schedule_id,full_name,phone&status=eq.confirmed&phone=like.*${last4}*&limit=500`)) || [];
+  const matches = cands.filter((x) => normPhone(x.phone) === norm);
+  if (!matches.length) return { error: 'Booking dengan nomor HP ini tidak ditemukan.' };
+  const sids = Array.from(new Set(matches.map((m) => m.schedule_id).filter(Boolean)));
+  const scheds = sids.length ? (await sb(`arena_class_schedules?select=id,schedule_date&id=in.(${sids.map(enc).join(',')})`)) || [] : [];
+  const dateById = {}; for (const s of scheds) dateById[s.id] = s.schedule_date;
+  const occurred = matches
+    .map((m) => ({ m, date: dateById[m.schedule_id] || '' }))
+    .filter((x) => x.date && x.date <= today)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (!occurred.length) return { error: 'Belum ada kelas yang selesai untuk nomor HP ini. Review bisa diberikan setelah kelas selesai.' };
+  for (const o of occurred) { if (!(await reviewed(o.m.booking_code))) return { booking: o.m }; }
+  return { allReviewed: true, booking: occurred[0].m };
 }
 route('POST', '/api/public/lookup', async (req, res) => {
   const body = await readBody(req);
-  const code = body && String(body.booking_code || '').trim().toUpperCase();
-  if (!code) return send(res, 400, { error: 'Kode booking wajib diisi.' });
-  const b = await bookingByCode(code);
-  if (!b || !b.schedule_id) return send(res, 404, { error: 'Kode booking kelas tidak ditemukan.' });
+  const q = body && String(body.q || body.booking_code || '').trim();
+  if (!q) return send(res, 400, { error: 'Nomor HP atau kode booking wajib diisi.' });
+  let b, code, forceAlready = false;
+  if (/[A-Za-z]/.test(q)) { // looks like a booking code (e.g. CL-...)
+    code = q.toUpperCase();
+    b = await bookingByCode(code);
+    if (!b || !b.schedule_id) return send(res, 404, { error: 'Kode booking kelas tidak ditemukan.' });
+  } else { // phone number
+    const r = await bookingByPhone(q, todayJakarta());
+    if (r.error) return send(res, 404, { error: r.error });
+    b = r.booking; code = r.booking.booking_code; forceAlready = !!r.allReviewed;
+  }
   const scs = await sb(`arena_class_schedules?select=instructor,class_type_id,schedule_date&id=eq.${enc(b.schedule_id)}&limit=1`);
   const sc = scs && scs[0]; const types = await classTypes();
-  const already = ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
-  return send(res, 200, { found: true, coach: sc ? sc.instructor : '', class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
+  const already = forceAlready || (await reviewed(code));
+  return send(res, 200, { found: true, booking_code: code, coach: sc ? sc.instructor : '', class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
 });
 // Per-category star ratings a participant gives a coach (each 1-5). "Other" is free text.
 const REVIEW_CATS = [
