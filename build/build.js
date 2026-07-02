@@ -85,8 +85,7 @@ const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900p
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', membersScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Leaderboard Coach" screen — ranked by average participant rating
 const boardScreen = '<sc-if value="{{ s.leaderboard }}"><div style="max-width:760px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:4px;">Leaderboard Coach</div>'
-  + '<div style="color:var(--muted);font-size:13.5px;margin-bottom:20px;">Peringkat coach berdasarkan jumlah peserta yang booking kelasnya.</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Leaderboard Coach</div>'
   + '<sc-if value="{{ hasBoard }}"><div style="' + cardBox + 'overflow:hidden;">'
   + '<sc-for list="{{ leaderboard }}" as="l"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);background:{{ l.rowBg }};">'
   + '<div style="width:30px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:{{ l.rankCol }};">{{ l.medal }}</div>'
