@@ -55,10 +55,11 @@
     <!-- STEP 1: enter booking code -->
     <div class="card" id="step1">
       <h1>Beri Review Kelas</h1>
-      <p class="sub">Masukkan kode booking Anda untuk memberi ulasan pada coach & kelas yang Anda ikuti.</p>
+      <p class="sub">Masukkan nomor HP yang Anda pakai saat booking untuk memberi ulasan pada coach & kelas Anda.</p>
       <div class="field">
-        <label for="code">Kode Booking</label>
-        <input id="code" placeholder="mis. CL-20260701-0001" autocapitalize="characters" autocomplete="off">
+        <label for="code">Nomor HP</label>
+        <input id="code" placeholder="08xxxxxxxxxx" inputmode="tel" autocomplete="off">
+        <div style="font-size:11.5px;color:var(--muted2);margin-top:7px;">Punya kode booking? Bisa juga ketik kodenya di sini.</div>
       </div>
       <button class="btn" id="findBtn">Cari Kelas</button>
       <div class="msg" id="msg1"></div>
@@ -141,23 +142,23 @@
       return d;
     }
 
-    async function doLookup(code, btn){
+    async function doLookup(val, btn){
       var m = $('msg1'); m.textContent=''; m.className='msg';
-      if (!code){ m.textContent='Masukkan kode booking dulu.'; m.className='msg err'; return; }
+      if (!val){ m.textContent='Masukkan nomor HP atau kode booking dulu.'; m.className='msg err'; return; }
       if (btn){ btn.disabled=true; btn.textContent='Mencari…'; }
       try{
-        var d = await api('/api/public/lookup', { booking_code: code });
-        if (d.already){ m.textContent='Kode ini sudah pernah memberi review. Terima kasih!'; m.className='msg err'; return; }
-        state.code = code; state.rating=0; setRating(0); resetCats();
+        var d = await api('/api/public/lookup', { q: val });
+        if (d.already){ m.textContent='Kelas ini sudah pernah diberi review. Terima kasih!'; m.className='msg err'; return; }
+        state.code = d.booking_code; state.rating=0; setRating(0); resetCats();
         $('clsName').textContent = d.class_label + (d.coach ? ' · Coach ' + d.coach : '');
-        $('clsMeta').textContent = 'Kode ' + code + (d.date ? ' · ' + d.date : '');
+        $('clsMeta').textContent = (d.date ? d.date : '') + (d.booking_code ? ' · ' + d.booking_code : '');
         $('rname').value = d.name || '';
         show('step2');
       }catch(e){ m.textContent=e.message; m.className='msg err'; }
       finally{ if (btn){ btn.disabled=false; btn.textContent='Cari Kelas'; } }
     }
 
-    $('findBtn').onclick = function(){ doLookup($('code').value.trim().toUpperCase(), this); };
+    $('findBtn').onclick = function(){ doLookup($('code').value.trim(), this); };
 
     $('submitBtn').onclick = async function(){
       var m = $('msg2'); m.textContent=''; m.className='msg';
