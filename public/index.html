@@ -133,8 +133,8 @@
     /* class-card action buttons stack full width */
     [style*="display:flex;gap:10px;margin-top:18px"] { flex-direction:column !important; }
     /* team schedule grid: keep width, scroll horizontally */
-    [style*="70px repeat(6,1fr)"] { min-width:520px; }
-    [style*="border-radius:18px"]:has([style*="70px repeat(6,1fr)"]) { overflow-x:auto !important; }
+    [style*="70px repeat("] { min-width:520px; }
+    [style*="border-radius:18px"]:has([style*="70px repeat("]) { overflow-x:auto !important; }
     /* per-class stats table (TGL/HARI/JAM/JENIS/PESERTA): keep columns, scroll horizontally */
     [style*="80px 90px 70px 1fr 90px"] { min-width:520px; }
     [style*="border-radius:18px"]:has([style*="80px 90px 70px 1fr 90px"]) { overflow-x:auto !important; }
@@ -430,18 +430,19 @@
         <sc-if value="{{ s.schedule }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-            <div style="color:var(--muted);font-size:14px;">Tampilan kalender lintas coach · Senin 30 Jun</div>
+            <div style="color:var(--muted);font-size:14px;">Tampilan kalender lintas coach · {{ scheduleDateLabel }}</div>
             <div style="display:flex;gap:9px;"><div style="font-size:12.5px;color:var(--muted);border:1px solid var(--border2);padding:8px 13px;border-radius:9px;">Per Coach ▾</div><div style="font-size:12.5px;color:var(--muted);border:1px solid var(--border2);padding:8px 13px;border-radius:9px;">Jenis Kelas ▾</div></div>
           </div>
+          <sc-if value="{{ hasSchedule }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="display:grid;grid-template-columns:70px repeat(6,1fr);">
+            <div style="display:grid;grid-template-columns:{{ schedCols }};">
               <div style="padding:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted2);">JAM</div>
               <sc-for list="{{ coachCols }}" as="cc" hint-placeholder-count="6">
               <div style="padding:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;"><div style="font-weight:700;font-size:13px;">{{ cc.name }}</div></div>
               </sc-for>
             </div>
             <sc-for list="{{ scheduleRows }}" as="row" hint-placeholder-count="6">
-            <div style="display:grid;grid-template-columns:70px repeat(6,1fr);">
+            <div style="display:grid;grid-template-columns:{{ schedCols }};">
               <div style="padding:14px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:var(--muted);">{{ row.time }}</div>
               <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="6">
               <div style="padding:7px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:54px;">
@@ -451,6 +452,10 @@
             </div>
             </sc-for>
           </div>
+          </sc-if>
+          <sc-if value="{{ noSchedule }}">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:48px 24px;text-align:center;color:var(--muted);">Tidak ada kelas terjadwal pada hari ini.</div>
+          </sc-if>
         </div>
         </sc-if>
 

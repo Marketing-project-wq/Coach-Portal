@@ -259,8 +259,12 @@ class Component extends DCLogic {
     const pendingCount = pendingSubs.length; const noPending = pendingCount === 0;
     const hasIncoming = incomingCount > 0;
     const rotHeader = isCoachView ? 'MENUNGGU PERSETUJUAN ANDA' : 'NOTIFIKASI ROTATION';
-    // schedule grid
+    // schedule grid — columns follow the actual number of coaches teaching that day
     const coachCols = ((D.schedule && D.schedule.coaches) || []).map((n) => ({ name: n }));
+    const schedCols = '70px repeat(' + Math.max(coachCols.length, 1) + ',minmax(0,1fr))';
+    const scheduleDateLabel = (D.schedule && D.schedule.dateLabel) || '';
+    const hasSchedule = coachCols.length > 0;
+    const noSchedule = !hasSchedule;
     const scheduleRows = ((D.schedule && D.schedule.times) || []).map((tm) => ({
       time: tm,
       cells: (D.schedule.grid[tm] || []).map((cell) => { if (!cell) return { has: false }; const comp = String(cell.type).includes('Complete'); return { has: true, type: String(cell.type).replace('HYROX ', ''), peserta: cell.peserta, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(214,255,61,.07)' : 'rgba(77,212,242,.07)' }; }),
@@ -299,7 +303,7 @@ class Component extends DCLogic {
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
-      coachCols, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
+      coachCols, schedCols, scheduleDateLabel, hasSchedule, noSchedule, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
@@ -328,7 +332,7 @@ class Component extends DCLogic {
     d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Terkirim' }];
     d.templates = [{ id: '01', text: 'Kelas hari ini kelar! Otot pegel itu tandanya kamu makin kuat.' }];
     d.hcToday = [{ time: '07:00', coach: 'Elsen', type: 'HYROX Complete', status: 'Mengajar', kind: 'live' }, { time: '07:00', coach: 'Rheza', type: 'HYROX Foundation', status: 'Akan Datang', kind: 'idle' }];
-    d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
+    d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], dateLabel: 'Rabu 1 Jul', grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
     d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
     d.rotations = { incoming: [{ id: 'r1', from: 'Gilang', to: 'Rheza', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], outgoing: [{ id: 'r2', from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: 'Rab, 07:00', status: 'approved' }] };
     d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-' }];

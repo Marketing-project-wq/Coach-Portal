@@ -122,8 +122,8 @@ const responsiveCss = `
     /* class-card action buttons stack full width */
     [style*="display:flex;gap:10px;margin-top:18px"] { flex-direction:column !important; }
     /* team schedule grid: keep width, scroll horizontally */
-    [style*="70px repeat(6,1fr)"] { min-width:520px; }
-    [style*="border-radius:18px"]:has([style*="70px repeat(6,1fr)"]) { overflow-x:auto !important; }
+    [style*="70px repeat("] { min-width:520px; }
+    [style*="border-radius:18px"]:has([style*="70px repeat("]) { overflow-x:auto !important; }
     /* per-class stats table (TGL/HARI/JAM/JENIS/PESERTA): keep columns, scroll horizontally */
     [style*="80px 90px 70px 1fr 90px"] { min-width:520px; }
     [style*="border-radius:18px"]:has([style*="80px 90px 70px 1fr 90px"]) { overflow-x:auto !important; }
