@@ -81,7 +81,8 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year })).catch(() => {}); this.loadRotations(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadRotations(); }
+    else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count })).catch(fail);
@@ -198,7 +199,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -210,9 +211,10 @@ class Component extends DCLogic {
 
     const titles = { dash: ['Coach', 'Dashboard'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Feedback'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
+    titles.monthly = ['Coach', 'Monitoring Kelas'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -290,7 +292,7 @@ class Component extends DCLogic {
       monthly, monthlyYear: D.monthlyYear || '',
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
-      goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
+      goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
       coachToday, week, recentClasses, participants, subOptions, emailLog,
