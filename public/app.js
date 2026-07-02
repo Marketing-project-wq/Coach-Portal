@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, coaches: [], stats: [], statMonth: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, coaches: [], stats: [], statMonth: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -82,7 +82,7 @@ class Component extends DCLogic {
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadRotations(); }
-    else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year })).catch(fail);
+    else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count })).catch(fail);
@@ -226,7 +226,7 @@ class Component extends DCLogic {
     // monthly monitoring bars
     const monthlyRaw = D.monthly || [];
     const maxM = Math.max(1, ...monthlyRaw.map((x) => x.count));
-    const monthly = monthlyRaw.map((x) => ({ month: x.month, count: x.count, h: Math.round((x.count / maxM) * 56), bar: x.isCurrent ? 'var(--volt)' : (x.count ? 'rgba(77,212,242,.55)' : 'var(--border2)'), col: x.isCurrent ? 'var(--volt)' : (x.count ? 'var(--text)' : 'var(--muted2)') }));
+    const monthly = monthlyRaw.map((x) => ({ month: x.month, count: x.count, peserta: x.peserta || 0, h: Math.round((x.count / maxM) * 56), bar: x.isCurrent ? 'var(--volt)' : (x.count ? 'rgba(77,212,242,.55)' : 'var(--border2)'), col: x.isCurrent ? 'var(--volt)' : (x.count ? 'var(--text)' : 'var(--muted2)') }));
     // participant reviews
     const isHCView = st.role === 'hc' || st.role === 'admin';
     const reviews = (D.reviews || []).map((rv) => Object.assign({}, rv, { coachSuffix: (isHCView && rv.coach) ? ' · Coach ' + rv.coach : '' }));
@@ -291,6 +291,7 @@ class Component extends DCLogic {
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
       monthly, monthlyYear: D.monthlyYear || '',
+      mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
@@ -313,7 +314,10 @@ class Component extends DCLogic {
     d.todayLabel = 'Rabu, 1 Juli 2026 · 1 kelas hari ini';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
     d.monthlyYear = '2026';
-    d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: [12, 14, 10, 16, 13, 18, 8, 0, 0, 0, 0, 0][i], isCurrent: i === 6 }));
+    const mCount = [12, 14, 10, 16, 13, 18, 8, 0, 0, 0, 0, 0];
+    const mPes = [148, 172, 121, 198, 160, 224, 96, 0, 0, 0, 0, 0];
+    d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 6 }));
+    d.mPesertaBulan = mPes[6]; d.mKelasBulan = mCount[6]; d.mPesertaTahun = mPes.reduce((a, b) => a + b, 0);
     d.reviewAvg = 4.6; d.reviewCount = 2;
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'Coach-nya sabar & jelas, kelasnya seru!', date: '1 Jul' }, { coach: 'Rheza', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: 'Mantap, cuma agak cepat tempo-nya.', date: '28 Jun' }];
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));

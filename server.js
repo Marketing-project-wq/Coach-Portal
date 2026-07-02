@@ -285,9 +285,16 @@ route('GET', '/api/coach/monthly', async (req, res, s) => {
   const curMon = parseInt(today.slice(5, 7), 10) - 1;
   const sched = await coachSchedules(s.c, year + '-01-01', year + '-12-31');
   const counts = new Array(12).fill(0);
-  for (const x of sched) counts[parseInt(x.schedule_date.slice(5, 7), 10) - 1]++;
-  const months = counts.map((c, i) => ({ month: MON[i], count: c, isCurrent: i === curMon }));
-  return send(res, 200, { months, year });
+  const peserta = new Array(12).fill(0);
+  const byId = await bookingCounts(sched.map((x) => x.id));
+  for (const x of sched) {
+    const mi = parseInt(x.schedule_date.slice(5, 7), 10) - 1;
+    counts[mi]++;
+    peserta[mi] += (byId[x.id] || {}).confirmed || 0;
+  }
+  const months = counts.map((c, i) => ({ month: MON[i], count: c, peserta: peserta[i], isCurrent: i === curMon }));
+  const yearPeserta = peserta.reduce((a, b) => a + b, 0);
+  return send(res, 200, { months, year, monthPeserta: peserta[curMon], monthClasses: counts[curMon], yearPeserta });
 });
 
 // ===== PUBLIC review (no login) — participants review the coach's class they attended =====
