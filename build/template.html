@@ -871,11 +871,12 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Penggantian</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — Juni 2026</div>
-            <div style="display:grid;grid-template-columns:90px 80px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PESERTA</div></div>
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — {{ statMonth }}</div>
+            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>HARI</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PESERTA</div></div>
             <sc-for list="{{ statRows }}" as="r" hint-placeholder-count="8">
-            <div style="display:grid;grid-template-columns:90px 80px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
+            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
               <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ r.date }}</div>
+              <div style="font-weight:600;color:var(--muted);">{{ r.day }}</div>
               <div style="font-family:'JetBrains Mono';font-size:13px;">{{ r.time }}</div>
               <div style="font-weight:600;">{{ r.type }}</div>
               <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.peserta }}</div>
@@ -1280,12 +1281,13 @@ class Component extends DCLogic {
 
     // selected coach stats
     const sel=coaches.find(c=>c.id===st.selCoach)||coaches[1];
+    const statMonth='Juni 2026';
     const statRows=[
-      ['01 Jun','07:00','HYROX Complete',12],['01 Jun','17:00','HYROX Foundation',8],['03 Jun','07:00','HYROX Complete',14],
-      ['05 Jun','09:00','HYROX Complete',11],['08 Jun','17:00','HYROX Foundation',9],['10 Jun','07:00','HYROX Complete',13],
-      ['12 Jun','07:00','HYROX Complete',12],['15 Jun','09:00','HYROX Complete',10],['18 Jun','17:00','HYROX Foundation',8],
-      ['22 Jun','07:00','HYROX Complete',14],['25 Jun','07:00','HYROX Complete',13]
-    ].map(r=>({date:r[0],time:r[1],type:r[2],peserta:r[3]}));
+      ['01 Jun','Senin','07:00','HYROX Complete',12],['01 Jun','Senin','17:00','HYROX Foundation',8],['03 Jun','Rabu','07:00','HYROX Complete',14],
+      ['05 Jun','Jumat','09:00','HYROX Complete',11],['08 Jun','Senin','17:00','HYROX Foundation',9],['10 Jun','Rabu','07:00','HYROX Complete',13],
+      ['12 Jun','Jumat','07:00','HYROX Complete',12],['15 Jun','Senin','09:00','HYROX Complete',10],['18 Jun','Kamis','17:00','HYROX Foundation',8],
+      ['22 Jun','Senin','07:00','HYROX Complete',14],['25 Jun','Kamis','07:00','HYROX Complete',13]
+    ].map(r=>({date:r[0],day:r[1],time:r[2],type:r[3],peserta:r[4]}));
 
     // templates
     const templates=[
@@ -1330,7 +1332,7 @@ class Component extends DCLogic {
       openClass:()=>this.go('detail'), goSubReq:()=>this.go('subreq'),
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
-      coachCols, scheduleRows, coaches, reportRows, sel, statRows, templates, perms,
+      coachCols, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen:()=>this.setState({absen:true}),
       showAbsen:st.absen, closeAbsen:()=>this.setState({absen:false}),
       confirmAbsen:()=>{ this.setState({absen:false,started:true}); this.toastMsg('Kelas dimulai · status Tepat Waktu'); },

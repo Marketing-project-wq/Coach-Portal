@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, coaches: [], stats: [] };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, coaches: [], stats: [], statMonth: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -90,7 +90,7 @@ class Component extends DCLogic {
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
-    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats })).catch(fail); }
+    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel })).catch(fail); }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
   }
@@ -274,6 +274,7 @@ class Component extends DCLogic {
     const reportRows = coaches.slice(0, 12);
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 100, subs: 0 };
     const statRows = D.stats || [];
+    const statMonth = D.statMonth || '';
     // templates
     const templates = D.templates || [];
     // permissions (static matrix)
@@ -297,7 +298,7 @@ class Component extends DCLogic {
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
-      coachCols, scheduleRows, coaches, reportRows, sel, statRows, templates, perms,
+      coachCols, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
@@ -327,7 +328,12 @@ class Component extends DCLogic {
     d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
     d.rotations = { incoming: [{ id: 'r1', from: 'Gilang', to: 'Rheza', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], outgoing: [{ id: 'r2', from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: 'Rab, 07:00', status: 'approved' }] };
     d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-' }];
-    d.stats = [{ date: '01 Jun', time: '07:00', type: 'HYROX Complete', peserta: 12 }];
+    d.statMonth = 'Juli 2026';
+    d.stats = [
+      { date: '1 Jul', day: 'Rabu', time: '18:30', type: 'HYROX Complete', peserta: 14 },
+      { date: '3 Jul', day: 'Jumat', time: '07:00', type: 'HYROX Foundation', peserta: 9 },
+      { date: '5 Jul', day: 'Minggu', time: '09:00', type: 'HYROX Complete', peserta: 16 },
+    ];
     return d;
   }
 }
