@@ -358,12 +358,15 @@ async function bookingByPhone(phone, today) {
   const matches = cands.filter((x) => normPhone(x.phone) === norm);
   if (!matches.length) return { error: 'Booking dengan nomor HP ini tidak ditemukan.' };
   const sids = Array.from(new Set(matches.map((m) => m.schedule_id).filter(Boolean)));
-  const scheds = sids.length ? (await sb(`arena_class_schedules?select=id,schedule_date&id=in.(${sids.map(enc).join(',')})`)) || [] : [];
-  const dateById = {}; for (const s of scheds) dateById[s.id] = s.schedule_date;
+  const scheds = sids.length ? (await sb(`arena_class_schedules?select=id,schedule_date,start_time&id=in.(${sids.map(enc).join(',')})`)) || [] : [];
+  const metaById = {}; for (const s of scheds) metaById[s.id] = s;
   const occurred = matches
-    .map((m) => ({ m, date: dateById[m.schedule_id] || '' }))
-    .filter((x) => x.date && x.date <= today)
-    .sort((a, b) => (a.date < b.date ? 1 : -1));
+    .map((m) => ({ m, s: metaById[m.schedule_id] }))
+    .filter((x) => x.s && x.s.schedule_date && x.s.schedule_date <= today)
+    .sort((a, b) => {
+      if (a.s.schedule_date !== b.s.schedule_date) return a.s.schedule_date < b.s.schedule_date ? 1 : -1;
+      return (a.s.start_time || '') < (b.s.start_time || '') ? 1 : -1;
+    });
   if (!occurred.length) return { error: 'Belum ada kelas yang selesai untuk nomor HP ini. Review bisa diberikan setelah kelas selesai.' };
   for (const o of occurred) { if (!(await reviewed(o.m.booking_code))) return { booking: o.m }; }
   return { allReviewed: true, booking: occurred[0].m };
