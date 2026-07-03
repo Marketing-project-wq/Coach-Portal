@@ -25,8 +25,10 @@ template = template.replace('>Email</label>', '>Name</label>');
 // Remove the promo hero panel; center the login form as a single column
 template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');
 template = template.replace('grid-template-columns:1.05fr .95fr', 'grid-template-columns:1fr');
-// Rebrand "Coach Portal" -> Coach Workspace (sidebar); submit label reflects the rotation-coach flow
-template = template.replace('>COACH PORTAL</div>', '>Coach Workspace</div>');
+// Sidebar logo: drop "20FIT ARENA", keep only "Coach Workspace"
+template = template.replace(
+  '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
+  '<div style="font-family:\'Archivo\';font-weight:800;font-size:16px;letter-spacing:.01em;line-height:1.1;">Coach Workspace</div>');
 template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation');
 // coachToday card: Detail/Absen buttons become per-item (scoped to that loop)
 (() => {
