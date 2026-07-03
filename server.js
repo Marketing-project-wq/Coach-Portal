@@ -85,19 +85,26 @@ async function classTypes() {
 }
 function shortType(name) { return String(name || '').replace(/^20FIT Arena\s*/i, '').replace(/^HYROX\s*/i, 'HYROX ').trim() || 'Kelas'; }
 
-// Coach photos live in the shared `arena_coaches` table (public storage URLs),
-// keyed by coach name. Cached for a few minutes — photos change rarely.
+// Coach photo + speciality live in the shared `arena_coaches` table
+// (public storage URLs), keyed by coach name. Cached — these change rarely.
 let _photoCache = null, _photoCacheAt = 0;
 async function coachPhotoMap() {
   if (_photoCache && (Date.now() - _photoCacheAt) < 5 * 60 * 1000) return _photoCache;
   let rows = [];
-  try { rows = await sb('arena_coaches?select=name,photo_url'); } catch (_e) { rows = []; }
+  try { rows = await sb('arena_coaches?select=name,photo_url,speciality'); } catch (_e) { rows = []; }
   const m = {};
-  for (const r of rows || []) { if (r && r.name && r.photo_url) m[String(r.name).trim().toLowerCase()] = r.photo_url; }
+  for (const r of rows || []) {
+    if (!r || !r.name) continue;
+    const k = String(r.name).trim().toLowerCase();
+    const cur = m[k] || { photo: '', spec: '' };
+    // Coaches can have duplicate rows; keep the first non-empty value for each field.
+    m[k] = { photo: cur.photo || r.photo_url || '', spec: cur.spec || r.speciality || '' };
+  }
   _photoCache = m; _photoCacheAt = Date.now();
   return m;
 }
-function coachPhoto(map, name) { return (map && name) ? (map[String(name).trim().toLowerCase()] || '') : ''; }
+function coachPhoto(map, name) { const v = (map && name) ? map[String(name).trim().toLowerCase()] : null; return v ? v.photo : ''; }
+function coachSpec(map, name) { const v = (map && name) ? map[String(name).trim().toLowerCase()] : null; return v ? v.spec : ''; }
 
 async function bookingCounts(ids) {
   const c = {};
@@ -547,7 +554,7 @@ route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
 route('GET', '/api/coach/subs/options', async (req, res, s, q) => {
   const coaches = await sb(`arena_coach_users?select=coach_name,role,is_active&is_active=eq.true&order=coach_name.asc`);
   const pm = await coachPhotoMap();
-  const opts = (coaches || []).filter((c) => c.coach_name !== s.c && c.role !== 'admin').map((c) => ({ name: c.coach_name, avail: 'Tersedia', disabled: false, photo: coachPhoto(pm, c.coach_name) }));
+  const opts = (coaches || []).filter((c) => c.coach_name !== s.c && c.role !== 'admin').map((c) => ({ name: c.coach_name, role: c.role, spec: coachSpec(pm, c.coach_name), disabled: false, photo: coachPhoto(pm, c.coach_name) }));
   return send(res, 200, { options: opts });
 });
 route('POST', '/api/coach/subs', async (req, res, s) => {
