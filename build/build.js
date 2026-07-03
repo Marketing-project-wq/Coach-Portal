@@ -159,7 +159,7 @@ for (const [a, b] of renames) template = template.split(a).join(b);
 // Full-bleed + mobile responsiveness. Targets the design's inline-styled containers
 // via [style*=...] selectors so no markup classes are needed; !important beats inline styles.
 const responsiveCss = `
-  html, body { margin:0; padding:0; background:#F4F3ED; }
+  html, body { margin:0; padding:0; min-height:100%; background:linear-gradient(135deg,#F2E9E6 0%,#EDEBEA 46%,#E9EEF3 100%) fixed; font-family:'Manrope',system-ui,sans-serif; }
   @media (max-width: 860px) {
     /* login: stack, hide the big hero, show only the form */
     [style*="grid-template-columns:1.05fr .95fr"] { grid-template-columns:minmax(0,1fr) !important; }
@@ -193,39 +193,51 @@ const responsiveCss = `
   }
 `;
 
-// ============ THEME: light content + dark sidebar + red accent (match Admin Hub) ============
-// 1) Swap the palette (var definitions on the app root div + :root)
+// ============ THEME: 20FIT Design System v1.0 — "Glass Minimalist" ============
+// Light glass surfaces on a warm->cool gradient, #E4002B primary, three-font system.
+// 1) Palette tokens (var definitions on the app root div + :root)
 const VARMAP = {
-  '--bg:#08090B': '--bg:#F4F3ED', '--panel:#121419': '--panel:#FFFFFF', '--panel2:#171A21': '--panel2:#F0EFE8',
-  '--raised:#1D212A': '--raised:#EBEAE2', '--border:#262B35': '--border:#E5E3DA', '--border2:#323845': '--border2:#D6D4CA',
-  '--text:#F3F5F7': '--text:#1C1B19', '--muted:#888F9C': '--muted:#6F6E66', '--muted2:#5B616E': '--muted2:#9C9A90',
-  '--volt:#D6FF3D': '--volt:#BE4A42', '--volt-dim:rgba(214,255,61,.13)': '--volt-dim:rgba(190,74,66,.10)',
-  '--green:#3ED598': '--green:#2E9E5B', '--amber:#FFB020': '--amber:#C77F00', '--red:#FF5247': '--red:#C0392B', '--cyan:#4DD4F2': '--cyan:#2E7D91',
+  '--bg:#08090B': '--bg:rgba(255,255,255,.55)', '--panel:#121419': '--panel:rgba(255,255,255,.62)', '--panel2:#171A21': '--panel2:rgba(255,255,255,.44)',
+  '--raised:#1D212A': '--raised:rgba(255,255,255,.55)', '--border:#262B35': '--border:rgba(17,17,20,.10)', '--border2:#323845': '--border2:rgba(17,17,20,.15)',
+  '--text:#F3F5F7': '--text:#1D1D1F', '--muted:#888F9C': '--muted:#6E6E73', '--muted2:#5B616E': '--muted2:#9A9A9E',
+  '--volt:#D6FF3D': '--volt:#E4002B', '--volt-dim:rgba(214,255,61,.13)': '--volt-dim:rgba(228,0,43,.09)',
+  '--green:#3ED598': '--green:#1C8A4B', '--amber:#FFB020': '--amber:#C77A00', '--red:#FF5247': '--red:#E4002B', '--cyan:#4DD4F2': '--cyan:#0068C9',
 };
 for (const [k, v] of Object.entries(VARMAP)) { template = template.split(k).join(v); baseCss = baseCss.split(k).join(v); }
-// 2) Hardcoded colors: dark-text-on-accent -> white; volt-green tints/solids -> red; bright cyan -> readable teal
+// 2) Hardcoded colors: dark-text-on-accent -> white; volt-green tints/solids -> red; bright cyan -> progress blue
 template = template.split('color:#08090B').join('color:#ffffff');
-template = template.split('214,255,61').join('190,74,66');
-template = template.split('#9BD11E').join('#9A3B33');
-template = template.split('#4DD4F2').join('#2E7D91');
-// 3) Font: Inter everywhere
-for (const f of ["'Hanken Grotesk'", "'Archivo'", "'JetBrains Mono'"]) { template = template.split(f).join("'Inter'"); baseCss = baseCss.split(f).join("'Inter'"); }
-// 4) Keep the sidebar dark on the light theme (scope dark palette to <aside>)
+template = template.split('214,255,61').join('228,0,43');
+template = template.split('#9BD11E').join('#B0001F');
+template = template.split('#4DD4F2').join('#0068C9');
+// 3) Fonts — three jobs: Barlow Condensed (display/label), JetBrains Mono (data/numbers), Manrope (body)
+template = template.split("'Archivo'").join("'Barlow Condensed'"); baseCss = baseCss.split("'Archivo'").join("'Barlow Condensed'");
+template = template.split("'Hanken Grotesk'").join("'Manrope'"); baseCss = baseCss.split("'Hanken Grotesk'").join("'Manrope'");
+// (JetBrains Mono kept as-is for times/dates/numbers/email/search)
+// 4) Bigger glass radii (design system: card 22px, small 14px)
+template = template.split('border-radius:20px').join('border-radius:22px');
+template = template.split('border-radius:18px').join('border-radius:22px');
+template = template.split('border-radius:16px').join('border-radius:18px');
+// 5) Glass surfaces + gradient page + red sidebar
 const themeCss = `
-  aside { background:#BE4A42 !important; backdrop-filter:none !important; color:#FFFFFF !important;
-    --bg:#BE4A42; --panel:rgba(0,0,0,.16); --panel2:rgba(255,255,255,.12); --raised:rgba(255,255,255,.12);
-    --border:rgba(255,255,255,.16); --border2:rgba(255,255,255,.26);
-    --text:#FFFFFF; --muted:rgba(255,255,255,.88); --muted2:rgba(255,255,255,.66); }
-  aside .badge, aside [style*="border-radius:50%"] { color:#FFFFFF !important; }
-  /* logo "20" badge: white on the red sidebar */
-  aside > div:first-child > div:first-child { background:#FFFFFF !important; color:#BE4A42 !important; }
-  header { background:#FFFFFF !important; backdrop-filter:none !important; }
+  [style*="--volt:#E4002B"]{ background:linear-gradient(135deg,#F2E9E6 0%,#EDEBEA 46%,#E9EEF3 100%) !important; background-attachment:fixed !important; }
+  [style*="background:var(--panel)"]{ backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); box-shadow:0 10px 30px rgba(35,25,45,.06), inset 0 1px 0 rgba(255,255,255,.55); }
+  [style*="background:var(--panel2)"]{ backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  [style*="Barlow Condensed"]{ text-transform:uppercase; letter-spacing:.012em; }
+  header { background:rgba(255,255,255,.55) !important; backdrop-filter:blur(20px) !important; -webkit-backdrop-filter:blur(20px) !important; }
   [style*="radial-gradient(900px 600px at 12% -8%"] { display:none !important; }
+  /* Sidebar: light glass surface with ink text; active nav item = red pill (design system) */
+  aside { background:rgba(255,255,255,.55) !important; backdrop-filter:blur(22px) !important; -webkit-backdrop-filter:blur(22px) !important; color:#1D1D1F !important; border-right:1px solid rgba(17,17,20,.08) !important; box-shadow:0 10px 30px rgba(35,25,45,.05) !important;
+    --bg:rgba(255,255,255,.5); --panel:rgba(255,255,255,.6); --panel2:rgba(255,255,255,.5); --raised:rgba(255,255,255,.6);
+    --border:rgba(17,17,20,.10); --border2:rgba(17,17,20,.15);
+    --text:#1D1D1F; --muted:#6E6E73; --muted2:#9A9A9E; }
+  aside [style*="background:var(--panel)"]{ backdrop-filter:none !important; box-shadow:none !important; }
+  aside > div:first-child > div:first-child { background:#E4002B !important; color:#FFFFFF !important; }
+  aside nav button { font-family:'Barlow Condensed',system-ui,sans-serif !important; text-transform:uppercase; letter-spacing:.03em; font-weight:700 !important; font-size:15px !important; }
 `;
 
 const googleFonts = `  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
 
 const out = `<!DOCTYPE html>
 <html lang="id"><head>
