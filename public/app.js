@@ -167,8 +167,10 @@ class Component extends DCLogic {
   showDay(date) {
     if (!date) return;
     const label = this.fmtD(date).toUpperCase();
-    if (this.MOCK) return this.setD({ jadwalLabel: label, selDate: date });
-    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, jadwalLabel: label, selDate: date })).catch((e) => this.toastMsg(e.message));
+    // Optimistic: move the highlight + header instantly, then load that day's cards.
+    this.setD({ jadwalLabel: label, selDate: date });
+    if (this.MOCK) return;
+    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes })).catch((e) => this.toastMsg(e.message));
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Link review disalin')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
   decideRotation(id, action) {
@@ -195,13 +197,41 @@ class Component extends DCLogic {
     const byPh = (ph) => { const els = document.querySelectorAll('#app input'); for (const e of els) if ((e.placeholder || '').indexOf(ph) >= 0) return e.value; return ''; };
     const name = byPh('Dimas') || byPh('Coach');
     if (!name) return this.toastMsg('Nama coach wajib diisi.');
-    const payload = { name, email: byPh('@20fit.id'), phone: byPh('0812'), password: byPh('nama + angka') || undefined };
+    const pwEl = document.getElementById('newCoachPw');
+    const payload = { name, email: byPh('@20fit.id'), phone: byPh('0812'), password: (pwEl && pwEl.value) || undefined };
     if (this.MOCK) { this.toastMsg('Coach baru ditambahkan · Active'); return this.go('accounts'); }
     this.api('/api/admin/coaches', { method: 'POST', body: JSON.stringify(payload) })
       .then((r) => { this.toastMsg('Coach ditambahkan · user: ' + r.username + ' · pw: ' + r.password); this.go('accounts'); })
       .catch((e) => this.toastMsg(e.message));
   }
   exportToast() { this.toastMsg('File sedang disiapkan untuk diunduh'); }
+  randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
+  addTemplate() {
+    const text = (typeof prompt === 'function') ? prompt('Teks template feedback baru:') : '';
+    if (!text || !text.trim()) return;
+    if (this.MOCK) return this.toastMsg('Template ditambahkan');
+    this.api('/api/admin/templates', { method: 'POST', body: JSON.stringify({ body: text.trim() }) })
+      .then(() => { this.toastMsg('Template ditambahkan'); this.loadScreen('templates'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  exportCSV() {
+    const st = this.state, scr = st.screen, D = st.d;
+    let rows, fname;
+    if (scr === 'stats') {
+      fname = 'statistik-' + String(st.selCoachName || 'coach').replace(/\s+/g, '-').toLowerCase();
+      rows = [['Tanggal', 'Hari', 'Jam', 'Jenis', 'Peserta']].concat((D.stats || []).map((r) => [r.date, r.day, r.time, r.type, r.peserta]));
+    } else {
+      fname = 'laporan-coach';
+      rows = [['Coach', 'Role', 'Kelas', 'Peserta', 'Status']].concat((D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, c.status]));
+    }
+    if (rows.length < 2) return this.toastMsg('Belum ada data untuk diekspor.');
+    const csv = rows.map((r) => r.map((c) => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = fname + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.toastMsg('File CSV diunduh');
+  }
 
   // ---------- render ----------
   renderVals() {
@@ -353,6 +383,7 @@ class Component extends DCLogic {
       coachCols, schedCols, scheduleDateLabel, hasSchedule, noSchedule, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
+      exportCSV: () => this.exportCSV(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
       stopProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
       hasToast: !!st.toast, toast: st.toast,
@@ -373,9 +404,10 @@ class Component extends DCLogic {
     for (let i = 0; i < 2; i++) calCellsMock.push({ blank: true });
     for (let day = 1; day <= 31; day++) { const cc = teachDays[day] || 0; calCellsMock.push({ blank: false, day, date: '2026-07-' + String(day).padStart(2, '0'), count: cc, teach: cc > 0, isToday: day === 2 }); }
     d.calCells = calCellsMock; d.selDate = '2026-07-02'; d.jadwalLabel = 'RABU 2 JUL';
-    const mCount = [12, 14, 10, 16, 13, 18, 8, 0, 0, 0, 0, 0];
-    const mPes = [148, 172, 121, 198, 160, 224, 96, 0, 0, 0, 0, 0];
-    d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 6 }));
+    // Monitoring starts from July (matches the server's "since July" slice)
+    const mCount = [8, 0, 0, 0, 0, 0];
+    const mPes = [96, 0, 0, 0, 0, 0];
+    d.monthly = ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 0 }));
     d.mPesertaBulan = mPes[6]; d.mKelasBulan = mCount[6]; d.mPesertaTahun = mPes.reduce((a, b) => a + b, 0);
     d.members = [
       { name: 'Jordan', visits: 8, lastVisit: '5 Mei', daysSince: 58 },

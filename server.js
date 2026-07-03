@@ -330,8 +330,10 @@ route('GET', '/api/coach/monthly', async (req, res, s) => {
     counts[mi]++;
     peserta[mi] += (byId[x.id] || {}).confirmed || 0;
   }
-  const months = counts.map((c, i) => ({ month: MON[i], count: c, peserta: peserta[i], isCurrent: i === curMon }));
-  const yearPeserta = peserta.reduce((a, b) => a + b, 0);
+  // Monitoring starts from July (index 6) — consistent with the leaderboard's "since July" rule.
+  const SINCE_MI = 6;
+  const months = counts.map((c, i) => ({ month: MON[i], count: c, peserta: peserta[i], isCurrent: i === curMon })).slice(SINCE_MI);
+  const yearPeserta = peserta.slice(SINCE_MI).reduce((a, b) => a + b, 0);
   return send(res, 200, { months, year, monthPeserta: peserta[curMon], monthClasses: counts[curMon], yearPeserta });
 });
 
