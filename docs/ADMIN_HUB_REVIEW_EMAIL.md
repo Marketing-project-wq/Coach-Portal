@@ -112,9 +112,9 @@ Gimana kelas {class_name} tadi? Kasih rating coach kamu ⭐
    <b>nomor HP yang kamu pakai saat booking</b>:</p>
 <p>
   <a href="https://coach-portal-production-8e81.up.railway.app/review"
-     style="display:inline-block;background:#D6FF3D;color:#08090B;
+     style="display:inline-block;background:#E4002B;color:#ffffff;
             font-weight:700;text-decoration:none;padding:12px 22px;
-            border-radius:10px;">Rate Your Coach</a>
+            border-radius:12px;">Rate Your Coach</a>
 </p>
 <p style="color:#888;font-size:12px;">Atau buka link ini:
    https://coach-portal-production-8e81.up.railway.app/review</p>
