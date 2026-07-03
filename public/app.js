@@ -25,7 +25,7 @@ class Component extends DCLogic {
       const role = (location.search.match(/role=(\w+)/) || [])[1] || 'coach';
       this.accountRole = role;
       const scr = (location.search.match(/screen=(\w+)/) || [])[1];
-      this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts');
+      this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts');
       this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role, photo: role === 'coach' ? 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/rheza-1778032238203.png' : '' });
       this.state.d = this.mockData();
       this.state.selFbClass = 'x1';
@@ -84,7 +84,7 @@ class Component extends DCLogic {
   loadCalendar(ym) { if (this.MOCK) return; this.api('/api/coach/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
   toastMsg(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
   go(screen) { this.setState({ screen }); if (!this.MOCK) this.loadScreen(screen); }
-  applyRole(role) { const screen = role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts'; this.setState({ role, screen }); if (!this.MOCK) this.loadScreen(screen); }
+  applyRole(role) { const screen = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts'; this.setState({ role, screen }); if (!this.MOCK) this.loadScreen(screen); }
   setRole(role) {
     const rank = { coach: 0, hc: 1, admin: 2 };
     if (rank[role] > rank[this.accountRole]) return this.toastMsg('Tidak punya akses ke area ini.');
@@ -180,10 +180,11 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(action === 'approve' ? 'Rotation disetujui · kelas kini kelas Anda' : 'Rotation ditolak'); this.loadRotations(); })
       .catch((e) => this.toastMsg(e.message));
   }
-  openReset(c) { this.setState({ reset: c.name, resetId: c.id, resetPwd: (c.name || '').replace(/^coach\s*/i, '').toLowerCase() + Math.floor(100 + Math.random() * 900) }); }
+  openReset(c) { this.setState({ reset: c.name, resetId: c.id, resetPwd: '' }); }
   confirmReset() {
     const el = document.querySelector('#app input[data-reset]');
-    const pw = el ? el.value : this.state.resetPwd;
+    const pw = ((el ? el.value : this.state.resetPwd) || '').trim();
+    if (!pw) return this.toastMsg('Ketik password baru dulu.');
     if (this.MOCK) { this.setState({ reset: null }); return this.toastMsg('Password direset · sampaikan ke coach'); }
     this.api('/api/admin/coaches/' + encodeURIComponent(this.state.resetId) + '/reset', { method: 'POST', body: JSON.stringify({ password: pw }) })
       .then((r) => { this.setState({ reset: null }); this.toastMsg('Password direset: ' + (r.password || pw)); })

@@ -85,12 +85,12 @@ template = template.replace(/<div style="display:grid;grid-template-columns:1\.4
 const statCard = (label, val, col) => '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">' + label + '</div><div style="font-family:\'Archivo\';font-weight:900;font-size:30px;' + (col ? 'color:' + col + ';' : '') + '">' + val + '</div></div>';
 const monthlyStats = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
   + statCard('Kelas Bulan Ini', '{{ mKelasBulan }}', 'var(--volt)')
-  + statCard('Peserta Bulan Ini', '{{ mPesertaBulan }}', '#0068C9')
-  + statCard('Total Peserta sejak Juli', '{{ mPesertaTahun }}', '#0068C9')
+  + statCard('Pax Bulan Ini', '{{ mPesertaBulan }}', '#0068C9')
+  + statCard('Total Pax sejak Juli', '{{ mPesertaTahun }}', '#0068C9')
   + '</div>';
 const monthlyPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;">'
-  + '<div style="font-weight:800;font-family:\'Archivo\';font-size:16px;margin-bottom:4px;">Peserta &amp; Kelas per Bulan · sejak Juli {{ monthlyYear }}</div>'
-  + '<div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Tinggi batang = jumlah <b style="color:#0068C9;">peserta</b>. Angka di bawah nama bulan = jumlah <b style="color:var(--volt);">kelas</b>.</div>'
+  + '<div style="font-weight:800;font-family:\'Archivo\';font-size:16px;margin-bottom:4px;">Pax &amp; Kelas per Bulan · sejak Juli {{ monthlyYear }}</div>'
+  + '<div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Tinggi batang = jumlah <b style="color:#0068C9;">pax</b>. Angka di bawah nama bulan = jumlah <b style="color:var(--volt);">kelas</b>.</div>'
   + '<div style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;align-items:end;">'
   + '<sc-for list="{{ monthly }}" as="m"><div style="text-align:center;">'
   + '<div style="font-size:13px;font-weight:800;font-family:\'Archivo\';margin-bottom:6px;color:{{ m.pesertaCol }};">{{ m.pesertaLabel }}</div>'
@@ -108,7 +108,7 @@ const cardBox = 'background:var(--panel);border:1px solid var(--border);border-r
 const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900px;margin:0 auto;">'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Peserta Kelas Saya</div>'
   + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
-  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Total Peserta</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
+  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Total Pax</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
   + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Aktif 30 Hari Terakhir</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--green);">{{ membersActive }}</div></div>'
   + '</div>'
   + '<sc-if value="{{ hasMembers }}"><div style="' + cardBox + 'overflow:hidden;">'
@@ -128,7 +128,7 @@ const boardScreen = '<sc-if value="{{ s.leaderboard }}"><div style="max-width:76
   + '<div style="width:30px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:{{ l.rankCol }};">{{ l.medal }}</div>'
   + '<div style="width:38px;height:38px;border-radius:50%;background:{{ l.avBg }};color:{{ l.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;position:relative;overflow:hidden;">{{ l.initials }}<sc-if value="{{ l.hasPhoto }}"><img src="{{ l.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>'
   + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ l.name }}{{ l.meLabel }}</div><div style="font-size:12px;color:var(--muted);margin-top:1px;">{{ l.classes }} kelas</div></div>'
-  + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:19px;">{{ l.peserta }}</div><div style="font-size:11px;color:var(--muted);">peserta</div></div>'
+  + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:19px;">{{ l.peserta }}</div><div style="font-size:11px;color:var(--muted);">pax</div></div>'
   + '</div></sc-for></div></sc-if>'
   + '<sc-if value="{{ noBoard }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada data booking peserta.</div></sc-if>'
   + '</div></sc-if>';
