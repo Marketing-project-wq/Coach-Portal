@@ -70,9 +70,9 @@ const calPanel = '<div style="background:var(--panel);border:1px solid var(--bor
   + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Ada kelas ngajar</div>'
   + '</div>';
 template = template.replace(jadwalHead, calPanel + jadwalHead);
-// Remove the "Kalender" widget from the dashboard; Riwayat takes the full width.
-template = template.replace(/<div style="background:var\(--panel\);border:1px solid var\(--border\);border-radius:18px;padding:20px;">\s*<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div[^>]*>Kalender Minggu Ini[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
-template = template.replace('grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;', 'grid-template-columns:1fr;gap:16px;margin-top:24px;');
+// Remove the bottom grid entirely (the old "Kalender Minggu Ini" + "Riwayat Terakhir" panels)
+// from the Schedule screen — the JADWAL cards are the last section now.
+template = template.replace(/<div style="display:grid;grid-template-columns:1\.4fr 1fr;gap:16px;margin-top:24px;">[\s\S]*?Riwayat Terakhir[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
 // "Monitoring Kelas per Bulan" is its own screen (separate nav item), not on the dashboard.
 // Summary stat cards (current-month peserta/kelas + full-year peserta) sit above the chart.
 const monthlyStats = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
