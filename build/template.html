@@ -545,8 +545,7 @@
 
         <sc-if value="{{ isHC }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;">HEAD COACH</div>
-        <button onclick="{{ goOverview }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.overview.bg }};color:{{ nav.overview.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.overview.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Overview</button>
-        <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Jadwal Tim</button>
+                <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Jadwal Tim</button>
         <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Penggantian</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
         <button onclick="{{ goMonitor }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monitor.bg }};color:{{ nav.monitor.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monitor.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring Coach</button>
         <button onclick="{{ goReports }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reports.bg }};color:{{ nav.reports.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reports.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Laporan</button>
@@ -615,7 +614,7 @@
                 <span style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};">{{ c.status }}</span>
               </div>
               <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
-              <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> peserta · {{ c.cap }} slot</div>
+              <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax · {{ c.cap }} slot</div>
               <div style="display:flex;gap:10px;margin-top:18px;">
                 <button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button>
                 <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
@@ -670,7 +669,7 @@
               <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Cari peserta…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:13.5px;"></div>
             </div>
             <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
-              <div>#</div><div>NAMA PESERTA</div><div>BOOKING</div><div>STATUS</div>
+              <div>#</div><div>NAMA PAX</div><div>BOOKING</div><div>STATUS</div>
             </div>
             <sc-for list="{{ participants }}" as="p" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
@@ -849,7 +848,7 @@
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
                 <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.classes }}</div><div style="font-size:11px;color:var(--muted);">kelas</div></div>
-                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.peserta }}</div><div style="font-size:11px;color:var(--muted);">peserta</div></div>
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.peserta }}</div><div style="font-size:11px;color:var(--muted);">pax</div></div>
                 <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;color:{{ c.punctCol }};">{{ c.punctual }}%</div><div style="font-size:11px;color:var(--muted);">tepat</div></div>
               </div>
             </button>
@@ -871,13 +870,13 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Kelas</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Peserta</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Pax</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Tepat Waktu</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--green);">{{ sel.punctual }}%</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Penggantian</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — {{ statMonth }}</div>
-            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>HARI</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PESERTA</div></div>
+            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>HARI</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PAX</div></div>
             <sc-for list="{{ statRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
               <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ r.date }}</div>
@@ -903,12 +902,12 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Kelas (tim)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Pax Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Penggantian Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Laporan Seluruh Coach — Juni 2026</div>
-            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">KELAS</div><div style="text-align:right;">PESERTA</div><div style="text-align:right;">DIGANTI</div><div style="text-align:right;"></div></div>
+            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">KELAS</div><div style="text-align:right;">PAX</div><div style="text-align:right;">DIGANTI</div><div style="text-align:right;"></div></div>
             <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
               <div style="display:flex;align-items:center;gap:11px;"><div style="width:32px;height:32px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:12px;color:{{ r.avFg }};">{{ r.initials }}</div><div><span style="font-weight:700;">{{ r.name }}</span> <span style="font-size:11px;color:var(--muted);">{{ r.role }}</span></div></div>
@@ -957,7 +956,7 @@
             <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Nomor Telepon</label>
             <input placeholder="0812-xxxx-xxxx" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
             <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Awal <span style="color:var(--muted2);font-weight:400;">(nama + angka)</span></label>
-            <div style="display:flex;gap:10px;margin-bottom:8px;"><input id="newCoachPw" value="dimas123" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:14.5px;outline:0;"><button onclick="{{ randomPw }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;">↻ Acak</button></div>
+            <div style="display:flex;gap:10px;margin-bottom:8px;"><input id="newCoachPw" value="" placeholder="ketik password awal…" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:14.5px;outline:0;"><button onclick="{{ randomPw }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;">↻ Acak</button></div>
             <div style="background:rgba(77,212,242,.07);border:1px solid rgba(77,212,242,.2);border-radius:10px;padding:12px;font-size:12.5px;color:var(--muted);margin-bottom:22px;">ℹ️ Akun langsung <span style="color:var(--text);font-weight:700;">Active</span>. Bagikan email &amp; password ini ke coach secara manual (WhatsApp).</div>
             <button onclick="{{ submitAddCoach }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Simpan Coach Baru</button>
           </div>
@@ -1030,7 +1029,7 @@
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:420px;width:100%;text-align:center;">
       <div style="width:60px;height:60px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;">⏱️</div>
       <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 8px;">Mulai Kelas Sekarang?</h2>
-      <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">HYROX Complete · 07:00 · 12 peserta</p>
+      <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">HYROX Complete · 07:00 · 12 pax</p>
       <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Tepat Waktu · timestamp &amp; device tercatat</div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · waktu server</div>
       <div style="display:flex;gap:11px;">
@@ -1045,12 +1044,15 @@
   <sc-if value="{{ showReset }}" hint-placeholder-val="{{ false }}">
   <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeReset }}">
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:400px;width:100%;">
-      <h2 style="font-family:'Archivo';font-weight:800;font-size:20px;margin:0 0 6px;">Reset Password</h2>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;">
+        <h2 style="font-family:'Archivo';font-weight:800;font-size:20px;margin:0;">Reset Password</h2>
+        <button onclick="{{ closeReset }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:9px;width:30px;height:30px;flex-shrink:0;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="border-color:var(--red);color:var(--red);">✕</button>
+      </div>
       <p style="color:var(--muted);font-size:13.5px;margin:0 0 20px;">untuk <span style="color:var(--text);font-weight:700;">{{ resetName }}</span> — password lama langsung tidak berlaku.</p>
-      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Baru (nama + angka)</label>
-      <input value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Baru (ketik sendiri)</label>
+      <input placeholder="ketik password baru…" value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
       <div style="display:flex;gap:11px;">
-        <button onclick="{{ closeReset }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;">Batal</button>
+        <button onclick="{{ closeReset }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;transition:border-color .15s,color .15s;" style-hover="border-color:var(--muted);color:var(--text);">Batal</button>
         <button onclick="{{ confirmReset }}" style="flex:1.3;background:var(--cyan);border:0;color:#08090B;border-radius:11px;padding:12px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Set Password</button>
       </div>
     </div>
