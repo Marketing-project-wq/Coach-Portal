@@ -212,9 +212,13 @@ template = template.split('#4DD4F2').join('#2E7D91');
 for (const f of ["'Hanken Grotesk'", "'Archivo'", "'JetBrains Mono'"]) { template = template.split(f).join("'Inter'"); baseCss = baseCss.split(f).join("'Inter'"); }
 // 4) Keep the sidebar dark on the light theme (scope dark palette to <aside>)
 const themeCss = `
-  aside { background:#0E0E0C !important; backdrop-filter:none !important;
-    --bg:#0E0E0C; --panel:#1A1A18; --panel2:#26251F; --raised:#26251F;
-    --border:#2A2A24; --border2:#35342D; --text:#F4F3EE; --muted:#A6A59C; --muted2:#75746B; }
+  aside { background:#BE4A42 !important; backdrop-filter:none !important; color:#FFFFFF !important;
+    --bg:#BE4A42; --panel:rgba(0,0,0,.16); --panel2:rgba(255,255,255,.12); --raised:rgba(255,255,255,.12);
+    --border:rgba(255,255,255,.16); --border2:rgba(255,255,255,.26);
+    --text:#FFFFFF; --muted:rgba(255,255,255,.88); --muted2:rgba(255,255,255,.66); }
+  aside .badge, aside [style*="border-radius:50%"] { color:#FFFFFF !important; }
+  /* logo "20" badge: white on the red sidebar */
+  aside > div:first-child > div:first-child { background:#FFFFFF !important; color:#BE4A42 !important; }
   header { background:#FFFFFF !important; backdrop-filter:none !important; }
   [style*="radial-gradient(900px 600px at 12% -8%"] { display:none !important; }
 `;
