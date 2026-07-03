@@ -85,6 +85,20 @@ async function classTypes() {
 }
 function shortType(name) { return String(name || '').replace(/^20FIT Arena\s*/i, '').replace(/^HYROX\s*/i, 'HYROX ').trim() || 'Kelas'; }
 
+// Coach photos live in the shared `arena_coaches` table (public storage URLs),
+// keyed by coach name. Cached for a few minutes — photos change rarely.
+let _photoCache = null, _photoCacheAt = 0;
+async function coachPhotoMap() {
+  if (_photoCache && (Date.now() - _photoCacheAt) < 5 * 60 * 1000) return _photoCache;
+  let rows = [];
+  try { rows = await sb('arena_coaches?select=name,photo_url'); } catch (_e) { rows = []; }
+  const m = {};
+  for (const r of rows || []) { if (r && r.name && r.photo_url) m[String(r.name).trim().toLowerCase()] = r.photo_url; }
+  _photoCache = m; _photoCacheAt = Date.now();
+  return m;
+}
+function coachPhoto(map, name) { return (map && name) ? (map[String(name).trim().toLowerCase()] || '') : ''; }
+
 async function bookingCounts(ids) {
   const c = {};
   if (!ids.length) return c;
@@ -232,7 +246,7 @@ route('POST', '/api/auth/login', async (req, res) => {
   const token = signToken({ u: u.username, c: u.coach_name, d: u.display_name || u.coach_name, r: u.role || 'coach' });
   return send(res, 200, { token, coach: { coach_name: u.coach_name, display_name: u.display_name || u.coach_name, role: u.role || 'coach' } });
 });
-route('GET', '/api/coach/me', async (req, res, s) => send(res, 200, { coach_name: s.c, display_name: s.d, role: s.r }));
+route('GET', '/api/coach/me', async (req, res, s) => { const pm = await coachPhotoMap(); return send(res, 200, { coach_name: s.c, display_name: s.d, role: s.r, photo: coachPhoto(pm, s.c) }); });
 
 // ===== COACH: dashboard =====
 route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
@@ -483,8 +497,9 @@ route('GET', '/api/coach/leaderboard', async (req, res, s) => {
     }
     results.push({ name: nm, peserta, classes: byCoach[nm].classes });
   }
+  const pm = await coachPhotoMap();
   const board = results.sort((a, b) => b.peserta - a.peserta || b.classes - a.classes)
-    .map((x, i) => Object.assign({ rank: i + 1, isMe: x.name === s.c }, x));
+    .map((x, i) => Object.assign({ rank: i + 1, isMe: x.name === s.c, photo: coachPhoto(pm, x.name) }, x));
   return send(res, 200, { board, me: s.c });
 });
 
@@ -529,7 +544,8 @@ route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
 // ===== COACH: substitution =====
 route('GET', '/api/coach/subs/options', async (req, res, s, q) => {
   const coaches = await sb(`arena_coach_users?select=coach_name,role,is_active&is_active=eq.true&order=coach_name.asc`);
-  const opts = (coaches || []).filter((c) => c.coach_name !== s.c && c.role !== 'admin').map((c) => ({ name: c.coach_name, avail: 'Tersedia', disabled: false }));
+  const pm = await coachPhotoMap();
+  const opts = (coaches || []).filter((c) => c.coach_name !== s.c && c.role !== 'admin').map((c) => ({ name: c.coach_name, avail: 'Tersedia', disabled: false, photo: coachPhoto(pm, c.coach_name) }));
   return send(res, 200, { options: opts });
 });
 route('POST', '/api/coach/subs', async (req, res, s) => {
@@ -629,10 +645,11 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const counts = await bookingCounts(allIds);
   const subs = await sb('arena_coach_substitutions?select=from_coach,status');
   const subCount = {}; for (const su of subs || []) subCount[su.from_coach] = (subCount[su.from_coach] || 0) + 1;
+  const pm = await coachPhotoMap();
   const list = (users || []).filter((u) => u.role !== 'admin').map((u) => {
     const b = byCoach[u.coach_name] || { classes: 0, ids: [] };
     const peserta = b.ids.reduce((a, id) => a + ((counts[id] || {}).confirmed || 0), 0);
-    return { id: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', classes: b.classes, peserta, punctual: 100, subs: subCount[u.coach_name] || 0, status: u.is_active ? 'Active' : 'Inactive' };
+    return { id: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', classes: b.classes, peserta, punctual: 100, subs: subCount[u.coach_name] || 0, status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) };
   });
   return send(res, 200, { coaches: list });
 });
@@ -654,7 +671,8 @@ function requireAdmin(s) { return s.r === 'admin'; }
 route('GET', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
   const rows = await sb('arena_coach_users?select=id,username,coach_name,display_name,role,email,phone,is_active&order=role.desc,coach_name.asc');
-  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : u.role === 'admin' ? 'Admin' : 'Coach', email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive' })) });
+  const pm = await coachPhotoMap();
+  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : u.role === 'admin' ? 'Admin' : 'Coach', email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) })) });
 });
 route('POST', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
