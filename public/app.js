@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -80,6 +80,7 @@ class Component extends DCLogic {
     });
   }
   setD(patch) { this.setState({ d: Object.assign({}, this.state.d, patch) }); }
+  loadCalendar(ym) { if (this.MOCK) return; this.api('/api/coach/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
   toastMsg(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
   go(screen) { this.setState({ screen }); if (!this.MOCK) this.loadScreen(screen); }
   applyRole(role) { const screen = role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts'; this.setState({ role, screen }); if (!this.MOCK) this.loadScreen(screen); }
@@ -90,7 +91,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadRotations(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadCalendar(); this.loadRotations(); }
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members').then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30 })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -220,7 +221,7 @@ class Component extends DCLogic {
     const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
     const canAdmin = this.accountRole === 'admin';
 
-    const titles = { dash: ['Coach', 'Dashboard'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Feedback'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
+    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Kelola Akun Coach'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Feedback'], settings: ['Admin', 'Pengaturan Sistem'], perms: ['Admin', 'Hak Akses Role'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
     titles.monthly = ['Coach', 'Monitoring Kelas'];
     titles.members = ['Coach', 'Peserta Kelas'];
@@ -236,6 +237,15 @@ class Component extends DCLogic {
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(214,255,61,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
+    // teaching calendar (month grid) — highlight days the coach has classes
+    const calDow = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    const calCells = (D.calCells || []).map((c) => {
+      if (c.blank) return { show: false, day: '', teach: false, count: 0, bg: 'transparent', border: 'transparent', col: 'var(--muted)' };
+      return { show: true, day: c.day, teach: !!c.teach, count: c.count,
+        bg: c.teach ? 'var(--volt-dim)' : 'transparent',
+        border: c.isToday ? 'var(--volt)' : (c.teach ? 'rgba(214,255,61,.3)' : 'var(--border)'),
+        col: c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)') };
+    });
     // monthly monitoring bars
     const monthlyRaw = D.monthly || [];
     const maxM = Math.max(1, ...monthlyRaw.map((x) => x.count));
@@ -324,6 +334,7 @@ class Component extends DCLogic {
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
       monthly, monthlyYear: D.monthlyYear || '',
+      calDow, calCells, calMonthLabel: D.calMonthLabel || '', calPrev: () => this.loadCalendar(this.state.d.calPrevYm), calNext: () => this.loadCalendar(this.state.d.calNextYm),
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
@@ -350,6 +361,13 @@ class Component extends DCLogic {
     d.todayLabel = 'Rabu, 1 Juli 2026 · 1 kelas hari ini';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
     d.monthlyYear = '2026';
+    // teaching calendar mock — July 2026 (July 1 is a Wednesday → offset 2)
+    d.calMonthLabel = 'Juli 2026'; d.calYm = '2026-07'; d.calPrevYm = '2026-06'; d.calNextYm = '2026-08';
+    const teachDays = { 1: 2, 2: 1, 6: 1, 7: 1, 13: 1, 14: 1, 20: 1, 21: 1 };
+    const calCellsMock = [];
+    for (let i = 0; i < 2; i++) calCellsMock.push({ blank: true });
+    for (let day = 1; day <= 31; day++) { const cc = teachDays[day] || 0; calCellsMock.push({ blank: false, day, date: '2026-07-' + String(day).padStart(2, '0'), count: cc, teach: cc > 0, isToday: day === 2 }); }
+    d.calCells = calCellsMock;
     const mCount = [12, 14, 10, 16, 13, 18, 8, 0, 0, 0, 0, 0];
     const mPes = [148, 172, 121, 198, 160, 224, 96, 0, 0, 0, 0, 0];
     d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 6 }));
