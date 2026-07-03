@@ -321,6 +321,31 @@ route('GET', '/api/coach/monthly', async (req, res, s) => {
   return send(res, 200, { months, year, monthPeserta: peserta[curMon], monthClasses: counts[curMon], yearPeserta });
 });
 
+// ===== COACH: monthly teaching calendar (which dates the coach teaches) =====
+route('GET', '/api/coach/calendar', async (req, res, s, q) => {
+  const today = todayJakarta();
+  const ym = (q.ym && /^\d{4}-\d{2}$/.test(q.ym)) ? q.ym : today.slice(0, 7);
+  const year = parseInt(ym.slice(0, 4), 10); const month = parseInt(ym.slice(5, 7), 10);
+  const lastDay = new Date(year, month, 0).getDate();
+  const mEnd = `${ym}-${String(lastDay).padStart(2, '0')}`;
+  const sched = await coachSchedules(s.c, `${ym}-01`, mEnd);
+  const cnt = {}; for (const x of sched) cnt[x.schedule_date] = (cnt[x.schedule_date] || 0) + 1;
+  const firstDow = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Monday-first offset
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push({ blank: true });
+  for (let d = 1; d <= lastDay; d++) {
+    const ds = `${ym}-${String(d).padStart(2, '0')}`;
+    const c = cnt[ds] || 0;
+    cells.push({ blank: false, day: d, date: ds, count: c, teach: c > 0, isToday: ds === today });
+  }
+  const pm = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
+  const nm = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  return send(res, 200, {
+    ym, monthLabel: `${MON_FULL[month - 1]} ${year}`, cells,
+    prevYm: `${pm.y}-${String(pm.m).padStart(2, '0')}`, nextYm: `${nm.y}-${String(nm.m).padStart(2, '0')}`,
+  });
+});
+
 // ===== COACH: participants — how many times each attended + recency of last visit =====
 route('GET', '/api/coach/members', async (req, res, s) => {
   const today = todayJakarta();

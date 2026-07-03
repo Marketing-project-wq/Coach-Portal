@@ -37,9 +37,17 @@ template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation')
     .replace(/\{\{ openClass \}\}/g, '{{ c.openClass }}')
     .replace(/\{\{ openAbsen \}\}/g, '{{ c.openAbsen }}')
     .replace('{{ c.end }}</span>', '{{ c.end }} · {{ c.dateLabel }}</span>')
-    // jam & tanggal kelas: samakan ukuran (sedang, 16px)
-    .replace('font-weight:700;font-size:24px;color:var(--text);">{{ c.time }}', 'font-weight:700;font-size:16px;color:var(--text);">{{ c.time }}')
-    .replace('font-size:13px;color:var(--muted);">{{ c.end }}', 'font-size:16px;color:var(--muted);">{{ c.end }}');
+    // jam & tanggal kelas: samakan ukuran (sedang, 15px)
+    .replace('font-weight:700;font-size:24px;color:var(--text);">{{ c.time }}', 'font-weight:700;font-size:15px;color:var(--text);">{{ c.time }}')
+    .replace('font-size:13px;color:var(--muted);">{{ c.end }}', 'font-size:15px;color:var(--muted);">{{ c.end }}')
+    // perkecil kartu jadwal
+    .replace('border-radius:18px;padding:20px;position:relative', 'border-radius:14px;padding:14px 15px;position:relative')
+    .replace('align-items:center;justify-content:space-between;margin-bottom:14px;', 'align-items:center;justify-content:space-between;margin-bottom:8px;')
+    .replace("font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;", "font-family:'Archivo';font-weight:800;font-size:16px;letter-spacing:-.01em;")
+    .replace('color:var(--muted);font-size:14px;margin-top:6px;', 'color:var(--muted);font-size:12.5px;margin-top:3px;')
+    .replace('display:flex;gap:10px;margin-top:18px;', 'display:flex;gap:8px;margin-top:12px;')
+    .replace('border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;', 'border-radius:9px;padding:9px;font-weight:700;font-size:12.5px;')
+    .replace("border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;", "border-radius:9px;padding:9px;font-family:'Archivo';font-weight:800;font-size:12.5px;");
   template = template.slice(0, start) + block + template.slice(end);
 })();
 // Dashboard: show upcoming classes (not just today) + bind the greeting/stat numbers to real data
@@ -49,6 +57,19 @@ template = template.replace('<div style="font-size:12px;font-weight:700;letter-s
 template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
 template = template.replace('line-height:1.1;">18</div>', 'line-height:1.1;">{{ monthClasses }}</div>');
 template = template.replace('line-height:1.1;">162</div>', 'line-height:1.1;">{{ monthPeserta }}</div>');
+// Tighter grid for the (now smaller) schedule cards
+template = template.replace('<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">', '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">');
+// Monthly teaching calendar on the Schedule screen — shows which dates the coach teaches
+const calPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:22px;">'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:\'Archivo\';font-weight:800;font-size:16px;">Kalender Ngajar · {{ calMonthLabel }}</div>'
+  + '<div style="display:flex;gap:8px;"><button onclick="{{ calPrev }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8249;</button><button onclick="{{ calNext }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8250;</button></div></div>'
+  + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">'
+  + '<sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0 4px;">{{ d }}</div></sc-for>'
+  + '<sc-for list="{{ calCells }}" as="c"><div style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:var(--volt);font-weight:700;margin-top:1px;">{{ c.count }} kls</div></sc-if></sc-if></div></sc-for>'
+  + '</div>'
+  + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Ada kelas ngajar</div>'
+  + '</div>';
+template = template.replace(jadwalHead, calPanel + jadwalHead);
 // Remove the "Kalender" widget from the dashboard; Riwayat takes the full width.
 template = template.replace(/<div style="background:var\(--panel\);border:1px solid var\(--border\);border-radius:18px;padding:20px;">\s*<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div[^>]*>Kalender Minggu Ini[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
 template = template.replace('grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;', 'grid-template-columns:1fr;gap:16px;margin-top:24px;');
@@ -127,6 +148,7 @@ template = template.replace('sampai Head Coach menyetujui', 'sampai coach rotati
 const renames = [
   ['PENGGANTIAN', 'ROTATION'], ['Penggantian', 'Rotation'], ['penggantian', 'rotation'], ['PENGGANTI', 'ROTATION'], ['pengganti', 'rotation'],
   ['Jadwal Tim', 'Schedule'], ['Email Apresiasi', 'Feedback'], ['Template Email', 'Template Feedback'],
+  ['Dashboard', 'Schedule'],
 ];
 for (const [a, b] of renames) template = template.split(a).join(b);
 
