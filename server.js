@@ -672,7 +672,13 @@ route('GET', '/api/hc/schedule', async (req, res, s, q) => {
   }
   const dl = new Date(day + 'T00:00:00');
   const dateLabel = `${DOW_FULL[dl.getDay()]} ${dl.getDate()} ${MON[dl.getMonth()]}`;
-  return send(res, 200, { coaches: coachNames, times, grid, date: day, dateLabel });
+  const DOW_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dateLabelEn = `${DOW_EN[dl.getDay()]} · ${dl.getDate()} ${MON[dl.getMonth()]} ${dl.getFullYear()}`;
+  const pm = await coachPhotoMap();
+  const list = (rows || []).slice()
+    .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')) || String(a.instructor || '').localeCompare(String(b.instructor || '')))
+    .map((r) => { const t = types[r.class_type_id] || {}; const cc = counts[r.id] || {}; return { time: hhmm(r.start_time), coach: r.instructor || '—', type: shortType(t.name), pax: (cc.confirmed || 0) + (cc.pending || 0), photo: coachPhoto(pm, r.instructor) }; });
+  return send(res, 200, { coaches: coachNames, times, grid, list, date: day, dateLabel, dateLabelEn });
 });
 route('GET', '/api/hc/subs', async (req, res, s) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
@@ -720,9 +726,9 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
 function requireAdmin(s) { return s.r === 'admin'; }
 route('GET', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
-  const rows = await sb('arena_coach_users?select=id,username,coach_name,display_name,role,email,phone,is_active&order=role.desc,coach_name.asc');
+  const rows = await sb('arena_coach_users?select=id,username,coach_name,display_name,role,email,phone,is_active,password_plain&order=role.desc,coach_name.asc');
   const pm = await coachPhotoMap();
-  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : u.role === 'admin' ? 'Admin' : 'Coach', email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) })) });
+  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : u.role === 'admin' ? 'Admin' : 'Coach', email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name), password: u.password_plain || '' })) });
 });
 route('POST', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
@@ -730,14 +736,14 @@ route('POST', '/api/admin/coaches', async (req, res, s) => {
   if (!body || !body.name) return send(res, 400, { error: 'Nama wajib diisi.' });
   const username = (body.username || String(body.name).replace(/^coach\s*/i, '').trim().split(/\s+/)[0]).toLowerCase();
   const pw = body.password || genPw();
-  await sb('arena_coach_users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username, password_hash: hashPassword(pw), coach_name: body.name.replace(/^coach\s*/i, '').trim(), display_name: body.name.trim(), role: body.role || 'coach', email: body.email || (username + '@20fit.id'), phone: body.phone || null }) });
+  await sb('arena_coach_users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username, password_hash: hashPassword(pw), password_plain: pw, coach_name: body.name.replace(/^coach\s*/i, '').trim(), display_name: body.name.trim(), role: body.role || 'coach', email: body.email || (username + '@20fit.id'), phone: body.phone || null }) });
   return send(res, 200, { ok: true, username, password: pw });
 });
 route('POST', '/api/admin/coaches/:id/reset', async (req, res, s, q, params) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
   const body = await readBody(req);
   const pw = (body && body.password) || genPw();
-  await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ password_hash: hashPassword(pw), updated_at: new Date().toISOString() }) });
+  await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ password_hash: hashPassword(pw), password_plain: pw, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true, password: pw });
 });
 route('POST', '/api/admin/coaches/:id/toggle', async (req, res, s, q, params) => {

@@ -508,7 +508,7 @@
     </div>
     <div style="display:flex;align-items:center;justify-content:center;padding:40px;">
       <div style="width:100%;max-width:380px;">
-        <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Selamat datang kembali</div>
+        <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Welcome back</div>
         <h2 style="font-family:'Archivo';font-weight:800;font-size:30px;margin:0 0 30px;letter-spacing:-.01em;">Masuk sebagai Coach</h2>
         <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Email</label>
         <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:18px;">
@@ -520,8 +520,8 @@
           <span style="color:var(--muted2);font-size:15px;">••</span>
           <input value="rheza456" type="password" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'JetBrains Mono';font-size:15px;padding:14px 0;letter-spacing:.1em;">
         </div>
-        <button onclick="{{ login }}" style="width:100%;background:var(--volt);color:#08090B;border:0;border-radius:12px;padding:16px;font-family:'Archivo';font-weight:800;font-size:16px;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;transition:transform .12s,box-shadow .2s;box-shadow:0 10px 30px -10px rgba(214,255,61,.5);" style-hover="transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(214,255,61,.6);">Masuk ke Portal</button>
-        <p style="text-align:center;color:var(--muted2);font-size:13px;margin-top:20px;line-height:1.6;">Lupa password? Password dibuat &amp; direset oleh <span style="color:var(--muted);">Admin</span>. Hubungi Admin untuk bantuan.</p>
+        <button onclick="{{ login }}" style="width:100%;background:var(--volt);color:#08090B;border:0;border-radius:12px;padding:16px;font-family:'Archivo';font-weight:800;font-size:16px;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;transition:transform .12s,box-shadow .2s;box-shadow:0 10px 30px -10px rgba(214,255,61,.5);" style-hover="transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(214,255,61,.6);">Login</button>
+        <p style="text-align:center;color:var(--muted2);font-size:13px;margin-top:20px;line-height:1.6;">Forgot your password? Passwords are created &amp; reset by <span style="color:var(--muted);">Admin</span>. Contact your Admin for help.</p>
       </div>
     </div>
   </div>
@@ -741,16 +741,14 @@
         <!-- ===== HEAD COACH OVERVIEW ===== -->
         <sc-if value="{{ s.overview }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:22px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Coach Aktif</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;">7</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Kelas Hari Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--volt);">14</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Sedang Mengajar</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--green);">3</div></div>
             <div style="background:linear-gradient(160deg,rgba(255,176,32,.12),var(--panel));border:1px solid rgba(255,176,32,.3);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--amber);font-weight:600;">⚠ Belum Absen</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--amber);">2</div></div>
           </div>
 
           <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Jadwal Hari Ini — Seluruh Coach</div><div style="font-size:12px;color:var(--muted);border:1px solid var(--border2);padding:5px 11px;border-radius:8px;">Filter ▾</div></div>
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Jadwal Hari Ini — Seluruh Coach</div></div>
               <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>JAM</div><div>COACH · KELAS</div><div>ABSEN</div></div>
               <sc-for list="{{ todayAll }}" as="t" hint-placeholder-count="6">
               <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;">
@@ -781,26 +779,19 @@
         <!-- ===== JADWAL TIM ===== -->
         <sc-if value="{{ s.schedule }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-            <div style="color:var(--muted);font-size:14px;">Tampilan kalender lintas coach · {{ scheduleDateLabel }}</div>
-            <div style="display:flex;gap:9px;"><div style="font-size:12.5px;color:var(--muted);border:1px solid var(--border2);padding:8px 13px;border-radius:9px;">Per Coach ▾</div><div style="font-size:12.5px;color:var(--muted);border:1px solid var(--border2);padding:8px 13px;border-radius:9px;">Jenis Kelas ▾</div></div>
+          <div style="display:flex;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+            <div style="font-family:'Archivo';font-weight:800;font-size:20px;">Schedule All Coach · {{ scheduleDateLabel }}</div>
           </div>
           <sc-if value="{{ hasSchedule }}">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="display:grid;grid-template-columns:{{ schedCols }};">
-              <div style="padding:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted2);">JAM</div>
-              <sc-for list="{{ coachCols }}" as="cc" hint-placeholder-count="6">
-              <div style="padding:12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;"><div style="font-weight:700;font-size:13px;">{{ cc.name }}</div></div>
-              </sc-for>
-            </div>
-            <sc-for list="{{ scheduleRows }}" as="row" hint-placeholder-count="6">
-            <div style="display:grid;grid-template-columns:{{ schedCols }};">
-              <div style="padding:14px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-family:'JetBrains Mono';font-weight:700;font-size:13px;color:var(--muted);">{{ row.time }}</div>
-              <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="6">
-              <div style="padding:7px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:54px;">
-                <sc-if value="{{ cell.has }}" hint-placeholder-val="{{ false }}"><div style="background:{{ cell.bg }};border-left:3px solid {{ cell.accent }};border-radius:7px;padding:7px 9px;height:100%;"><div style="font-size:11.5px;font-weight:700;color:{{ cell.accent }};">{{ cell.type }}</div><div style="font-size:10.5px;color:var(--muted);margin-top:2px;">{{ cell.peserta }} pax</div></div></sc-if>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <sc-for list="{{ scheduleList }}" as="cl" hint-placeholder-count="6">
+            <div style="background:var(--panel);border:1px solid var(--border);border-left:3px solid {{ cl.accent }};border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:16px;">
+              <div style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--text);min-width:56px;">{{ cl.time }}</div>
+              <div style="flex:1;min-width:0;"><div style="font-weight:800;font-family:'Archivo';font-size:15px;color:{{ cl.accent }};">{{ cl.type }}</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px;">{{ cl.pax }} pax</div></div>
+              <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;">
+                <div style="width:34px;height:34px;border-radius:50%;background:var(--raised);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:12px;color:var(--text);position:relative;overflow:hidden;">{{ cl.initials }}<sc-if value="{{ cl.hasPhoto }}"><img src="{{ cl.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
+                <div style="font-weight:700;font-size:13.5px;">{{ cl.coach }}</div>
               </div>
-              </sc-for>
             </div>
             </sc-for>
           </div>
@@ -876,7 +867,7 @@
               <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:20px;color:#08090B;position:relative;overflow:hidden;">{{ sel.initials }}<sc-if value="{{ sel.hasPhoto }}"><img src="{{ sel.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
               <div><h2 style="font-family:'Archivo';font-weight:800;font-size:24px;margin:0;">{{ sel.name }}</h2><div style="color:var(--muted);font-size:13.5px;margin-top:3px;">{{ sel.role }} · {{ sel.phone }} · {{ sel.email }}</div></div>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:9px 14px;border-radius:10px;">Bulan: Juni 2026 ▾</div><button onclick="{{ exportCSV }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ Ekspor</button></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);">Bulan: {{ statMonth }}</div><button onclick="{{ exportCSV }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ Ekspor</button></div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Kelas</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
@@ -907,8 +898,7 @@
             <div style="display:flex;gap:8px;">
               <div style="font-size:13px;font-weight:700;color:#08090B;background:var(--volt);padding:8px 14px;border-radius:9px;">Bulan Ini</div>
               <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">Minggu Ini</div>
-              <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">Custom ▾</div>
-            </div>
+                          </div>
             <button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 20px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Ekspor Excel / PDF</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
@@ -942,8 +932,8 @@
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="8">
             <div style="display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--border);">
-              <div style="width:40px;height:40px;border-radius:50%;background:{{ c.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:{{ c.avFg }};">{{ c.initials }}</div>
-              <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ c.name }}</div><div style="font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';">{{ c.phone }}</div></div>
+              <div style="width:40px;height:40px;border-radius:50%;background:{{ c.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:{{ c.avFg }};position:relative;overflow:hidden;">{{ c.initials }}<sc-if value="{{ c.hasPhoto }}"><img src="{{ c.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
+              <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ c.name }}</div><div style="font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';">🔑 {{ c.passwordShown }}</div></div>
               <span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.roleBg }};color:{{ c.roleCol }};">{{ c.role }}</span>
               <span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};display:inline-flex;align-items:center;gap:5px;"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.statusCol }};"></span>{{ c.status }}</span>
               <button onclick="{{ c.reset }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--cyan);color:var(--cyan);">Reset Password</button>

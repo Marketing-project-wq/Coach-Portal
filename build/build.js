@@ -15,12 +15,12 @@ let baseCss = (helmet.replace(/@font-face\s*\{[\s\S]*?\}/g, '').match(/<style>([
 
 // ---- wiring edits (before renames so we can target original ids) ----
 // Login inputs get ids (accept username or email)
-template = template.replace('value="rheza@20fit.id"', 'id="loginEmail" placeholder="username atau email" value=""');
+template = template.replace('value="rheza@20fit.id"', 'id="loginEmail" placeholder="username or email" value=""');
 template = template.replace('value="rheza456" type="password"', 'id="loginPassword" type="password" placeholder="password" value=""');
 // Reset-modal input flagged so confirmReset can read it
 template = template.replace('value="{{ resetPwd }}"', 'data-reset value="{{ resetPwd }}"');
 // Login card copy: neutral heading + rename the first field label (Email -> Name)
-template = template.replace('Masuk sebagai Coach', 'Masuk ke Akun Anda');
+template = template.replace('Masuk sebagai Coach', 'Sign in to your account');
 template = template.replace('>Email</label>', '>Name</label>');
 // Remove the promo hero panel; center the login form as a single column
 template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');

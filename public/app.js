@@ -362,21 +362,16 @@ class Component extends DCLogic {
     const pendingCount = pendingSubs.length; const noPending = pendingCount === 0;
     const hasIncoming = incomingCount > 0;
     const rotHeader = isCoachView ? 'MENUNGGU PERSETUJUAN ANDA' : 'NOTIFIKASI ROTATION';
-    // schedule grid — columns follow the actual number of coaches teaching that day
-    const coachCols = ((D.schedule && D.schedule.coaches) || []).map((n) => ({ name: n }));
-    const schedCols = '70px repeat(' + Math.max(coachCols.length, 1) + ',minmax(0,1fr))';
-    const scheduleDateLabel = (D.schedule && D.schedule.dateLabel) || '';
-    const hasSchedule = coachCols.length > 0;
+    // all-coach schedule — a clean, time-sorted list of classes (one card per class)
+    const scheduleDateLabel = (D.schedule && (D.schedule.dateLabelEn || D.schedule.dateLabel)) || '';
+    const scheduleList = ((D.schedule && D.schedule.list) || []).map((x) => { const comp = String(x.type).includes('Complete'); return { time: x.time, coach: x.coach, type: String(x.type).replace('HYROX ', ''), pax: x.pax, initials: this.ini(x.coach), photo: x.photo || '', hasPhoto: !!x.photo, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.06)' : 'rgba(0,104,201,.06)' }; });
+    const hasSchedule = scheduleList.length > 0;
     const noSchedule = !hasSchedule;
-    const scheduleRows = ((D.schedule && D.schedule.times) || []).map((tm) => ({
-      time: tm,
-      cells: (D.schedule.grid[tm] || []).map((cell) => { if (!cell) return { has: false }; const comp = String(cell.type).includes('Complete'); return { has: true, type: String(cell.type).replace('HYROX ', ''), peserta: cell.peserta, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.07)' : 'rgba(0,104,201,.07)' }; }),
-    }));
     // coaches enriched
     const roleColor = (r) => r === 'Head Coach' ? { bg: C.voltDim, col: C.volt } : { bg: 'rgba(136,143,156,.14)', col: C.muted };
     const coaches = (D.coaches || []).map((c) => {
       const av = this.avatar(c.id); const rc = roleColor(c.role);
-      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
+      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
     });
     const reportRows = coaches.slice(0, 12);
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 100, subs: 0, photo: '', hasPhoto: false };
@@ -412,7 +407,7 @@ class Component extends DCLogic {
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
-      coachCols, schedCols, scheduleDateLabel, hasSchedule, noSchedule, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
+      scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       exportCSV: () => this.exportCSV(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
@@ -472,11 +467,16 @@ class Component extends DCLogic {
     d.fbClassLabel = 'HYROX Complete'; d.fbParticipants = [{ booking_id: 'b1', name: 'Andra Wijaya' }, { booking_id: 'b2', name: 'Sari Putri' }, { booking_id: 'b3', name: 'Indah Wulansari' }];
     d.templates = [{ id: '01', text: 'Kelas hari ini kelar! Otot pegel itu tandanya kamu makin kuat.' }];
     d.hcToday = [{ time: '07:00', coach: 'Elsen', type: 'HYROX Complete', status: 'Mengajar', kind: 'live' }, { time: '07:00', coach: 'Rheza', type: 'HYROX Foundation', status: 'Akan Datang', kind: 'idle' }];
-    d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], dateLabel: 'Rabu 1 Jul', grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
+    d.schedule = { dateLabel: 'Rabu 1 Jul', dateLabelEn: 'Friday · 3 Jul 2026', list: [
+      { time: '07:00', coach: 'Elsen', type: 'HYROX Complete', pax: 12, photo: '' },
+      { time: '07:00', coach: 'Rheza', type: 'HYROX Foundation', pax: 8, photo: LPH + 'rheza-1778032238203.png' },
+      { time: '17:00', coach: 'Calysta', type: 'HYROX Complete', pax: 10, photo: LPH + 'calysta-1778032200529.png' },
+      { time: '19:30', coach: 'Brian', type: 'HYROX Foundation', pax: 4, photo: '' },
+    ] };
     d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
     d.rotations = { incoming: [{ id: 'r1', from: 'Gilang', to: 'Rheza', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], outgoing: [{ id: 'r2', from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: 'Rab, 07:00', status: 'approved' }] };
     const PH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
-    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', photo: PH + 'rheza-1778032238203.png' }];
+    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', password: 'nando456', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', password: 'rheza123', photo: PH + 'rheza-1778032238203.png' }];
     d.statMonth = 'Juli 2026';
     d.stats = [
       { date: '1 Jul', day: 'Rabu', time: '18:30', type: 'HYROX Complete', peserta: 14 },
