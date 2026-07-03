@@ -25,10 +25,13 @@ template = template.replace('>Email</label>', '>Name</label>');
 // Remove the promo hero panel; center the login form as a single column
 template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');
 template = template.replace('grid-template-columns:1.05fr .95fr', 'grid-template-columns:1fr');
-// Sidebar logo: drop "20FIT ARENA", keep only "Coach Workspace"
+// Sidebar logo: drop the "20" badge + "20FIT ARENA"; keep only a larger "Coach Workspace" wordmark
+template = template.replace(
+  '<div style="width:34px;height:34px;border-radius:9px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:#08090B;">20</div>',
+  '');
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
-  '<div style="font-family:\'Archivo\';font-weight:800;font-size:16px;letter-spacing:.01em;line-height:1.1;">Coach Workspace</div>');
+  '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;letter-spacing:.03em;line-height:1.05;">Coach Workspace</div>');
 template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation');
 // coachToday card: Detail/Absen buttons become per-item (scoped to that loop)
 (() => {
@@ -56,8 +59,8 @@ template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation')
 const jadwalHead = '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL · {{ jadwalLabel }}</div>';
 template = template.replace('<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL HARI INI</div>', jadwalHead);
 template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
-template = template.replace('line-height:1.1;">18</div>', 'line-height:1.1;">{{ monthClasses }}</div>');
-template = template.replace('line-height:1.1;">162</div>', 'line-height:1.1;">{{ monthPeserta }}</div>');
+// Dashboard: drop the "Kelas Bulan Ini" / "Peserta Dilayani" stat cards (not needed)
+template = template.replace(/<div style="display:flex;gap:12px;">\s*<div style="background:var\(--panel\)[\s\S]*?Peserta Dilayani[\s\S]*?<\/div><\/div>\s*<\/div>/, '');
 // Tighter grid for the (now smaller) schedule cards
 template = template.replace('<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">', '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">');
 // Monthly teaching calendar on the Schedule screen — shows which dates the coach teaches
@@ -231,7 +234,6 @@ const themeCss = `
     --border:rgba(17,17,20,.10); --border2:rgba(17,17,20,.15);
     --text:#1D1D1F; --muted:#6E6E73; --muted2:#9A9A9E; }
   aside [style*="background:var(--panel)"]{ backdrop-filter:none !important; box-shadow:none !important; }
-  aside > div:first-child > div:first-child { background:#E4002B !important; color:#FFFFFF !important; }
   aside nav button { font-family:'Barlow Condensed',system-ui,sans-serif !important; text-transform:uppercase; letter-spacing:.03em; font-weight:700 !important; font-size:15px !important; }
 `;
 
