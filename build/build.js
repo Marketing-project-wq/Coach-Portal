@@ -50,9 +50,8 @@ template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation')
     .replace("border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;", "border-radius:9px;padding:9px;font-family:'Archivo';font-weight:800;font-size:12.5px;");
   template = template.slice(0, start) + block + template.slice(end);
 })();
-// Dashboard: show upcoming classes (not just today) + bind the greeting/stat numbers to real data
-// Schedule heading becomes a date-range filter (dari–sampai) + dynamic label
-const jadwalHead = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:6px 0 14px;"><div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);">JADWAL {{ jadwalLabel }}</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><input type="date" id="rangeFrom" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:\'Hanken Grotesk\';outline:0;"><span style="color:var(--muted2);font-size:12px;">s/d</span><input type="date" id="rangeTo" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:\'Hanken Grotesk\';outline:0;"><button onclick="{{ applyRange }}" style="background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:\'Archivo\';">Terapkan</button><button onclick="{{ resetRange }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:8px 12px;font-weight:700;font-size:12.5px;cursor:pointer;">Reset</button></div></div>';
+// Schedule heading: no date-range filter — the calendar drives which day is shown.
+const jadwalHead = '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL · {{ jadwalLabel }}</div>';
 template = template.replace('<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL HARI INI</div>', jadwalHead);
 template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
 template = template.replace('line-height:1.1;">18</div>', 'line-height:1.1;">{{ monthClasses }}</div>');
@@ -61,15 +60,18 @@ template = template.replace('line-height:1.1;">162</div>', 'line-height:1.1;">{{
 template = template.replace('<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">', '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">');
 // Monthly teaching calendar on the Schedule screen — shows which dates the coach teaches
 const calPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:22px;">'
-  + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:\'Archivo\';font-weight:800;font-size:16px;">Kalender Ngajar · {{ calMonthLabel }}</div>'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:\'Archivo\';font-weight:800;font-size:16px;">Calendar · {{ calMonthLabel }}</div>'
   + '<div style="display:flex;gap:8px;"><button onclick="{{ calPrev }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8249;</button><button onclick="{{ calNext }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8250;</button></div></div>'
   + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">'
   + '<sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0 4px;">{{ d }}</div></sc-for>'
-  + '<sc-for list="{{ calCells }}" as="c"><div style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:var(--volt);font-weight:700;margin-top:1px;">{{ c.count }} kls</div></sc-if></sc-if></div></sc-for>'
+  + '<sc-for list="{{ calCells }}" as="c"><div onclick="{{ c.pick }}" style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};cursor:{{ c.cursor }};" style-hover="border-color:var(--muted);"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:{{ c.countCol }};font-weight:700;margin-top:1px;">{{ c.count }} kls</div></sc-if></sc-if></div></sc-for>'
   + '</div>'
-  + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Ada kelas ngajar</div>'
+  + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Ada kelas ngajar · klik tanggal untuk lihat jadwalnya</div>'
   + '</div>';
 template = template.replace(jadwalHead, calPanel + jadwalHead);
+// Empty state when the selected day has no classes
+const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">Tidak ada kelas di tanggal ini.</div></sc-if>';
+template = template.replace(jadwalHead, jadwalHead + noClassBox);
 // Remove the bottom grid entirely (the old "Kalender Minggu Ini" + "Riwayat Terakhir" panels)
 // from the Schedule screen — the JADWAL cards are the last section now.
 template = template.replace(/<div style="display:grid;grid-template-columns:1\.4fr 1fr;gap:16px;margin-top:24px;">[\s\S]*?Riwayat Terakhir[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
