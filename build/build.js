@@ -235,6 +235,10 @@ const themeCss = `
     --text:#1D1D1F; --muted:#6E6E73; --muted2:#9A9A9E; }
   aside [style*="background:var(--panel)"]{ backdrop-filter:none !important; box-shadow:none !important; }
   aside nav button { font-family:'Barlow Condensed',system-ui,sans-serif !important; text-transform:uppercase; letter-spacing:.03em; font-weight:700 !important; font-size:15px !important; }
+  /* Active nav item stays red on hover so its white label doesn't vanish.
+     During hover the JS handler normalizes #E4002B -> rgb(228, 0, 43), so match that. */
+  aside nav button[style*="rgb(228, 0, 43)"]:hover,
+  aside nav button[style*="#E4002B"]:hover { background:#C80028 !important; color:#FFFFFF !important; }
 `;
 
 const googleFonts = `  <link rel="preconnect" href="https://fonts.googleapis.com">
