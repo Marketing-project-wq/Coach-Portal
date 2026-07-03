@@ -82,12 +82,22 @@ template = template.replace(jadwalHead, jadwalHead + noClassBox);
 template = template.replace(/<div style="display:grid;grid-template-columns:1\.4fr 1fr;gap:16px;margin-top:24px;">[\s\S]*?Riwayat Terakhir[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
 // "Monitoring Kelas per Bulan" is its own screen (separate nav item), not on the dashboard.
 // Summary stat cards (current-month peserta/kelas + full-year peserta) sit above the chart.
+const statCard = (label, val, col) => '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">' + label + '</div><div style="font-family:\'Archivo\';font-weight:900;font-size:30px;' + (col ? 'color:' + col + ';' : '') + '">' + val + '</div></div>';
 const monthlyStats = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
-  + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Peserta Bulan Ini</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--volt);">{{ mPesertaBulan }}</div></div>'
-  + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Kelas Bulan Ini</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ mKelasBulan }}</div></div>'
-  + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Total Peserta {{ monthlyYear }}</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:#4DD4F2;">{{ mPesertaTahun }}</div></div>'
+  + statCard('Kelas Bulan Ini', '{{ mKelasBulan }}', 'var(--volt)')
+  + statCard('Peserta Bulan Ini', '{{ mPesertaBulan }}', '#0068C9')
+  + statCard('Total Peserta {{ monthlyYear }}', '{{ mPesertaTahun }}', '#0068C9')
   + '</div>';
-const monthlyPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;"><div style="font-weight:800;font-family:\'Archivo\';font-size:16px;">Monitoring Kelas per Bulan · {{ monthlyYear }}</div><div style="font-size:11px;color:var(--muted);display:flex;gap:14px;align-items:center;"><span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--text);"></span>Kelas</span><span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#4DD4F2;"></span>Peserta</span></div></div><div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;"><sc-for list="{{ monthly }}" as="m"><div style="text-align:center;"><div style="font-size:13px;font-weight:800;font-family:\'Archivo\';margin-bottom:6px;color:{{ m.col }};">{{ m.count }}</div><div style="height:{{ m.h }}px;min-height:4px;background:{{ m.bar }};border-radius:5px;"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;">{{ m.month }}</div><div style="font-size:11px;font-weight:800;font-family:\'Archivo\';color:#4DD4F2;margin-top:2px;">{{ m.peserta }}</div></div></sc-for></div></div>';
+const monthlyPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;">'
+  + '<div style="font-weight:800;font-family:\'Archivo\';font-size:16px;margin-bottom:4px;">Peserta &amp; Kelas per Bulan · {{ monthlyYear }}</div>'
+  + '<div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Tinggi batang = jumlah <b style="color:#0068C9;">peserta</b>. Angka di bawah nama bulan = jumlah <b style="color:var(--volt);">kelas</b>.</div>'
+  + '<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:8px;align-items:end;">'
+  + '<sc-for list="{{ monthly }}" as="m"><div style="text-align:center;">'
+  + '<div style="font-size:13px;font-weight:800;font-family:\'Archivo\';margin-bottom:6px;color:{{ m.pesertaCol }};">{{ m.pesertaLabel }}</div>'
+  + '<div style="height:{{ m.h }}px;min-height:3px;background:{{ m.bar }};border-radius:6px;"></div>'
+  + '<div style="font-size:11px;color:{{ m.monthCol }};margin-top:8px;font-weight:700;">{{ m.month }}</div>'
+  + '<div style="font-size:10.5px;color:var(--muted2);margin-top:2px;">{{ m.kelasLabel }}</div>'
+  + '</div></sc-for></div></div>';
 const monthlyScreen = '<sc-if value="{{ s.monthly }}"><div style="max-width:980px;margin:0 auto;"><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:4px;">Monitoring Kelas</div><div style="color:var(--muted);font-size:13.5px;margin-bottom:20px;">Jumlah kelas & total peserta yang Anda ampu setiap bulan sepanjang tahun.</div>' + monthlyStats + monthlyPanel + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', monthlyScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Review Peserta" screen (sibling screen in the scroll area)
@@ -117,7 +127,7 @@ const boardScreen = '<sc-if value="{{ s.leaderboard }}"><div style="max-width:76
   + '<sc-if value="{{ hasBoard }}"><div style="' + cardBox + 'overflow:hidden;">'
   + '<sc-for list="{{ leaderboard }}" as="l"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);background:{{ l.rowBg }};">'
   + '<div style="width:30px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:{{ l.rankCol }};">{{ l.medal }}</div>'
-  + '<div style="width:38px;height:38px;border-radius:50%;background:{{ l.avBg }};color:{{ l.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;">{{ l.initials }}</div>'
+  + '<div style="width:38px;height:38px;border-radius:50%;background:{{ l.avBg }};color:{{ l.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;position:relative;overflow:hidden;">{{ l.initials }}<sc-if value="{{ l.hasPhoto }}"><img src="{{ l.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>'
   + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ l.name }}{{ l.meLabel }}</div><div style="font-size:12px;color:var(--muted);margin-top:1px;">{{ l.classes }} kelas</div></div>'
   + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:19px;">{{ l.peserta }}</div><div style="font-size:11px;color:var(--muted);">peserta</div></div>'
   + '</div></sc-for></div></sc-if>'

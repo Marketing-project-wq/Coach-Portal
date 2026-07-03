@@ -26,7 +26,7 @@ class Component extends DCLogic {
       this.accountRole = role;
       const scr = (location.search.match(/screen=(\w+)/) || [])[1];
       this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts');
-      this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role });
+      this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role, photo: role === 'coach' ? 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/rheza-1778032238203.png' : '' });
       this.state.d = this.mockData();
       return;
     }
@@ -64,7 +64,7 @@ class Component extends DCLogic {
     const nm = me.display_name || me.coach_name || 'User';
     const roleLabel = me.role === 'hc' ? 'Head Coach' : me.role === 'admin' ? 'Administrator' : 'Coach';
     const name = me.role === 'admin' ? 'Admin 20FIT' : (/^coach/i.test(nm) ? nm : 'Coach ' + nm);
-    return { name, role: roleLabel, first: nm.replace(/^coach\s*/i, ''), initials: me.role === 'admin' ? 'AD' : this.ini(nm) };
+    return { name, role: roleLabel, first: nm.replace(/^coach\s*/i, ''), initials: me.role === 'admin' ? 'AD' : this.ini(nm), photo: me.photo || '', hasPhoto: !!me.photo };
   }
 
   // ---------- api + nav ----------
@@ -250,10 +250,10 @@ class Component extends DCLogic {
         col: isSel ? '#ffffff' : (c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)')),
         countCol: isSel ? '#ffffff' : 'var(--volt)' };
     });
-    // monthly monitoring bars
+    // monthly monitoring bars — bar height = jumlah peserta (volume); kelas ditampilkan sebagai caption
     const monthlyRaw = D.monthly || [];
-    const maxM = Math.max(1, ...monthlyRaw.map((x) => x.count));
-    const monthly = monthlyRaw.map((x) => ({ month: x.month, count: x.count, peserta: x.peserta || 0, h: Math.round((x.count / maxM) * 56), bar: x.isCurrent ? 'var(--volt)' : (x.count ? 'rgba(0,104,201,.55)' : 'var(--border2)'), col: x.isCurrent ? 'var(--volt)' : (x.count ? 'var(--text)' : 'var(--muted2)') }));
+    const maxP = Math.max(1, ...monthlyRaw.map((x) => x.peserta || 0));
+    const monthly = monthlyRaw.map((x) => { const p = x.peserta || 0, k = x.count || 0; return { month: x.month, h: Math.round((p / maxP) * 92), bar: x.isCurrent ? 'var(--volt)' : (p ? 'rgba(0,104,201,.7)' : 'var(--border2)'), pesertaLabel: p ? String(p) : '–', pesertaCol: p ? '#0068C9' : 'var(--muted2)', kelasLabel: k + ' kelas', monthCol: x.isCurrent ? 'var(--volt)' : 'var(--text)' }; });
     // participants (attendance frequency + recency of last visit)
     const members = (D.members || []).map((m, i) => {
       const r = this.recencyLabel(m.daysSince);
@@ -271,7 +271,7 @@ class Component extends DCLogic {
       const av = this.avatar(l.name);
       return { name: l.name, initials: this.ini(l.name), peserta: l.peserta, classes: l.classes, rank: l.rank,
         medal: l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : String(l.rank),
-        rankCol: l.rank <= 3 ? C.amber : C.muted2, avBg: av[0], avFg: av[1],
+        rankCol: l.rank <= 3 ? C.amber : C.muted2, avBg: av[0], avFg: av[1], photo: l.photo || '', hasPhoto: !!l.photo,
         rowBg: l.isMe ? 'var(--volt-dim)' : 'transparent', meLabel: l.isMe ? ' · Anda' : '' };
     });
     const noBoard = leaderboard.length === 0;
@@ -279,7 +279,7 @@ class Component extends DCLogic {
     // participants
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col }; });
     // sub options
-    const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; return { name: o.name, avail: o.avail, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: dis ? 'var(--red)' : 'var(--green)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
+    const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; return { name: o.name, avail: o.avail, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: dis ? 'var(--red)' : 'var(--green)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
     const emailLog = (D.emailLog || []).map((e) => { const m = this.statusPill(e.status); return Object.assign({}, e, { bg: m.bg, col: m.col, icon: e.status === 'Gagal' ? '⚠' : '✓', iconBg: e.status === 'Gagal' ? 'rgba(228,0,43,.12)' : 'var(--volt-dim)' }); });
     // HC today all
@@ -316,10 +316,10 @@ class Component extends DCLogic {
     const roleColor = (r) => r === 'Head Coach' ? { bg: C.voltDim, col: C.volt } : { bg: 'rgba(136,143,156,.14)', col: C.muted };
     const coaches = (D.coaches || []).map((c) => {
       const av = this.avatar(c.id); const rc = roleColor(c.role);
-      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
+      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
     });
     const reportRows = coaches.slice(0, 12);
-    const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 100, subs: 0 };
+    const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 100, subs: 0, photo: '', hasPhoto: false };
     const statRows = D.stats || [];
     const statMonth = D.statMonth || '';
     // templates
@@ -389,13 +389,14 @@ class Component extends DCLogic {
     d.reviewAvg = 4.6; d.reviewCount = 2;
     d.reviewCats = [{ label: 'Clear Instructions', avg: '4.8' }, { label: 'Technique Correction', avg: '4.5' }, { label: 'Member Support', avg: '4.9' }, { label: 'Professionalism', avg: '4.7' }, { label: 'Class Management', avg: '4.6' }];
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'Coach-nya sabar & jelas, kelasnya seru!', tags: ['Instruksi jelas', 'Sabar & suportif', 'Kelas seru'], date: '1 Jul' }, { coach: 'Rheza', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: '', tags: ['Tepat waktu', 'Bikin semangat'], date: '28 Jun' }];
+    const LPH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
     d.leaderboard = [
       { name: 'Elsen', peserta: 11, classes: 2, rank: 1, isMe: false },
       { name: 'Brian', peserta: 7, classes: 2, rank: 2, isMe: false },
       { name: 'Gilang', peserta: 6, classes: 2, rank: 3, isMe: false },
-      { name: 'Rheza', peserta: 4, classes: 2, rank: 4, isMe: true },
+      { name: 'Rheza', peserta: 4, classes: 2, rank: 4, isMe: true, photo: LPH + 'rheza-1778032238203.png' },
       { name: 'Mae', peserta: 3, classes: 1, rank: 5, isMe: false },
-      { name: 'Calysta', peserta: 1, classes: 1, rank: 6, isMe: false },
+      { name: 'Calysta', peserta: 1, classes: 1, rank: 6, isMe: false, photo: LPH + 'calysta-1778032200529.png' },
     ];
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
@@ -408,7 +409,8 @@ class Component extends DCLogic {
     d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], dateLabel: 'Rabu 1 Jul', grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
     d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
     d.rotations = { incoming: [{ id: 'r1', from: 'Gilang', to: 'Rheza', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], outgoing: [{ id: 'r2', from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: 'Rab, 07:00', status: 'approved' }] };
-    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-' }];
+    const PH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
+    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', photo: PH + 'rheza-1778032238203.png' }];
     d.statMonth = 'Juli 2026';
     d.stats = [
       { date: '1 Jul', day: 'Rabu', time: '18:30', type: 'HYROX Complete', peserta: 14 },
