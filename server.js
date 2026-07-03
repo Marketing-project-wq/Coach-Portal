@@ -593,6 +593,47 @@ route('GET', '/api/coach/emails', async (req, res, s) => {
   const log = (rows || []).map((e) => ({ class: e.class_label || 'Kelas', date: fmtDMon(String(e.sent_at).slice(0, 10)), recipients: e.recipients, status: e.status === 'failed' ? 'Gagal' : 'Terkirim' }));
   return send(res, 200, { log });
 });
+
+// ===== COACH: manual per-participant feedback (coach writes it; Admin Hub emails it) =====
+// Recent finished classes the coach can write feedback for (last 30 days).
+route('GET', '/api/coach/feedback/classes', async (req, res, s) => {
+  const today = todayJakarta();
+  const d0 = new Date(today + 'T00:00:00'); d0.setDate(d0.getDate() - 30);
+  const from = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-${String(d0.getDate()).padStart(2, '0')}`;
+  const types = await classTypes();
+  const sched = (await coachSchedules(s.c, from, today)).slice(-60).reverse();
+  const classes = sched.map((x) => ({ id: x.id, label: shortType((types[x.class_type_id] || {}).name) + ' · ' + hhmm(x.start_time) + ' · ' + fmtDMon(x.schedule_date) }));
+  return send(res, 200, { classes });
+});
+// Participants of one of the coach's classes (name only — no contact details).
+route('GET', '/api/coach/feedback/participants', async (req, res, s, q) => {
+  const id = q.id || '';
+  const rows = await sb(`arena_class_schedules?select=id,class_type_id,instructor&id=eq.${enc(id)}&limit=1`);
+  const sc = rows && rows[0];
+  if (!sc) return send(res, 404, { error: 'Kelas tidak ditemukan.' });
+  if (s.r === 'coach' && sc.instructor !== s.c) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  const types = await classTypes();
+  const bookings = await sb(`arena_class_bookings?select=id,full_name,status&schedule_id=eq.${enc(id)}&status=eq.confirmed&order=full_name.asc`);
+  const participants = (bookings || []).map((b) => ({ booking_id: b.id, name: b.full_name || 'Peserta' }));
+  return send(res, 200, { classLabel: shortType((types[sc.class_type_id] || {}).name), participants });
+});
+// Save feedback the coach wrote for each participant (status 'pending' → Admin Hub emails it).
+route('POST', '/api/coach/feedback', async (req, res, s) => {
+  const body = await readBody(req);
+  const schedule_id = body && body.schedule_id;
+  const items = (body && Array.isArray(body.items)) ? body.items : [];
+  if (!schedule_id || !items.length) return send(res, 400, { error: 'Pilih kelas & isi minimal satu feedback.' });
+  const rows = await sb(`arena_class_schedules?select=instructor&id=eq.${enc(schedule_id)}&limit=1`);
+  const sc = rows && rows[0];
+  if (!sc) return send(res, 404, { error: 'Kelas tidak ditemukan.' });
+  if (s.r === 'coach' && sc.instructor !== s.c) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  const payload = items
+    .filter((it) => it && it.booking_id && String(it.message || '').trim())
+    .map((it) => ({ schedule_id, booking_id: it.booking_id, coach: s.c, participant_name: String(it.name || '').slice(0, 120) || null, message: String(it.message).trim().slice(0, 1000), status: 'pending' }));
+  if (!payload.length) return send(res, 400, { error: 'Isi minimal satu feedback.' });
+  await sb('arena_coach_feedback', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
+  return send(res, 200, { saved: payload.length });
+});
 route('GET', '/api/templates', async (req, res) => {
   const rows = await sb('arena_email_templates?select=id,body&is_active=eq.true&order=created_at.asc');
   return send(res, 200, { templates: (rows || []).map((t, i) => ({ id: String(i + 1).padStart(2, '0'), rowId: t.id, text: t.body })) });

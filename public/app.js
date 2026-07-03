@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -28,6 +28,7 @@ class Component extends DCLogic {
       this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'overview' : 'accounts');
       this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role, photo: role === 'coach' ? 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/rheza-1778032238203.png' : '' });
       this.state.d = this.mockData();
+      this.state.selFbClass = 'x1';
       return;
     }
     if (this.state.token) {
@@ -95,7 +96,7 @@ class Component extends DCLogic {
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members').then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30 })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
-    else if (screen === 'email') this.api('/api/coach/emails').then((d) => this.setD({ emailLog: d.log })).catch(fail);
+    else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
@@ -205,6 +206,28 @@ class Component extends DCLogic {
       .catch((e) => this.toastMsg(e.message));
   }
   exportToast() { this.toastMsg('File sedang disiapkan untuk diunduh'); }
+  pickFbClass(e) {
+    const id = e && e.target ? e.target.value : '';
+    this.setState({ selFbClass: id });
+    if (!id) return this.setD({ fbParticipants: [], fbClassLabel: '' });
+    if (this.MOCK) return;
+    this.api('/api/coach/feedback/participants?id=' + encodeURIComponent(id))
+      .then((d) => this.setD({ fbParticipants: d.participants, fbClassLabel: d.classLabel }))
+      .catch((err) => this.toastMsg(err.message));
+  }
+  submitFeedback() {
+    const id = this.state.selFbClass;
+    if (!id) return this.toastMsg('Pilih kelas dulu.');
+    const items = (this.state.d.fbParticipants || []).map((p) => {
+      const el = document.getElementById('fb-' + p.booking_id);
+      return { booking_id: p.booking_id, name: p.name, message: el ? el.value.trim() : '' };
+    }).filter((it) => it.message);
+    if (!items.length) return this.toastMsg('Isi minimal satu feedback dulu.');
+    if (this.MOCK) return this.toastMsg('Feedback terkirim ke ' + items.length + ' peserta');
+    this.api('/api/coach/feedback', { method: 'POST', body: JSON.stringify({ schedule_id: id, items }) })
+      .then((r) => { this.toastMsg('Feedback terkirim ke ' + r.saved + ' peserta'); this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); })
+      .catch((err) => this.toastMsg(err.message));
+  }
   randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
   addTemplate() {
     const text = (typeof prompt === 'function') ? prompt('Teks template feedback baru:') : '';
@@ -312,6 +335,13 @@ class Component extends DCLogic {
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
     const emailLog = (D.emailLog || []).map((e) => { const m = this.statusPill(e.status); return Object.assign({}, e, { bg: m.bg, col: m.col, icon: e.status === 'Gagal' ? '⚠' : '✓', iconBg: e.status === 'Gagal' ? 'rgba(228,0,43,.12)' : 'var(--volt-dim)' }); });
+    // feedback (manual, per-participant)
+    const selFbClass = st.selFbClass || '';
+    const fbClasses = D.fbClasses || [];
+    const fbParticipants = (D.fbParticipants || []).map((p) => ({ name: p.name, booking_id: p.booking_id, fieldId: 'fb-' + p.booking_id }));
+    const hasFbParticipants = !!selFbClass && fbParticipants.length > 0;
+    const fbNoParticipants = !!selFbClass && fbParticipants.length === 0;
+    const fbEmpty = !selFbClass;
     // HC today all
     const todayAll = (D.hcToday || []).map((t) => { const kc = { ok: ['rgba(28,138,75,.14)', C.green, '✓ '], warn: ['rgba(199,122,0,.14)', C.amber, '⚠ '], live: [C.voltDim, C.volt, ''], idle: ['rgba(136,143,156,.1)', C.muted, ''] }[t.kind] || ['rgba(136,143,156,.1)', C.muted, '']; return Object.assign({}, t, { bg: kc[0], col: kc[1], dot: t.kind === 'live' ? '● ' : kc[2] }); });
     // rotation requests — coach (rotation coach) decides; head coach only gets notified
@@ -379,6 +409,8 @@ class Component extends DCLogic {
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
       coachToday, week, recentClasses, participants, subOptions, emailLog,
+      fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
+      pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       coachCols, schedCols, scheduleDateLabel, hasSchedule, noSchedule, scheduleRows, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
@@ -436,6 +468,8 @@ class Component extends DCLogic {
     d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2 }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null }] };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];
     d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Terkirim' }];
+    d.fbClasses = [{ id: 'x1', label: 'HYROX Complete · 07:00 · 1 Jul' }, { id: 'x2', label: 'HYROX Foundation · 17:00 · 30 Jun' }];
+    d.fbClassLabel = 'HYROX Complete'; d.fbParticipants = [{ booking_id: 'b1', name: 'Andra Wijaya' }, { booking_id: 'b2', name: 'Sari Putri' }, { booking_id: 'b3', name: 'Indah Wulansari' }];
     d.templates = [{ id: '01', text: 'Kelas hari ini kelar! Otot pegel itu tandanya kamu makin kuat.' }];
     d.hcToday = [{ time: '07:00', coach: 'Elsen', type: 'HYROX Complete', status: 'Mengajar', kind: 'live' }, { time: '07:00', coach: 'Rheza', type: 'HYROX Foundation', status: 'Akan Datang', kind: 'idle' }];
     d.schedule = { coaches: ['Elsen', 'Rheza', 'Calysta'], times: ['07:00', '17:00'], dateLabel: 'Rabu 1 Jul', grid: { '07:00': [{ type: 'HYROX Complete', peserta: 12 }, null, null], '17:00': [null, { type: 'HYROX Foundation', peserta: 8 }, null] } };
