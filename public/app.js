@@ -18,7 +18,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -91,7 +91,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Gagal memuat.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ today: d.today, week: d.week, recent: d.recent, month: d.month, todayLabel: d.todayLabel, weekRange: d.weekRange, weekStart: d.weekStart, jadwalLabel: 'MENDATANG' })).catch(fail); this.loadCalendar(); this.loadRotations(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); }
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members').then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30 })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -163,11 +163,12 @@ class Component extends DCLogic {
     this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
   }
   resetRange() { if (this.MOCK) return this.setD({ jadwalLabel: 'MENDATANG' }); this.loadScreen('dash'); }
+  todayISO() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
   showDay(date) {
     if (!date) return;
     const label = this.fmtD(date).toUpperCase();
-    if (this.MOCK) return this.setD({ jadwalLabel: label });
-    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
+    if (this.MOCK) return this.setD({ jadwalLabel: label, selDate: date });
+    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, jadwalLabel: label, selDate: date })).catch((e) => this.toastMsg(e.message));
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Link review disalin')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
   decideRotation(id, action) {
@@ -239,12 +240,15 @@ class Component extends DCLogic {
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(214,255,61,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
     // teaching calendar (month grid) — highlight days the coach has classes
     const calDow = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    const selDate = D.selDate || '';
     const calCells = (D.calCells || []).map((c) => {
-      if (c.blank) return { show: false, day: '', teach: false, count: 0, bg: 'transparent', border: 'transparent', col: 'var(--muted)' };
-      return { show: true, day: c.day, teach: !!c.teach, count: c.count,
-        bg: c.teach ? 'var(--volt-dim)' : 'transparent',
-        border: c.isToday ? 'var(--volt)' : (c.teach ? 'rgba(214,255,61,.3)' : 'var(--border)'),
-        col: c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)') };
+      if (c.blank) return { show: false, day: '', teach: false, count: 0, bg: 'transparent', border: 'transparent', col: 'var(--muted)', countCol: 'var(--volt)', cursor: 'default', pick: null };
+      const isSel = c.date === selDate;
+      return { show: true, day: c.day, teach: !!c.teach, count: c.count, cursor: 'pointer', pick: () => this.showDay(c.date),
+        bg: isSel ? 'var(--volt)' : (c.teach ? 'var(--volt-dim)' : 'transparent'),
+        border: isSel ? 'var(--volt)' : (c.isToday ? 'var(--volt)' : (c.teach ? 'rgba(214,255,61,.3)' : 'var(--border)')),
+        col: isSel ? '#08090B' : (c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)')),
+        countCol: isSel ? '#08090B' : 'var(--volt)' };
     });
     // monthly monitoring bars
     const monthlyRaw = D.monthly || [];
@@ -335,6 +339,7 @@ class Component extends DCLogic {
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
       monthly, monthlyYear: D.monthlyYear || '',
       calDow, calCells, calMonthLabel: D.calMonthLabel || '', calPrev: () => this.loadCalendar(this.state.d.calPrevYm), calNext: () => this.loadCalendar(this.state.d.calNextYm),
+      noClasses: (D.today || []).length === 0,
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
@@ -367,7 +372,7 @@ class Component extends DCLogic {
     const calCellsMock = [];
     for (let i = 0; i < 2; i++) calCellsMock.push({ blank: true });
     for (let day = 1; day <= 31; day++) { const cc = teachDays[day] || 0; calCellsMock.push({ blank: false, day, date: '2026-07-' + String(day).padStart(2, '0'), count: cc, teach: cc > 0, isToday: day === 2 }); }
-    d.calCells = calCellsMock;
+    d.calCells = calCellsMock; d.selDate = '2026-07-02'; d.jadwalLabel = 'RABU 2 JUL';
     const mCount = [12, 14, 10, 16, 13, 18, 8, 0, 0, 0, 0, 0];
     const mPes = [148, 172, 121, 198, 160, 224, 96, 0, 0, 0, 0, 0];
     d.monthly = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 6 }));
