@@ -288,18 +288,7 @@
             </sc-for>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-top:24px;">
-            
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
-              <div style="font-weight:800;font-family:'Archivo';font-size:16px;margin-bottom:14px;">Riwayat Terakhir</div>
-              <sc-for list="{{ recentClasses }}" as="r" hint-placeholder-count="3">
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-                <div><div style="font-weight:700;font-size:14px;">{{ r.type }}</div><div style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono';">{{ r.date }} · {{ r.time }}</div></div>
-                <div style="text-align:right;"><div style="font-weight:700;font-size:14px;">{{ r.peserta }}</div><div style="font-size:11px;color:var(--green);">Selesai</div></div>
-              </div>
-              </sc-for>
-            </div>
-          </div>
+          
         </div>
         </sc-if>
 
