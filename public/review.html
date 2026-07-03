@@ -5,30 +5,30 @@
 <title>Rate Your Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#08090B; --panel:#121419; --panel2:#171A21; --border:#262B35; --border2:#323845; --text:#F3F5F7; --muted:#888F9C; --muted2:#5B616E; --volt:#D6FF3D; --amber:#FFB020; --green:#3ED598; --red:#FF5247; }
+  :root{ --bg:#F4F3ED; --panel:#FFFFFF; --panel2:#F0EFE8; --border:#E5E3DA; --border2:#D6D4CA; --text:#1C1B19; --muted:#6F6E66; --muted2:#9C9A90; --volt:#BE4A42; --amber:#C77F00; --green:#2E9E5B; --red:#C0392B; }
   *{ margin:0; padding:0; box-sizing:border-box; }
-  body{ background:var(--bg); color:var(--text); min-height:100vh; font-family:'Hanken Grotesk',system-ui,sans-serif; display:flex; align-items:flex-start; justify-content:center; padding:28px 16px 60px; }
+  body{ background:var(--bg); color:var(--text); min-height:100vh; font-family:'Inter',system-ui,sans-serif; display:flex; align-items:flex-start; justify-content:center; padding:28px 16px 60px; }
   .wrap{ width:100%; max-width:440px; }
   .brand{ display:flex; align-items:center; gap:11px; margin-bottom:22px; justify-content:center; }
-  .badge{ width:38px; height:38px; border-radius:10px; background:var(--volt); color:#08090B; font-size:20px; display:flex; align-items:center; justify-content:center; }
-  .brand-name{ font-family:'Archivo'; font-weight:800; font-size:18px; letter-spacing:.01em; }
+  .badge{ width:38px; height:38px; border-radius:10px; background:var(--volt); color:#ffffff; font-size:20px; display:flex; align-items:center; justify-content:center; }
+  .brand-name{ font-family:'Inter'; font-weight:800; font-size:18px; letter-spacing:.01em; }
   .card{ background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:26px 24px; }
-  h1{ font-family:'Archivo'; font-weight:800; font-size:22px; margin-bottom:6px; }
+  h1{ font-family:'Inter'; font-weight:800; font-size:22px; margin-bottom:6px; }
   .sub{ color:var(--muted); font-size:13.5px; margin-bottom:22px; line-height:1.5; }
   label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:7px; }
   input, textarea{ width:100%; background:var(--panel2); border:1px solid var(--border2); color:var(--text); border-radius:12px; padding:13px 14px; font-size:14.5px; font-family:inherit; outline:0; }
   input:focus, textarea:focus{ border-color:var(--volt); }
   textarea{ min-height:80px; resize:vertical; }
   .field{ margin-bottom:16px; }
-  .btn{ width:100%; background:var(--volt); color:#08090B; border:0; border-radius:12px; padding:15px; font-family:'Archivo'; font-weight:800; font-size:15px; cursor:pointer; text-transform:uppercase; letter-spacing:.02em; }
+  .btn{ width:100%; background:var(--volt); color:#ffffff; border:0; border-radius:12px; padding:15px; font-family:'Inter'; font-weight:800; font-size:15px; cursor:pointer; text-transform:uppercase; letter-spacing:.02em; }
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
   .btn.ghost{ background:transparent; border:1px solid var(--border2); color:var(--muted); text-transform:none; letter-spacing:0; }
   .msg{ font-size:13px; margin-top:14px; text-align:center; min-height:18px; } .msg.err{ color:var(--red); } .msg.ok{ color:var(--green); }
   .classbox{ background:var(--panel2); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px; }
-  .classbox .cls{ font-family:'Archivo'; font-weight:800; font-size:17px; } .classbox .meta{ color:var(--muted); font-size:13px; margin-top:4px; }
-  .sechead{ font-family:'Archivo'; font-weight:800; font-size:16px; margin:2px 0 6px; }
+  .classbox .cls{ font-family:'Inter'; font-weight:800; font-size:17px; } .classbox .meta{ color:var(--muted); font-size:13px; margin-top:4px; }
+  .sechead{ font-family:'Inter'; font-weight:800; font-size:16px; margin:2px 0 6px; }
   .catlist{ margin-bottom:6px; }
   .catrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
   .catrow:last-child{ border-bottom:0; }
@@ -38,13 +38,13 @@
   .star{ line-height:1; color:var(--border2); cursor:pointer; transition:transform .1s, color .1s; }
   .star.on{ color:var(--amber); } .star:hover{ transform:scale(1.14); }
   .divider{ height:1px; background:var(--border); margin:20px 0; }
-  .rate-q{ text-align:center; font-family:'Archivo'; font-weight:800; font-size:17px; margin-bottom:2px; }
+  .rate-q{ text-align:center; font-family:'Inter'; font-weight:800; font-size:17px; margin-bottom:2px; }
   .rate-sub{ text-align:center; color:var(--muted); font-size:12.5px; margin-bottom:6px; }
   .stars{ display:flex; gap:8px; justify-content:center; margin:6px 0 22px; }
   .stars .star{ font-size:40px; }
   .hidden{ display:none; }
   .done{ text-align:center; padding:12px 0; }
-  .done .big{ font-size:44px; margin-bottom:8px; } .done h2{ font-family:'Archivo'; font-weight:800; font-size:20px; margin-bottom:6px; }
+  .done .big{ font-size:44px; margin-bottom:8px; } .done h2{ font-family:'Inter'; font-weight:800; font-size:20px; margin-bottom:6px; }
   .done p{ color:var(--muted); font-size:14px; }
 </style>
 </head>

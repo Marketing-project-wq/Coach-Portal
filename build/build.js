@@ -11,7 +11,7 @@ const xdcEnd = design.indexOf('</x-dc>');
 let xdcInner = design.slice(xdcStart + '<x-dc>'.length, xdcEnd);
 const helmet = (xdcInner.match(/<helmet>([\s\S]*?)<\/helmet>/) || [, ''])[1];
 let template = xdcInner.replace(/<helmet>[\s\S]*?<\/helmet>/, '').trim();
-const baseCss = (helmet.replace(/@font-face\s*\{[\s\S]*?\}/g, '').match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1];
+let baseCss = (helmet.replace(/@font-face\s*\{[\s\S]*?\}/g, '').match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1];
 
 // ---- wiring edits (before renames so we can target original ids) ----
 // Login inputs get ids (accept username or email)
@@ -159,7 +159,7 @@ for (const [a, b] of renames) template = template.split(a).join(b);
 // Full-bleed + mobile responsiveness. Targets the design's inline-styled containers
 // via [style*=...] selectors so no markup classes are needed; !important beats inline styles.
 const responsiveCss = `
-  html, body { margin:0; padding:0; background:#08090B; }
+  html, body { margin:0; padding:0; background:#F4F3ED; }
   @media (max-width: 860px) {
     /* login: stack, hide the big hero, show only the form */
     [style*="grid-template-columns:1.05fr .95fr"] { grid-template-columns:minmax(0,1fr) !important; }
@@ -193,9 +193,35 @@ const responsiveCss = `
   }
 `;
 
+// ============ THEME: light content + dark sidebar + red accent (match Admin Hub) ============
+// 1) Swap the palette (var definitions on the app root div + :root)
+const VARMAP = {
+  '--bg:#08090B': '--bg:#F4F3ED', '--panel:#121419': '--panel:#FFFFFF', '--panel2:#171A21': '--panel2:#F0EFE8',
+  '--raised:#1D212A': '--raised:#EBEAE2', '--border:#262B35': '--border:#E5E3DA', '--border2:#323845': '--border2:#D6D4CA',
+  '--text:#F3F5F7': '--text:#1C1B19', '--muted:#888F9C': '--muted:#6F6E66', '--muted2:#5B616E': '--muted2:#9C9A90',
+  '--volt:#D6FF3D': '--volt:#BE4A42', '--volt-dim:rgba(214,255,61,.13)': '--volt-dim:rgba(190,74,66,.10)',
+  '--green:#3ED598': '--green:#2E9E5B', '--amber:#FFB020': '--amber:#C77F00', '--red:#FF5247': '--red:#C0392B', '--cyan:#4DD4F2': '--cyan:#2E7D91',
+};
+for (const [k, v] of Object.entries(VARMAP)) { template = template.split(k).join(v); baseCss = baseCss.split(k).join(v); }
+// 2) Hardcoded colors: dark-text-on-accent -> white; volt-green tints/solids -> red; bright cyan -> readable teal
+template = template.split('color:#08090B').join('color:#ffffff');
+template = template.split('214,255,61').join('190,74,66');
+template = template.split('#9BD11E').join('#9A3B33');
+template = template.split('#4DD4F2').join('#2E7D91');
+// 3) Font: Inter everywhere
+for (const f of ["'Hanken Grotesk'", "'Archivo'", "'JetBrains Mono'"]) { template = template.split(f).join("'Inter'"); baseCss = baseCss.split(f).join("'Inter'"); }
+// 4) Keep the sidebar dark on the light theme (scope dark palette to <aside>)
+const themeCss = `
+  aside { background:#0E0E0C !important; backdrop-filter:none !important;
+    --bg:#0E0E0C; --panel:#1A1A18; --panel2:#26251F; --raised:#26251F;
+    --border:#2A2A24; --border2:#35342D; --text:#F4F3EE; --muted:#A6A59C; --muted2:#75746B; }
+  header { background:#FFFFFF !important; backdrop-filter:none !important; }
+  [style*="radial-gradient(900px 600px at 12% -8%"] { display:none !important; }
+`;
+
 const googleFonts = `  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">`;
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">`;
 
 const out = `<!DOCTYPE html>
 <html lang="id"><head>
@@ -205,6 +231,7 @@ const out = `<!DOCTYPE html>
 ${googleFonts}
 <style>
 ${baseCss}
+${themeCss}
 ${responsiveCss}
 </style>
 </head>

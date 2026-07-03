@@ -4,7 +4,7 @@
 class Component extends DCLogic {
   constructor() {
     super();
-    this.C = { volt: '#D6FF3D', voltDim: 'rgba(214,255,61,.13)', green: '#3ED598', amber: '#FFB020', red: '#FF5247', cyan: '#4DD4F2', muted: '#888F9C', muted2: '#5B616E', raised: '#1D212A', border2: '#323845', text: '#F3F5F7' };
+    this.C = { volt: '#BE4A42', voltDim: 'rgba(190,74,66,.12)', green: '#2E9E5B', amber: '#C77F00', red: '#C0392B', cyan: '#2E7D91', muted: '#6F6E66', muted2: '#9C9A90', raised: '#EBEAE2', border2: '#D6D4CA', text: '#1C1B19' };
     this.accountRole = 'coach';
     this._t = null;
     this.state = {
@@ -42,7 +42,7 @@ class Component extends DCLogic {
   // ---------- helpers ----------
   ini(name) { const p = String(name || '').replace('Coach ', '').trim().split(' '); return ((p[0] && p[0][0] || 'C') + (p[1] ? p[1][0] : (p[0] && p[0][1]) || '')).toUpperCase(); }
   avatar(id) {
-    const map = { nando: ['#D6FF3D', '#08090B'], rheza: ['rgba(77,212,242,.18)', '#4DD4F2'], elsen: ['rgba(62,213,152,.18)', '#3ED598'], calysta: ['rgba(255,176,32,.18)', '#FFB020'], yokae: ['rgba(214,255,61,.16)', '#D6FF3D'], gilang: ['rgba(77,212,242,.16)', '#4DD4F2'], brian: ['rgba(62,213,152,.16)', '#3ED598'], mae: ['rgba(255,82,71,.16)', '#FF5247'] };
+    const map = { nando: ['#BE4A42', '#ffffff'], rheza: ['rgba(77,212,242,.18)', '#2E7D91'], elsen: ['rgba(62,213,152,.18)', '#3ED598'], calysta: ['rgba(255,176,32,.18)', '#FFB020'], yokae: ['rgba(190,74,66,.16)', '#BE4A42'], gilang: ['rgba(77,212,242,.16)', '#2E7D91'], brian: ['rgba(62,213,152,.16)', '#3ED598'], mae: ['rgba(255,82,71,.16)', '#FF5247'] };
     return map[String(id || '').toLowerCase()] || ['#1D212A', '#888F9C'];
   }
   statusPill(status) {
@@ -50,7 +50,7 @@ class Component extends DCLogic {
     const m = { 'Confirmed': ['rgba(136,143,156,.14)', C.muted], 'Checked-in': ['rgba(62,213,152,.14)', C.green], 'No-show': ['rgba(255,82,71,.14)', C.red], 'Akan Datang': ['rgba(136,143,156,.14)', C.muted], 'Sedang Berlangsung': [C.voltDim, C.volt], 'Selesai': ['rgba(62,213,152,.14)', C.green], 'Approved': ['rgba(62,213,152,.14)', C.green], 'Cancelled': ['rgba(255,82,71,.14)', C.red], 'Ditolak': ['rgba(255,82,71,.14)', C.red], 'Terkirim': ['rgba(62,213,152,.14)', C.green], 'Gagal': ['rgba(255,82,71,.14)', C.red] };
     const v = m[status] || ['rgba(136,143,156,.14)', C.muted]; return { bg: v[0], col: v[1] };
   }
-  navMeta(active) { return active ? { bg: 'var(--volt-dim)', fg: 'var(--volt)', bar: 'var(--volt)' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
+  navMeta(active) { return active ? { bg: '#BE4A42', fg: '#ffffff', bar: '#BE4A42' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
   recencyLabel(d) {
     let label;
     if (d == null) label = 'Pertama kali';
@@ -217,7 +217,7 @@ class Component extends DCLogic {
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
 
-    const seg = (on) => on ? { bg: 'var(--volt)', fg: '#08090B' } : { bg: 'transparent', fg: 'var(--muted)' };
+    const seg = (on) => on ? { bg: 'var(--volt)', fg: '#ffffff' } : { bg: 'transparent', fg: 'var(--muted)' };
     const rseg = { coach: seg(st.role === 'coach'), hc: seg(st.role === 'hc'), admin: seg(st.role === 'admin') };
     const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
     const canAdmin = this.accountRole === 'admin';
@@ -237,7 +237,7 @@ class Component extends DCLogic {
       return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c) });
     });
     // week
-    const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(214,255,61,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
+    const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(190,74,66,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
     // teaching calendar (month grid) — highlight days the coach has classes
     const calDow = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
     const selDate = D.selDate || '';
@@ -246,9 +246,9 @@ class Component extends DCLogic {
       const isSel = c.date === selDate;
       return { show: true, day: c.day, teach: !!c.teach, count: c.count, cursor: 'pointer', pick: () => this.showDay(c.date),
         bg: isSel ? 'var(--volt)' : (c.teach ? 'var(--volt-dim)' : 'transparent'),
-        border: isSel ? 'var(--volt)' : (c.isToday ? 'var(--volt)' : (c.teach ? 'rgba(214,255,61,.3)' : 'var(--border)')),
-        col: isSel ? '#08090B' : (c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)')),
-        countCol: isSel ? '#08090B' : 'var(--volt)' };
+        border: isSel ? 'var(--volt)' : (c.isToday ? 'var(--volt)' : (c.teach ? 'rgba(190,74,66,.3)' : 'var(--border)')),
+        col: isSel ? '#ffffff' : (c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)')),
+        countCol: isSel ? '#ffffff' : 'var(--volt)' };
     });
     // monthly monitoring bars
     const monthlyRaw = D.monthly || [];
@@ -279,7 +279,7 @@ class Component extends DCLogic {
     // participants
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col }; });
     // sub options
-    const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; return { name: o.name, avail: o.avail, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(255,82,71,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: dis ? 'var(--red)' : 'var(--green)', avBg: dis ? '#1D212A' : 'rgba(214,255,61,.12)', avFg: dis ? '#5B616E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
+    const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; return { name: o.name, avail: o.avail, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(255,82,71,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: dis ? 'var(--red)' : 'var(--green)', avBg: dis ? '#1D212A' : 'rgba(190,74,66,.12)', avFg: dis ? '#5B616E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
     const emailLog = (D.emailLog || []).map((e) => { const m = this.statusPill(e.status); return Object.assign({}, e, { bg: m.bg, col: m.col, icon: e.status === 'Gagal' ? '⚠' : '✓', iconBg: e.status === 'Gagal' ? 'rgba(255,82,71,.12)' : 'var(--volt-dim)' }); });
     // HC today all
@@ -310,7 +310,7 @@ class Component extends DCLogic {
     const noSchedule = !hasSchedule;
     const scheduleRows = ((D.schedule && D.schedule.times) || []).map((tm) => ({
       time: tm,
-      cells: (D.schedule.grid[tm] || []).map((cell) => { if (!cell) return { has: false }; const comp = String(cell.type).includes('Complete'); return { has: true, type: String(cell.type).replace('HYROX ', ''), peserta: cell.peserta, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(214,255,61,.07)' : 'rgba(77,212,242,.07)' }; }),
+      cells: (D.schedule.grid[tm] || []).map((cell) => { if (!cell) return { has: false }; const comp = String(cell.type).includes('Complete'); return { has: true, type: String(cell.type).replace('HYROX ', ''), peserta: cell.peserta, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(190,74,66,.07)' : 'rgba(77,212,242,.07)' }; }),
     }));
     // coaches enriched
     const roleColor = (r) => r === 'Head Coach' ? { bg: C.voltDim, col: C.volt } : { bg: 'rgba(136,143,156,.14)', col: C.muted };
@@ -362,7 +362,7 @@ class Component extends DCLogic {
   // ---------- mock sample data (for ?mock=1 render tests) ----------
   mockData() {
     const d = this.emptyData();
-    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#4DD4F2', status: 'Akan Datang', canAbsen: true, dateLabel: 'Rab 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Terjadwal', canAbsen: false, dateLabel: 'Kam 2 Jul' }];
+    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#2E7D91', status: 'Akan Datang', canAbsen: true, dateLabel: 'Rab 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Terjadwal', canAbsen: false, dateLabel: 'Kam 2 Jul' }];
     d.todayLabel = 'Rabu, 1 Juli 2026 · 1 kelas hari ini';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
     d.monthlyYear = '2026';
