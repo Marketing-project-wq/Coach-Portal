@@ -50,7 +50,7 @@ class Component extends DCLogic {
     const m = { 'Confirmed': ['rgba(136,143,156,.14)', C.muted], 'Checked-in': ['rgba(62,213,152,.14)', C.green], 'No-show': ['rgba(255,82,71,.14)', C.red], 'Akan Datang': ['rgba(136,143,156,.14)', C.muted], 'Sedang Berlangsung': [C.voltDim, C.volt], 'Selesai': ['rgba(62,213,152,.14)', C.green], 'Approved': ['rgba(62,213,152,.14)', C.green], 'Cancelled': ['rgba(255,82,71,.14)', C.red], 'Ditolak': ['rgba(255,82,71,.14)', C.red], 'Terkirim': ['rgba(62,213,152,.14)', C.green], 'Gagal': ['rgba(255,82,71,.14)', C.red] };
     const v = m[status] || ['rgba(136,143,156,.14)', C.muted]; return { bg: v[0], col: v[1] };
   }
-  navMeta(active) { return active ? { bg: '#BE4A42', fg: '#ffffff', bar: '#BE4A42' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
+  navMeta(active) { return active ? { bg: 'rgba(255,255,255,.20)', fg: '#ffffff', bar: '#ffffff' } : { bg: 'transparent', fg: 'var(--muted)', bar: 'transparent' }; }
   recencyLabel(d) {
     let label;
     if (d == null) label = 'Pertama kali';
