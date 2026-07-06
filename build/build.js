@@ -200,7 +200,7 @@ const menuScreen = '<sc-if value="{{ s.menu }}"><div style="max-width:900px;marg
     + '<button onclick="{{ submitMenu }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:13px;font-family:\'Archivo\';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">{{ menuSubmitLabel }}</button>'
   + '</div>'
   + '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;">DAFTAR MENU</div>'
-  + '<sc-if value="{{ hasClassMenus }}"><div style="display:flex;flex-direction:column;gap:10px;">'
+  + '<sc-if value="{{ hasClassMenus }}"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;align-items:start;">'
     + '<sc-for list="{{ classMenus }}" as="m"><div style="' + cardBox + 'padding:14px 16px;">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">'
         + '<div style="min-width:0;"><div style="font-weight:800;font-size:14.5px;">{{ m.title }}</div><sc-if value="{{ m.hasCategory }}"><span style="display:inline-block;margin-top:5px;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:100px;background:var(--volt-dim);color:var(--volt);">{{ m.category }}</span></sc-if></div>'
