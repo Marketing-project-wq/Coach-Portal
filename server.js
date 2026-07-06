@@ -440,7 +440,8 @@ route('POST', '/api/public/lookup', async (req, res) => {
   const scs = await sb(`arena_class_schedules?select=instructor,class_type_id,schedule_date&id=eq.${enc(b.schedule_id)}&limit=1`);
   const sc = scs && scs[0]; const types = await classTypes();
   const already = forceAlready || (await reviewed(code));
-  return send(res, 200, { found: true, booking_code: code, coach: sc ? sc.instructor : '', class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
+  const pm = await coachPhotoMap();
+  return send(res, 200, { found: true, booking_code: code, coach: sc ? sc.instructor : '', coach_photo: coachPhoto(pm, sc ? sc.instructor : ''), class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
 });
 // Per-category star ratings a participant gives a coach (each 1-5). "Other" is free text.
 const REVIEW_CATS = [

@@ -29,9 +29,9 @@ template = template.replace('grid-template-columns:1.05fr .95fr', 'grid-template
 template = template.replace(
   '<div style="width:34px;height:34px;border-radius:9px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:#08090B;">20</div>',
   '');
-const arenaLogo = '<div style="display:flex;align-items:center;gap:5px;font-family:\'Archivo\';font-weight:900;font-size:18px;letter-spacing:-.01em;line-height:1;margin-bottom:7px;">'
-  + '<span style="color:var(--text);display:inline-flex;align-items:center;">2<span style="display:inline-flex;width:.62em;height:.62em;border:.13em solid var(--text);border-radius:50%;position:relative;margin:0 .03em;"><span style="position:absolute;inset:26%;background:#E4002B;border-radius:50%;"></span></span>FIT</span>'
-  + '<span style="color:var(--border2);font-weight:300;">|</span>'
+const arenaLogo = '<div style="display:flex;align-items:center;gap:6px;font-family:\'Archivo\';font-weight:900;font-size:19px;letter-spacing:.01em;line-height:1;margin-bottom:7px;">'
+  + '<span style="color:var(--text);display:inline-flex;align-items:center;">2<span style="display:inline-flex;width:.66em;height:.66em;border:.15em solid var(--text);box-sizing:border-box;border-radius:50%;position:relative;margin:0 .04em;"><span style="position:absolute;inset:22%;background:#E4002B;border-radius:50%;"></span></span>FIT</span>'
+  + '<span style="color:var(--muted2);font-weight:400;">|</span>'
   + '<span style="color:#E4002B;">ARENA</span></div>';
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',

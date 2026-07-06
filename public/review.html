@@ -27,7 +27,8 @@
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
   .btn.ghost{ background:transparent; border:1px solid var(--border2); color:var(--muted); }
   .msg{ font-size:13px; margin-top:14px; text-align:center; min-height:18px; } .msg.err{ color:var(--red); } .msg.ok{ color:var(--green); }
-  .classbox{ background:rgba(255,255,255,.5); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:20px; }
+  .classbox{ background:rgba(255,255,255,.5); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:20px; display:flex; align-items:center; gap:14px; }
+  .coach-photo{ width:54px; height:54px; border-radius:50%; object-fit:cover; flex-shrink:0; border:2px solid rgba(228,0,43,.28); background:var(--panel2); }
   .classbox .cls{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px; text-transform:uppercase; letter-spacing:.012em; } .classbox .meta{ color:var(--muted); font-size:13px; margin-top:4px; font-family:'JetBrains Mono',monospace; }
   .sechead{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:18px; margin:2px 0 6px; text-transform:uppercase; letter-spacing:.012em; }
   .catlist{ margin-bottom:6px; }
@@ -51,7 +52,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="brand"><div style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:27px;letter-spacing:-.01em;line-height:1;text-transform:uppercase;"><span style="color:var(--text);display:inline-flex;align-items:center;">2<span style="display:inline-flex;width:.62em;height:.62em;border:.13em solid var(--text);border-radius:50%;position:relative;margin:0 .03em;"><span style="position:absolute;inset:26%;background:#E4002B;border-radius:50%;"></span></span>FIT</span><span style="color:var(--border2);font-weight:300;">|</span><span style="color:#E4002B;">ARENA</span></div></div>
+    <div class="brand"><div style="display:flex;align-items:center;gap:7px;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:30px;letter-spacing:.01em;line-height:1;text-transform:uppercase;"><span style="color:var(--text);display:inline-flex;align-items:center;">2<span style="display:inline-flex;width:.66em;height:.66em;border:.15em solid var(--text);box-sizing:border-box;border-radius:50%;position:relative;margin:0 .04em;"><span style="position:absolute;inset:22%;background:#E4002B;border-radius:50%;"></span></span>FIT</span><span style="color:var(--muted2);font-weight:400;">|</span><span style="color:#E4002B;">ARENA</span></div></div>
 
     <!-- STEP 1: enter booking code -->
     <div class="card" id="step1">
@@ -69,8 +70,11 @@
     <!-- STEP 2: rate -->
     <div class="card hidden" id="step2">
       <div class="classbox">
-        <div class="cls" id="clsName">—</div>
-        <div class="meta" id="clsMeta">—</div>
+        <img id="coachPhoto" class="coach-photo" alt="" onerror="this.style.display='none'">
+        <div style="min-width:0;">
+          <div class="cls" id="clsName">—</div>
+          <div class="meta" id="clsMeta">—</div>
+        </div>
       </div>
 
       <div class="sechead">Nilai coach kamu</div>
@@ -84,7 +88,6 @@
       <div class="divider"></div>
 
       <div class="rate-q">Rating keseluruhan</div>
-      <div class="rate-sub">1 mengecewakan · 5 mantap!</div>
       <div class="stars" id="stars"></div>
 
       <div class="field">
@@ -153,6 +156,8 @@
         state.code = d.booking_code; state.rating=0; setRating(0); resetCats();
         $('clsName').textContent = d.class_label + (d.coach ? ' · Coach ' + d.coach : '');
         $('clsMeta').textContent = (d.date ? d.date : '') + (d.booking_code ? ' · ' + d.booking_code : '');
+        var cp = $('coachPhoto');
+        if (d.coach_photo){ cp.src = d.coach_photo; cp.style.display = ''; } else { cp.style.display = 'none'; }
         $('rname').value = d.name || '';
         show('step2');
       }catch(e){ m.textContent=e.message; m.className='msg err'; }
