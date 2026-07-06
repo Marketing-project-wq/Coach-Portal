@@ -413,9 +413,9 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
 route('POST', '/api/venue/bookings', async (req, res, s) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
   const body = await readBody(req);
-  if (!body || !body.customer_name || !body.coach_name || !body.booking_date) return send(res, 400, { error: 'Nama customer, tanggal, & coach wajib diisi.' });
+  if (!body || !body.coach_name || !body.booking_date) return send(res, 400, { error: 'Coach & tanggal wajib diisi.' });
   const payload = {
-    customer_name: String(body.customer_name).trim().slice(0, 120),
+    customer_name: body.customer_name ? String(body.customer_name).trim().slice(0, 120) : null,
     customer_phone: body.customer_phone ? String(body.customer_phone).trim().slice(0, 40) : null,
     booking_date: body.booking_date,
     start_time: body.start_time || null,

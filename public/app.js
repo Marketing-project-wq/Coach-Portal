@@ -300,7 +300,7 @@ class Component extends DCLogic {
     const customer = val('venueCustomer').trim();
     const date = val('venueDate');
     const coach = val('venueCoach');
-    if (!customer || !date || !coach) return this.toastMsg('Nama customer, tanggal, & coach wajib diisi.');
+    if (!date || !coach) return this.toastMsg('Pilih coach & tanggal dulu.');
     const payload = { customer_name: customer, customer_phone: val('venuePhone').trim(), booking_date: date, start_time: val('venueTime') || null, end_time: val('venueEnd') || null, arena: val('venueArena').trim(), notes: val('venueNotes').trim(), coach_name: coach };
     if (this.MOCK) return this.toastMsg('Venue booking terkirim ke ' + coach);
     this.api('/api/venue/bookings', { method: 'POST', body: JSON.stringify(payload) })
@@ -429,14 +429,14 @@ class Component extends DCLogic {
     const venueStatusMap = { assigned: ['Terjadwal', C.muted, 'rgba(136,143,156,.14)'], done: ['Selesai', C.green, 'rgba(28,138,75,.12)'], cancelled: ['Dibatalkan', C.red, 'rgba(228,0,43,.12)'] };
     const venueBookings = (D.venueBookings || []).map((b) => {
       const stt = venueStatusMap[b.status] || venueStatusMap.assigned;
-      return Object.assign({}, b, { statusLabel: stt[0], statusCol: stt[1], statusBg: stt[2], isCancelled: b.status === 'cancelled', active: b.status !== 'cancelled',
+      return Object.assign({}, b, { customer: b.customer || 'Booking arena', statusLabel: stt[0], statusCol: stt[1], statusBg: stt[2], isCancelled: b.status === 'cancelled', active: b.status !== 'cancelled',
         timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Jam fleksibel', hasPhone: !!b.phone, hasArena: !!b.arena, hasNotes: !!b.notes,
         coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), cancel: () => this.cancelVenue(b.id) });
     });
     const noVenueBookings = venueBookings.length === 0;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
-    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes }));
+    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Booking arena', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes }));
     const hasScheduleVenues = scheduleVenues.length > 0;
     // coach management (open to all internal roles) — list without passwords + add form
     const mgmtCoaches = (D.mgmtCoaches || []).map((c) => { const av = this.avatar(c.name); return { name: c.name, role: c.role, initials: this.ini(c.name), avBg: av[0], avFg: av[1], photo: c.photo || '', hasPhoto: !!c.photo, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', status: c.status, roleCol: c.role === 'Head Coach' ? C.volt : C.muted }; });
