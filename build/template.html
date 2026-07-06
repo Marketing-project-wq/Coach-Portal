@@ -618,10 +618,10 @@
               </div>
               <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
               <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax · {{ c.cap }} slot</div>
-              <div style="display:flex;gap:10px;margin-top:18px;">
+              <sc-if value="{{ canOpenClass }}"><div style="display:flex;gap:10px;margin-top:18px;">
                 <button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button>
                 <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
-              </div>
+              </div></sc-if>
             </div>
             </sc-for>
           </div>

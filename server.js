@@ -106,6 +106,13 @@ async function coachPhotoMap() {
 function coachPhoto(map, name) { const v = (map && name) ? map[String(name).trim().toLowerCase()] : null; return v ? v.photo : ''; }
 function coachSpec(map, name) { const v = (map && name) ? map[String(name).trim().toLowerCase()] : null; return v ? v.spec : ''; }
 
+// External coaches: participants may review them, but they must NOT see any
+// participant data/names. They only get Schedule, Monitoring and Rotation.
+const EXTERNAL_COACHES = new Set(['brian', 'gilang', 'mae', 'yokae']);
+function isExternalCoach(name) { return EXTERNAL_COACHES.has(String(name || '').trim().toLowerCase()); }
+// True when the *logged-in* account is an external coach (never applies to HC/admin).
+function isExternalSession(s) { return s.r === 'coach' && isExternalCoach(s.c); }
+
 async function bookingCounts(ids) {
   const c = {};
   if (!ids.length) return c;
@@ -255,9 +262,9 @@ route('POST', '/api/auth/login', async (req, res) => {
   if (!u || !u.is_active || !verifyPassword(body.password, u.password_hash)) return send(res, 401, { error: 'Username atau password salah.' });
   sb(`arena_coach_users?id=eq.${enc(u.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ last_login: new Date().toISOString() }) }).catch(() => {});
   const token = signToken({ u: u.username, c: u.coach_name, d: u.display_name || u.coach_name, r: u.role || 'coach' });
-  return send(res, 200, { token, coach: { coach_name: u.coach_name, display_name: u.display_name || u.coach_name, role: u.role || 'coach' } });
+  return send(res, 200, { token, coach: { coach_name: u.coach_name, display_name: u.display_name || u.coach_name, role: u.role || 'coach', external: (u.role || 'coach') === 'coach' && isExternalCoach(u.coach_name) } });
 });
-route('GET', '/api/coach/me', async (req, res, s) => { const pm = await coachPhotoMap(); return send(res, 200, { coach_name: s.c, display_name: s.d, role: s.r, photo: coachPhoto(pm, s.c) }); });
+route('GET', '/api/coach/me', async (req, res, s) => { const pm = await coachPhotoMap(); return send(res, 200, { coach_name: s.c, display_name: s.d, role: s.r, photo: coachPhoto(pm, s.c), external: isExternalSession(s) }); });
 
 // ===== COACH: dashboard =====
 route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
@@ -375,6 +382,7 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
 
 // ===== COACH: participants — how many times each attended + recency of last visit =====
 route('GET', '/api/coach/members', async (req, res, s) => {
+  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
   const today = todayJakarta();
   const map = await coachAttendanceMap(s.c, today);
   const members = Object.keys(map).map((k) => {
@@ -472,6 +480,8 @@ route('POST', '/api/public/review', async (req, res) => {
 
 // Reviews for the portal (coach sees own; head coach/admin see all)
 route('GET', '/api/coach/reviews', async (req, res, s) => {
+  // External coaches can be reviewed, but only Admin/HC may see those reviews.
+  if (isExternalSession(s)) return send(res, 403, { error: 'Review hanya bisa dilihat Admin & Head Coach.' });
   const isHC = s.r === 'hc' || s.r === 'admin';
   let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,ratings,created_at&order=created_at.desc&limit=100';
   if (!isHC) q += `&coach_name=eq.${enc(s.c)}`;
@@ -498,6 +508,7 @@ async function sbCount(q) {
 // Counts only classes from this date onward (the leaderboard "starts" here).
 const LEADERBOARD_SINCE = '2026-07-01';
 route('GET', '/api/coach/leaderboard', async (req, res, s) => {
+  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
   const scheds = (await sb(`arena_class_schedules?select=id,instructor&is_cancelled=eq.false&schedule_date=gte.${LEADERBOARD_SINCE}`)) || [];
   const byCoach = {};
   for (const sc of scheds) { const nm = sc.instructor; if (!nm) continue; if (!byCoach[nm]) byCoach[nm] = { ids: [], classes: 0 }; byCoach[nm].ids.push(sc.id); byCoach[nm].classes++; }
@@ -519,6 +530,7 @@ route('GET', '/api/coach/leaderboard', async (req, res, s) => {
 
 // ===== COACH: class detail + participants =====
 route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
+  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
   const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&id=eq.${enc(params.id)}&limit=1`);
   const sc = rows && rows[0];
   if (!sc) return send(res, 404, { error: 'Jadwal tidak ditemukan.' });

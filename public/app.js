@@ -1,11 +1,16 @@
 'use strict';
 /* Coach Portal — real-data component (extends DCLogic from sc-runtime.js).
  * Sources every screen from the backend API; falls back to sample data with ?mock=1. */
+/* External coaches: participants may review them, but they cannot see participant
+ * data/names. They only get Schedule, Monitoring and Rotation. */
+const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'yokae'];
+function isExternalName(name) { return EXTERNAL_COACHES.indexOf(String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase()) >= 0; }
 class Component extends DCLogic {
   constructor() {
     super();
     this.C = { volt: '#E4002B', voltDim: 'rgba(228,0,43,.12)', green: '#1C8A4B', amber: '#C77A00', red: '#E4002B', cyan: '#0068C9', muted: '#6E6E73', muted2: '#9A9A9E', raised: 'rgba(255,255,255,.55)', border2: 'rgba(17,17,20,.15)', text: '#1D1D1F' };
     this.accountRole = 'coach';
+    this.isExternal = false;
     this._t = null;
     this.state = {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
@@ -24,6 +29,7 @@ class Component extends DCLogic {
     if (this.MOCK) {
       const role = (location.search.match(/role=(\w+)/) || [])[1] || 'coach';
       this.accountRole = role;
+      this.isExternal = role === 'coach' && /[?&]ext=1/.test(location.search);
       const scr = (location.search.match(/screen=(\w+)/) || [])[1];
       this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts');
       this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role, photo: role === 'coach' ? 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/rheza-1778032238203.png' : '' });
@@ -34,6 +40,7 @@ class Component extends DCLogic {
     if (this.state.token) {
       this.api('/api/coach/me').then((me) => {
         this.accountRole = me.role;
+        this.isExternal = !!me.external;
         this.state.user = this.userObj(me); this.state.loggedIn = true;
         this.applyRole(me.role, true);
       }).catch(() => this.logout());
@@ -91,6 +98,8 @@ class Component extends DCLogic {
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
     if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq'].indexOf(saved) < 0) screen = saved; }
+    // External coaches may only reach Schedule, Monitoring and Rotation.
+    if (this.isExternal && ['dash', 'monthly', 'subreq'].indexOf(screen) < 0) screen = 'dash';
     if (window.localStorage) localStorage.setItem('arena_screen', screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
@@ -127,6 +136,7 @@ class Component extends DCLogic {
       .then((res) => {
         if (window.localStorage) localStorage.setItem('arena_token', res.token);
         this.accountRole = res.coach.role;
+        this.isExternal = !!res.coach.external || (res.coach.role === 'coach' && isExternalName(res.coach.coach_name || res.coach.display_name));
         this.setState({ token: res.token, loggedIn: true, user: this.userObj(res.coach) });
         this.applyRole(res.coach.role);
       }).catch((e) => this.toastMsg(e.message || 'Login gagal.'));
@@ -400,6 +410,8 @@ class Component extends DCLogic {
       login: () => this.login(), logout: () => this.logout(),
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
+      isExternal: this.isExternal, showReview: !this.isExternal, showLeaderboard: !this.isExternal,
+      showMembers: (isCoachView || isAdmin) && !this.isExternal, canOpenClass: !this.isExternal,
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'MENDATANG', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
