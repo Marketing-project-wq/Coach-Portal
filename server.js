@@ -503,6 +503,18 @@ route('POST', '/api/coach/menu/:id/delete', async (req, res, s, q, params) => {
   await sb(`arena_class_menus?id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   return send(res, 200, { ok: true });
 });
+route('POST', '/api/coach/menu/:id/update', async (req, res, s, q, params) => {
+  // The author or a Head Coach / Admin may edit a menu entry.
+  const rows = await sb(`arena_class_menus?select=created_by&id=eq.${enc(params.id)}&limit=1`);
+  const m = rows && rows[0];
+  if (!m) return send(res, 404, { error: 'Menu tidak ditemukan.' });
+  const mine = m.created_by === s.d || m.created_by === s.c;
+  if (!mine && !requireHC(s)) return send(res, 403, { error: 'Hanya pembuat atau Head Coach yang bisa mengedit.' });
+  const body = await readBody(req);
+  if (!body || !body.title || !body.content) return send(res, 400, { error: 'Nama menu & isi menu wajib diisi.' });
+  await sb(`arena_class_menus?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ title: String(body.title).trim().slice(0, 160), category: body.category ? String(body.category).trim().slice(0, 80) : null, content: String(body.content).trim().slice(0, 4000) }) });
+  return send(res, 200, { ok: true });
+});
 
 // ===== COACH: participants — how many times each attended + recency of last visit =====
 route('GET', '/api/coach/members', async (req, res, s) => {
