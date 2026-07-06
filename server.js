@@ -228,9 +228,11 @@ function serveStatic(req, res) {
   if (p === '/review') p = '/review.html';
   const fp = path.normalize(path.join(PUBLIC_DIR, p));
   if (!fp.startsWith(PUBLIC_DIR)) return send(res, 403, 'Forbidden');
-  const cacheFor = (ext) => (ext === '.html' || ext === '.js') ? 'no-cache' : 'public, max-age=3600';
+  // HTML/JS must never be cached (by browser or CDN) so a new deploy shows immediately;
+  // other assets use content-versioned URLs, so they can cache for a while.
+  const cacheFor = (ext) => (ext === '.html' || ext === '.js') ? 'no-store, no-cache, must-revalidate, max-age=0' : 'public, max-age=3600';
   fs.readFile(fp, (err, data) => {
-    if (err) return fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (e2, d2) => e2 ? send(res, 404, 'Not found') : (res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' }), res.end(d2)));
+    if (err) return fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (e2, d2) => e2 ? send(res, 404, 'Not found') : (res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' }), res.end(d2)));
     const ext = path.extname(fp).toLowerCase();
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cacheFor(ext) });
     res.end(data);

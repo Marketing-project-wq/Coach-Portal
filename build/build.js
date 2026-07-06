@@ -2,9 +2,15 @@
 // Run: node build/build.js   (from repo root)
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 const design = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf8');
+// Cache-busting version derived from the JS content — changes whenever app.js /
+// sc-runtime.js change, so browsers/CDNs always fetch the newest script.
+const assetVer = crypto.createHash('md5')
+  .update(fs.readFileSync(path.join(ROOT, 'public', 'app.js')) + fs.readFileSync(path.join(ROOT, 'public', 'sc-runtime.js')))
+  .digest('hex').slice(0, 8);
 
 const xdcStart = design.indexOf('<x-dc>');
 const xdcEnd = design.indexOf('</x-dc>');
@@ -357,8 +363,8 @@ ${responsiveCss}
 <body>
 <div id="app"></div>
 <template id="tpl">${template}</template>
-<script src="sc-runtime.js"></script>
-<script src="app.js"></script>
+<script src="sc-runtime.js?v=${assetVer}"></script>
+<script src="app.js?v=${assetVer}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
