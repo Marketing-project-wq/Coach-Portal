@@ -617,9 +617,9 @@
                 <span style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};">{{ c.status }}</span>
               </div>
               <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
-              <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax · {{ c.cap }} slot</div>
-              <sc-if value="{{ canOpenClass }}"><div style="display:flex;gap:10px;margin-top:18px;">
-                <button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button>
+              <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax</div>
+              <sc-if value="{{ canOpenClass || c.canAbsen }}"><div style="display:flex;gap:10px;margin-top:18px;">
+                <sc-if value="{{ canOpenClass }}"><button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button></sc-if>
                 <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
               </div></sc-if>
             </div>
@@ -677,8 +677,8 @@
           <button onclick="{{ goDash }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Back</button>
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
             <div>
-              <div style="display:flex;align-items:center;gap:12px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--volt);">07:00</span><h2 style="font-family:'Archivo';font-weight:800;font-size:24px;margin:0;">HYROX Complete</h2></div>
-              <div style="color:var(--muted);font-size:14px;margin-top:6px;">Senin, 30 Jun 2026 · 07:00–08:00 · <span style="color:var(--text);font-weight:700;">12 dari 16 slot terisi</span></div>
+              <div style="display:flex;align-items:center;gap:12px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--volt);">{{ detailTime }}</span><h2 style="font-family:'Archivo';font-weight:800;font-size:24px;margin:0;">{{ detailType }}</h2></div>
+              <div style="color:var(--muted);font-size:14px;margin-top:6px;">{{ detailDate }} · {{ detailTimeRange }}</div>
             </div>
             <div style="display:flex;gap:10px;">
               <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Ganti Coach</button>
@@ -1013,9 +1013,13 @@
             </div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
-              <div><div style="font-weight:700;font-size:15px;">Validasi Lokasi saat Absen</div><div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:440px;">Validasi GPS terhadap koordinat 20FIT Arena. Default tanpa GPS (lebih sederhana untuk v1).</div></div>
-              <div style="width:48px;height:27px;border-radius:100px;background:var(--border2);position:relative;cursor:pointer;flex-shrink:0;"><div style="width:21px;height:21px;border-radius:50%;background:var(--muted);position:absolute;top:3px;left:3px;"></div></div>
+            <div style="font-weight:700;font-size:15px;">Kunci Lokasi saat Absen (GPS)</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:520px;">Coach cuma bisa "Mulai Kelas" kalau HP-nya berada di arena. Buka halaman ini <b style="color:var(--text);">saat kamu di arena</b>, atur radius, lalu simpan lokasinya.</div>
+            <div style="font-size:13px;margin-top:12px;color:{{ arenaLocCol }};font-weight:700;">{{ arenaLocStatus }}</div>
+            <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap;">
+              <button onclick="{{ captureArenaLoc }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">📍 Pakai Lokasi Saya Sekarang</button>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;color:var(--muted);">Radius</span><input id="arenaRadius" type="number" min="20" max="2000" value="{{ arenaRadius }}" style="width:82px;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:9px;color:var(--text);font-family:'JetBrains Mono';font-size:13px;outline:0;"><span style="font-size:13px;color:var(--muted);">meter</span></div>
+              <sc-if value="{{ arenaLocSet }}"><button onclick="{{ clearArenaLoc }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer;">Matikan Kunci</button></sc-if>
             </div>
           </div>
           <div style="background:rgba(214,255,61,.05);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);">20FIT Arena beroperasi di <span style="color:var(--text);font-weight:700;">satu lokasi</span> (Menteng Prada) — pemilihan studio dihapus dari seluruh portal.</div>
@@ -1051,7 +1055,7 @@
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:420px;width:100%;text-align:center;">
       <div style="width:60px;height:60px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;">⏱️</div>
       <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 8px;">Mulai Kelas Sekarang?</h2>
-      <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">HYROX Complete · 07:00 · 12 pax</p>
+      <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">{{ absenLabel }}</p>
       <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Tepat Waktu · timestamp &amp; device tercatat</div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · waktu server</div>
       <div style="display:flex;gap:11px;">

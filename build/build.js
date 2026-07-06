@@ -33,9 +33,12 @@ const arenaLogo = '<div style="display:flex;align-items:center;gap:6px;font-fami
   + '<span style="color:var(--text);display:inline-flex;align-items:center;">2<span style="display:inline-flex;width:.66em;height:.66em;border:.15em solid var(--text);box-sizing:border-box;border-radius:50%;position:relative;margin:0 .04em;"><span style="position:absolute;inset:22%;background:#E4002B;border-radius:50%;"></span></span>FIT</span>'
   + '<span style="color:var(--muted2);font-weight:400;">|</span>'
   + '<span style="color:#E4002B;">ARENA</span></div>';
+// Primary: the uploaded brand PNG. If it isn't present yet, fall back to the CSS wordmark above.
+const arenaLogoImg = '<img src="/20FITcolor.png" alt="20FIT" style="height:30px;width:auto;object-fit:contain;display:block;margin-bottom:8px;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+  + '<div style="display:none;">' + arenaLogo + '</div>';
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
-  '<div>' + arenaLogo + '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.02em;line-height:1.05;color:var(--muted);">Coach Workspace</div></div>');
+  '<div>' + arenaLogoImg + '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.02em;line-height:1.05;color:var(--muted);">Coach Workspace</div></div>');
 template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation');
 // Mobile drawer: mark the app shell with the menu state + inject a tap-to-close backdrop
 template = template.replace(
@@ -192,6 +195,34 @@ const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;ma
   + '<sc-if value="{{ noVenueBookings }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada venue booking.</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Manajemen Coach (open to all internal roles) ----
+const mgmtNav = '<sc-if value="{{ showMgmtNav }}"><button onclick="{{ goCoachMgmt }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.coachmgmt.bg }};color:{{ nav.coachmgmt.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.coachmgmt.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Manajemen Coach</button></sc-if>';
+template = template.replace(/(<button onclick="\{\{ goVenue \}\}"[\s\S]*?<\/button>)/, '$1' + mgmtNav);
+const mgmtScreen = '<sc-if value="{{ s.coachmgmt }}"><div style="max-width:900px;margin:0 auto;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Manajemen Coach</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Tambah coach baru ke sistem. Email &amp; password awal dibagikan manual ke coach (WhatsApp).</div>'
+  + '<div style="' + cardBox + 'padding:22px;margin-bottom:24px;">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+      + '<div><label style="' + vLabel + '">Nama Lengkap</label><input id="mgmtName" placeholder="mis. Coach Dimas" style="' + vInput + '"></div>'
+      + '<div><label style="' + vLabel + '">Role</label><select id="mgmtRole" style="' + vInput + 'cursor:pointer;"><option value="coach">Coach</option><option value="hc">Head Coach</option></select></div>'
+      + '<div><label style="' + vLabel + '">Email <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label><input id="mgmtEmail" placeholder="dimas@20fit.id" style="' + vInput + '"></div>'
+      + '<div><label style="' + vLabel + '">Nomor HP <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label><input id="mgmtPhone" placeholder="0812-xxxx-xxxx" style="' + vInput + '"></div>'
+    + '</div>'
+    + '<label style="' + vLabel + 'margin-top:14px;">Password Awal <span style="color:var(--muted2);font-weight:400;">(kosongkan = dibuat otomatis)</span></label>'
+    + '<input id="mgmtPw" placeholder="ketik password awal…" style="' + vInput + 'font-family:\'JetBrains Mono\';">'
+    + '<button onclick="{{ submitMgmtCoach }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:14px;font-family:\'Archivo\';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Tambah Coach</button>'
+  + '</div>'
+  + '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;">DAFTAR COACH</div>'
+  + '<sc-if value="{{ hasMgmtCoaches }}"><div style="' + cardBox + 'overflow:hidden;">'
+    + '<sc-for list="{{ mgmtCoaches }}" as="c"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);">'
+      + '<div style="width:38px;height:38px;border-radius:50%;background:{{ c.avBg }};color:{{ c.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;position:relative;overflow:hidden;">{{ c.initials }}<sc-if value="{{ c.hasPhoto }}"><img src="{{ c.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ c.name }}</div><div style="font-size:12px;color:{{ c.roleCol }};font-weight:600;margin-top:2px;">{{ c.role }}</div></div>'
+      + '<span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};">{{ c.status }}</span>'
+    + '</div></sc-for></div></sc-if>'
+    + '<sc-if value="{{ noMgmtCoaches }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada coach terdaftar.</div></sc-if>'
+  + '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', mgmtScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Hide Head Coach / Admin role buttons unless the account allows them
 template = template.replace(/(<button onclick="\{\{ setRoleHC \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canHC }}">$1</sc-if>');
 template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canAdmin }}">$1</sc-if>');
@@ -301,8 +332,11 @@ template = template.split('border-radius:16px').join('border-radius:18px');
 // 5) Glass surfaces + gradient page + red sidebar
 const themeCss = `
   [style*="--volt:#E4002B"]{ background:linear-gradient(135deg,#F2E9E6 0%,#EDEBEA 46%,#E9EEF3 100%) !important; background-attachment:fixed !important; }
-  [style*="background:var(--panel)"]{ backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); box-shadow:0 10px 30px rgba(35,25,45,.06), inset 0 1px 0 rgba(255,255,255,.55); }
-  [style*="background:var(--panel2)"]{ backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  /* Cards sit over a smooth gradient, so blurring behind each one costs GPU on every
+     re-render for ~no visible gain. Keep the frosted look on the sidebar + header only;
+     give inner cards a slightly more opaque fill + soft shadow so they still read as glass. */
+  [style*="background:var(--panel)"]{ background:rgba(255,255,255,.72) !important; box-shadow:0 10px 30px rgba(35,25,45,.06), inset 0 1px 0 rgba(255,255,255,.55); }
+  [style*="background:var(--panel2)"]{ background:rgba(255,255,255,.6) !important; }
   [style*="Barlow Condensed"]{ text-transform:uppercase; letter-spacing:.012em; }
   header { background:rgba(255,255,255,.55) !important; backdrop-filter:blur(20px) !important; -webkit-backdrop-filter:blur(20px) !important; }
   [style*="radial-gradient(900px 600px at 12% -8%"] { display:none !important; }
