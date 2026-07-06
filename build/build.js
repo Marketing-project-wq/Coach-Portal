@@ -34,7 +34,7 @@ const arenaLogo = '<div style="display:flex;align-items:center;gap:6px;font-fami
   + '<span style="color:var(--muted2);font-weight:400;">|</span>'
   + '<span style="color:#E4002B;">ARENA</span></div>';
 // Primary: the uploaded brand PNG. If it isn't present yet, fall back to the CSS wordmark above.
-const arenaLogoImg = '<img src="/20FITcolor.png" alt="20FIT" style="height:30px;width:auto;object-fit:contain;display:block;margin-bottom:8px;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+const arenaLogoImg = '<img src="/logo-20fit-arena.png" alt="20FIT Arena" style="height:30px;width:auto;object-fit:contain;display:block;margin-bottom:8px;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
   + '<div style="display:none;">' + arenaLogo + '</div>';
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
