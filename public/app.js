@@ -289,7 +289,7 @@ class Component extends DCLogic {
     const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Detail Kelas'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Monitoring Coach'], stats: ['Head Coach', 'Statistik Bulanan'], reports: ['Head Coach', 'Laporan Coach'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Tambah Coach'], templates: ['Admin', 'Template Feedback'], settings: ['Admin', 'Setting'], perms: ['Admin', 'Hak Akses Role'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
     titles.monthly = ['Coach', 'Monitoring Kelas'];
-    titles.members = ['Coach', 'Peserta Kelas'];
+    titles.members = ['Coach', 'Peserta'];
     titles.leaderboard = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Leaderboard'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];

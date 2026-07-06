@@ -56,14 +56,12 @@
 
     <!-- STEP 1: enter booking code -->
     <div class="card" id="step1">
-      <h1>Beri Review Kelas</h1>
-      <p class="sub">Masukkan nomor HP yang Anda pakai saat booking untuk memberi ulasan pada coach & kelas Anda.</p>
       <div class="field">
-        <label for="code">Nomor HP</label>
+        <label for="code">Phone Number</label>
         <input id="code" placeholder="08xxxxxxxxxx" inputmode="tel" autocomplete="off">
         <div style="font-size:11.5px;color:var(--muted2);margin-top:7px;">Punya kode booking? Bisa juga ketik kodenya di sini.</div>
       </div>
-      <button class="btn" id="findBtn">Cari Kelas</button>
+      <button class="btn" id="findBtn">Search</button>
       <div class="msg" id="msg1"></div>
     </div>
 
@@ -156,7 +154,7 @@
         $('rname').value = d.name || '';
         show('step2');
       }catch(e){ m.textContent=e.message; m.className='msg err'; }
-      finally{ if (btn){ btn.disabled=false; btn.textContent='Cari Kelas'; } }
+      finally{ if (btn){ btn.disabled=false; btn.textContent='Search'; } }
     }
 
     $('findBtn').onclick = function(){ doLookup($('code').value.trim(), this); };
