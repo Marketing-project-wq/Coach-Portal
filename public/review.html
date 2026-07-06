@@ -70,7 +70,7 @@
     <!-- STEP 2: rate -->
     <div class="card hidden" id="step2">
       <div class="classbox">
-        <img id="coachPhoto" class="coach-photo" alt="" onerror="this.style.display='none'">
+        <img id="coachPhoto" class="coach-photo" alt="" style="display:none" onerror="this.style.display='none'">
         <div style="min-width:0;">
           <div class="cls" id="clsName">—</div>
           <div class="meta" id="clsMeta">—</div>
@@ -86,9 +86,6 @@
       </div>
 
       <div class="divider"></div>
-
-      <div class="rate-q">Rating keseluruhan</div>
-      <div class="stars" id="stars"></div>
 
       <div class="field">
         <label for="rname">Nama (opsional)</label>
@@ -134,10 +131,8 @@
     function setCat(key,n,sc){ state.ratings[key]=n; var els=sc.children; for(var i=0;i<5;i++) els[i].classList.toggle('on', i<n); }
     function resetCats(){ state.ratings={}; var rows=catlist.querySelectorAll('.ministars'); rows.forEach(function(sc){ var e=sc.children; for(var i=0;i<5;i++) e[i].classList.remove('on'); }); }
 
-    // overall stars
-    var starsEl = $('stars');
-    for (var i=1;i<=5;i++){ (function(n){ var s=document.createElement('span'); s.className='star'; s.textContent='★'; s.onclick=function(){ setRating(n); }; starsEl.appendChild(s); })(i); }
-    function setRating(n){ state.rating=n; var els=starsEl.children; for(var i=0;i<5;i++) els[i].classList.toggle('on', i<n); }
+    // overall rating is derived from the per-category ratings (no separate overall step)
+    function overallFromCats(){ var v=[]; for (var k in state.ratings){ if (state.ratings[k]) v.push(state.ratings[k]); } return v.length ? Math.round(v.reduce(function(a,b){return a+b;},0)/v.length) : 0; }
 
     async function api(path, body){
       var r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
@@ -153,7 +148,7 @@
       try{
         var d = await api('/api/public/lookup', { q: val });
         if (d.already){ m.textContent='Kelas ini sudah pernah diberi review. Terima kasih!'; m.className='msg err'; return; }
-        state.code = d.booking_code; state.rating=0; setRating(0); resetCats();
+        state.code = d.booking_code; resetCats();
         $('clsName').textContent = d.class_label + (d.coach ? ' · Coach ' + d.coach : '');
         $('clsMeta').textContent = (d.date ? d.date : '') + (d.booking_code ? ' · ' + d.booking_code : '');
         var cp = $('coachPhoto');
@@ -168,10 +163,11 @@
 
     $('submitBtn').onclick = async function(){
       var m = $('msg2'); m.textContent=''; m.className='msg';
-      if (!state.rating){ m.textContent='Beri rating keseluruhan dulu.'; m.className='msg err'; return; }
+      var overall = overallFromCats();
+      if (!overall){ m.textContent='Beri minimal satu rating dulu.'; m.className='msg err'; return; }
       this.disabled=true; this.textContent='Mengirim…';
       try{
-        await api('/api/public/review', { booking_code: state.code, rating: state.rating, ratings: state.ratings, name: $('rname').value.trim(), comment: $('comment').value.trim() });
+        await api('/api/public/review', { booking_code: state.code, rating: overall, ratings: state.ratings, name: $('rname').value.trim(), comment: $('comment').value.trim() });
         show('step3');
       }catch(e){ m.textContent=e.message; m.className='msg err'; this.disabled=false; this.textContent='Kirim Review'; }
     };
