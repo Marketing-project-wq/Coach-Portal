@@ -23,7 +23,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, mgmtCoaches: [], arenaLoc: { set: false, radius_m: 150 } };
   }
   boot() {
     if (this.MOCK) {
@@ -119,6 +119,8 @@ class Component extends DCLogic {
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'coachmgmt') this.api('/api/coach/manage/list').then((r) => this.setD({ mgmtCoaches: r.coaches })).catch(fail);
+    else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
@@ -151,9 +153,51 @@ class Component extends DCLogic {
   confirmAbsen() {
     const cls = this.state.absenClass; const id = cls && cls.schedule_id;
     if (this.MOCK || !id) { this.setState({ absen: false }); return this.toastMsg('Kelas dimulai · status Tepat Waktu'); }
-    this.api('/api/coach/class/' + encodeURIComponent(id) + '/start', { method: 'POST' })
-      .then(() => { this.setState({ absen: false }); this.toastMsg('Kelas dimulai · status Tepat Waktu'); this.loadScreen('dash'); })
-      .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
+    const start = (coords) => {
+      this.api('/api/coach/class/' + encodeURIComponent(id) + '/start', { method: 'POST', body: JSON.stringify(coords || {}) })
+        .then(() => { this.setState({ absen: false }); this.toastMsg('Kelas dimulai · status Tepat Waktu'); this.loadScreen('dash'); })
+        .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
+    };
+    // Attach current GPS so the server can verify the coach is at the arena (when the lock is on).
+    if (navigator.geolocation) {
+      this.toastMsg('Mengecek lokasi kamu…');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => start({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => start(null),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    } else { start(null); }
+  }
+  submitMgmtCoach() {
+    const val = (id) => ((document.getElementById(id) || {}).value || '').trim();
+    const name = val('mgmtName');
+    if (!name) return this.toastMsg('Nama coach wajib diisi.');
+    const roleEl = document.getElementById('mgmtRole');
+    const payload = { name, email: val('mgmtEmail'), phone: val('mgmtPhone'), role: roleEl ? roleEl.value : 'coach', password: val('mgmtPw') || undefined };
+    if (this.MOCK) return this.toastMsg('Coach baru ditambahkan · Active');
+    this.api('/api/coach/manage/add', { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => { this.toastMsg('Coach ditambahkan · user: ' + r.username + ' · pw: ' + r.password); this.loadScreen('coachmgmt'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  captureArenaLoc() {
+    if (this.MOCK) return this.toastMsg('Lokasi arena tersimpan (mock)');
+    if (!navigator.geolocation) return this.toastMsg('Perangkat tidak mendukung GPS.');
+    const rEl = document.getElementById('arenaRadius');
+    const radius = rEl ? parseInt(rEl.value, 10) || 150 : 150;
+    this.toastMsg('Mengambil lokasi kamu…');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => this.api('/api/settings/arena-location', { method: 'POST', body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, radius_m: radius }) })
+        .then(() => { this.toastMsg('Lokasi arena tersimpan · absen kini dikunci ke lokasi ini'); this.loadScreen('settings'); })
+        .catch((e) => this.toastMsg(e.message)),
+      () => this.toastMsg('Gagal ambil lokasi. Aktifkan izin lokasi lalu coba lagi.'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+  clearArenaLoc() {
+    if (this.MOCK) return this.toastMsg('Kunci lokasi dimatikan (mock)');
+    this.api('/api/settings/arena-location', { method: 'POST', body: JSON.stringify({ clear: true }) })
+      .then(() => { this.toastMsg('Kunci lokasi dimatikan'); this.loadScreen('settings'); })
+      .catch((e) => this.toastMsg(e.message));
   }
   submitSub() {
     if (!this.state.selSub) return this.toastMsg('Pilih coach pengganti dulu.');
@@ -175,6 +219,7 @@ class Component extends DCLogic {
     this.api('/api/coach/week?start=' + start).then((r) => this.setD({ week: r.week, weekRange: r.range, weekStart: r.start })).catch((e) => this.toastMsg(e.message));
   }
   fmtD(iso) { const M = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; const d = new Date(iso + 'T00:00:00'); return d.getDate() + ' ' + M[d.getMonth()]; }
+  fmtDayLong(iso) { const DF = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']; const M = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; const d = new Date(iso + 'T00:00:00'); return DF[d.getDay()] + ', ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + d.getFullYear(); }
   applyRange() {
     const from = (document.getElementById('rangeFrom') || {}).value;
     const to = (document.getElementById('rangeTo') || {}).value;
@@ -312,7 +357,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), coachmgmt: A('coachmgmt'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -328,9 +373,10 @@ class Component extends DCLogic {
     titles.members = ['Coach', 'Peserta'];
     titles.leaderboard = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Leaderboard'];
     titles.venue = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Venue Booking'];
+    titles.coachmgmt = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Manajemen Coach'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', coachmgmt: scr === 'coachmgmt', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -392,7 +438,24 @@ class Component extends DCLogic {
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
     const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes }));
     const hasScheduleVenues = scheduleVenues.length > 0;
+    // coach management (open to all internal roles) — list without passwords + add form
+    const mgmtCoaches = (D.mgmtCoaches || []).map((c) => { const av = this.avatar(c.name); return { name: c.name, role: c.role, initials: this.ini(c.name), avBg: av[0], avFg: av[1], photo: c.photo || '', hasPhoto: !!c.photo, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', status: c.status, roleCol: c.role === 'Head Coach' ? C.volt : C.muted }; });
+    const noMgmtCoaches = mgmtCoaches.length === 0;
+    // arena GPS lock (settings)
+    const aloc = D.arenaLoc || { set: false, radius_m: 150 };
+    const arenaLocSet = !!aloc.set;
+    const arenaRadius = aloc.radius_m || 150;
+    const arenaLocStatus = arenaLocSet ? ('✓ Lokasi arena aktif · radius ' + arenaRadius + ' m — absen dikunci ke lokasi ini') : '○ Belum diatur — absen belum dikunci lokasi';
+    const arenaLocCol = arenaLocSet ? C.green : C.muted;
     // participants
+    // class detail header (bound to the real class, no slot-fill count)
+    const cd = (D.classDetail && D.classDetail.schedule) || {};
+    const detailTime = cd.time || '';
+    const detailType = cd.type || '';
+    const detailDate = cd.date ? this.fmtDayLong(cd.date) : '';
+    const detailTimeRange = (cd.time || '') + (cd.end ? '–' + cd.end : '');
+    const ac = st.absenClass || {};
+    const absenLabel = ac.type ? (ac.type + (ac.time ? ' · ' + ac.time : '')) : '';
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col, classesLabel: p.classesLabel || '', hasClasses: !!p.classesLabel }; });
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
@@ -465,12 +528,15 @@ class Component extends DCLogic {
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       showVenueNav: true, goVenue: () => this.go('venue'), venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts, venueBookings, noVenueBookings, hasVenueBookings: !noVenueBookings,
       submitVenue: () => this.submitVenue(), scheduleVenues, hasScheduleVenues,
+      showMgmtNav: !this.isExternal, goCoachMgmt: () => this.go('coachmgmt'), mgmtCoaches, noMgmtCoaches, hasMgmtCoaches: !noMgmtCoaches, submitMgmtCoach: () => this.submitMgmtCoach(),
+      arenaLocSet, arenaRadius, arenaLocStatus, arenaLocCol, captureArenaLoc: () => this.captureArenaLoc(), clearArenaLoc: () => this.clearArenaLoc(),
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       menuState: st.menuOpen ? 'open' : 'closed', toggleMenu: () => this.toggleMenu(), closeMenu: () => this.closeMenu(),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
+      detailTime, detailType, detailDate, detailTimeRange, absenLabel,
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
@@ -528,7 +594,7 @@ class Component extends DCLogic {
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '' }] };
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '' }] };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];
     d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Terkirim' }];
     d.fbClasses = [{ id: 'x1', label: 'HYROX Complete · 07:00 · 1 Jul' }, { id: 'x2', label: 'HYROX Foundation · 17:00 · 30 Jun' }];
@@ -554,6 +620,8 @@ class Component extends DCLogic {
       { id: 'v2', customer: 'Grup Corporate PT Maju', phone: '0821-1111-2222', date: '2026-07-02', dateLabel: '2 Jul', dayLabel: 'Kam 2 Jul', time: '15:00', end: '17:00', arena: 'Arena 2', notes: '', coach: 'Brian', status: 'assigned', assignedBy: 'Nando' },
     ];
     d.venues = [{ id: 'v2', time: '15:00', end: '– 17:00', customer: 'Grup Corporate PT Maju', phone: '0821-1111-2222', arena: 'Arena 2', notes: '', dateLabel: 'Kam 2 Jul', isToday: true }];
+    d.mgmtCoaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', status: 'Active', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', status: 'Active', photo: LPH + 'rheza-1778032238203.png' }, { id: 'brian', name: 'Brian', role: 'Coach', status: 'Active', photo: '' }];
+    d.arenaLoc = { set: true, lat: -6.195, lng: 106.83, radius_m: 150 };
     d.stats = [
       { date: '1 Jul', day: 'Rabu', time: '18:30', type: 'HYROX Complete', peserta: 14 },
       { date: '3 Jul', day: 'Jumat', time: '07:00', type: 'HYROX Foundation', peserta: 9 },

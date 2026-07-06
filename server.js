@@ -444,6 +444,59 @@ route('POST', '/api/venue/bookings/:id/cancel', async (req, res, s, q, params) =
   return send(res, 200, { ok: true });
 });
 
+// ===== ARENA SETTINGS: GPS location lock for absen =====
+// Returns the configured arena point, or null when the location lock is off.
+async function arenaLocation() {
+  const rows = await sb('arena_settings?select=arena_lat,arena_lng,radius_m&id=eq.1&limit=1');
+  const r = rows && rows[0];
+  if (!r || r.arena_lat == null || r.arena_lng == null) return null;
+  return { lat: Number(r.arena_lat), lng: Number(r.arena_lng), radius_m: Number(r.radius_m) || 150 };
+}
+// Great-circle distance in metres.
+function haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000, toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+route('GET', '/api/settings/arena-location', async (req, res, s) => {
+  const loc = await arenaLocation();
+  return send(res, 200, { set: !!loc, lat: loc ? loc.lat : null, lng: loc ? loc.lng : null, radius_m: loc ? loc.radius_m : 150 });
+});
+route('POST', '/api/settings/arena-location', async (req, res, s) => {
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  const body = (await readBody(req)) || {};
+  if (body.clear) {
+    await sb('arena_settings?id=eq.1', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ arena_lat: null, arena_lng: null, updated_by: s.d || s.c, updated_at: new Date().toISOString() }) });
+    return send(res, 200, { ok: true });
+  }
+  if (body.lat == null || body.lng == null) return send(res, 400, { error: 'Lokasi wajib diisi.' });
+  const radius = Math.max(20, Math.min(2000, parseInt(body.radius_m, 10) || 150));
+  await sb('arena_settings?id=eq.1', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ arena_lat: Number(body.lat), arena_lng: Number(body.lng), radius_m: radius, updated_by: s.d || s.c, updated_at: new Date().toISOString() }) });
+  return send(res, 200, { ok: true });
+});
+
+// ===== COACH MANAGEMENT (open to all internal roles; external coaches excluded) =====
+route('GET', '/api/coach/manage/list', async (req, res, s) => {
+  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
+  const rows = await sb('arena_coach_users?select=id,coach_name,role,is_active&role=neq.admin&order=role.desc,coach_name.asc');
+  const pm = await coachPhotoMap();
+  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) })) });
+});
+route('POST', '/api/coach/manage/add', async (req, res, s) => {
+  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
+  const body = await readBody(req);
+  if (!body || !body.name) return send(res, 400, { error: 'Nama coach wajib diisi.' });
+  const role = body.role === 'hc' ? 'hc' : 'coach'; // admin can only be created from the Admin > Account screen
+  const username = (body.username || String(body.name).replace(/^coach\s*/i, '').trim().split(/\s+/)[0]).toLowerCase();
+  if (!username) return send(res, 400, { error: 'Nama coach tidak valid.' });
+  const pw = body.password || genPw();
+  const exists = await sb(`arena_coach_users?select=id&username=eq.${enc(username)}&limit=1`);
+  if (exists && exists.length) return send(res, 409, { error: 'Username sudah dipakai. Pilih nama/username lain.' });
+  await sb('arena_coach_users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username, password_hash: hashPassword(pw), password_plain: pw, coach_name: String(body.name).replace(/^coach\s*/i, '').trim(), display_name: String(body.name).trim(), role, email: body.email || (username + '@20fit.id'), phone: body.phone || null }) });
+  return send(res, 200, { ok: true, username, password: pw });
+});
+
 // ===== COACH: participants — how many times each attended + recency of last visit =====
 route('GET', '/api/coach/members', async (req, res, s) => {
   if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
@@ -622,6 +675,14 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota }, started, participants });
 });
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
+  const body = (await readBody(req)) || {};
+  // GPS lock: if an arena location is configured, the coach must be within its radius.
+  const loc = await arenaLocation();
+  if (loc) {
+    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Aktifkan izin lokasi di HP kamu untuk mulai kelas.', needLocation: true });
+    const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
+    if (dist > loc.radius_m) return send(res, 403, { error: `Kamu harus berada di arena untuk mulai kelas (jarak kamu ~${Math.round(dist)} m dari arena).`, tooFar: true });
+  }
   await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: s.c, status: 'ongoing' }) });
   return send(res, 200, { ok: true, started: true });
 });
