@@ -626,6 +626,25 @@
             </sc-for>
           </div>
 
+          <sc-if value="{{ hasScheduleVenues }}">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--volt);margin:22px 0 12px;">VENUE BOOKING + COACH</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <sc-for list="{{ scheduleVenues }}" as="v">
+            <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid rgba(228,0,43,.3);border-radius:14px;padding:14px 15px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--volt);"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--text);">{{ v.timeLabel }}</span>
+                <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:var(--volt-dim);color:var(--volt);">Arena + Coach</span>
+              </div>
+              <div style="font-family:'Archivo';font-weight:800;font-size:17px;letter-spacing:-.01em;">{{ v.customer }}</div>
+              <sc-if value="{{ v.hasArena }}"><div style="font-size:13px;color:var(--muted);margin-top:4px;">{{ v.arena }}</div></sc-if>
+              <sc-if value="{{ v.hasPhone }}"><div style="font-size:12.5px;color:var(--muted2);margin-top:3px;">{{ v.phone }}</div></sc-if>
+              <sc-if value="{{ v.hasNotes }}"><div style="font-size:12.5px;color:var(--muted);margin-top:6px;">{{ v.notes }}</div></sc-if>
+            </div>
+            </sc-for>
+          </div>
+          </sc-if>
+
           <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Kalender Minggu Ini</div><div style="font-size:13px;color:var(--muted);">23–29 Jun</div></div>

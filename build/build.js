@@ -141,6 +141,57 @@ const boardScreen = '<sc-if value="{{ s.leaderboard }}"><div style="max-width:76
   + '<sc-if value="{{ noBoard }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada data booking peserta.</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', boardScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Venue Booking (arena + coach) ----
+// Nav item visible to ALL roles (coach / head coach / admin).
+const venueNav = '<sc-if value="{{ showVenueNav }}"><button onclick="{{ goVenue }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.venue.bg }};color:{{ nav.venue.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.venue.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Venue Booking</button></sc-if>';
+template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/button>)/, '$1' + venueNav);
+// Venue screen
+const vInput = 'width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;';
+const vLabel = 'display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;';
+const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;margin:0 auto;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Venue Booking + Coach</div>'
+  + '<sc-if value="{{ venueIsHC }}">'
+    + '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Isi detail booking arena, lalu pilih coach yang bertanggung jawab. Booking langsung masuk ke Schedule coach tersebut.</div>'
+    + '<div style="' + cardBox + 'padding:22px;margin-bottom:24px;">'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+        + '<div><label style="' + vLabel + '">Nama Customer</label><input id="venueCustomer" placeholder="mis. Bapak Andi" style="' + vInput + '"></div>'
+        + '<div><label style="' + vLabel + '">Nomor HP <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label><input id="venuePhone" placeholder="0812-xxxx-xxxx" style="' + vInput + '"></div>'
+        + '<div><label style="' + vLabel + '">Tanggal</label><input id="venueDate" type="date" style="' + vInput + '"></div>'
+        + '<div><label style="' + vLabel + '">Arena / Lokasi <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label><input id="venueArena" placeholder="mis. Arena 1" style="' + vInput + '"></div>'
+        + '<div><label style="' + vLabel + '">Jam Mulai</label><input id="venueTime" type="time" style="' + vInput + '"></div>'
+        + '<div><label style="' + vLabel + '">Jam Selesai <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label><input id="venueEnd" type="time" style="' + vInput + '"></div>'
+      + '</div>'
+      + '<label style="' + vLabel + 'margin-top:14px;">Catatan <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label>'
+      + '<textarea id="venueNotes" rows="2" placeholder="Catatan tambahan…" style="' + vInput + 'resize:vertical;"></textarea>'
+      + '<label style="' + vLabel + 'margin-top:14px;">Coach yang Bertanggung Jawab</label>'
+      + '<select id="venueCoach" style="' + vInput + 'cursor:pointer;"><option value="">— pilih coach —</option><sc-for list="{{ venueCoachOpts }}" as="o"><option value="{{ o.name }}">{{ o.label }}</option></sc-for></select>'
+      + '<button onclick="{{ submitVenue }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:14px;font-family:\'Archivo\';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Kirim ke Coach</button>'
+    + '</div>'
+    + '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;">SEMUA BOOKING</div>'
+  + '</sc-if>'
+  + '<sc-if value="{{ venueIsCoach }}"><div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Booking arena + coach yang jadi tanggung jawab Anda. Booking ini juga muncul di Schedule Anda.</div></sc-if>'
+  + '<sc-if value="{{ hasVenueBookings }}"><div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<sc-for list="{{ venueBookings }}" as="b"><div style="' + cardBox + 'padding:16px 18px;">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+        + '<div style="min-width:0;"><div style="font-weight:800;font-size:15.5px;">{{ b.customer }}</div>'
+        + '<div style="font-size:12.5px;color:var(--muted);margin-top:3px;">{{ b.dayLabel }} &#183; {{ b.timeLabel }}<sc-if value="{{ b.hasArena }}"> &#183; {{ b.arena }}</sc-if></div>'
+        + '<sc-if value="{{ b.hasPhone }}"><div style="font-size:12px;color:var(--muted2);margin-top:2px;">{{ b.phone }}</div></sc-if>'
+        + '<sc-if value="{{ b.hasNotes }}"><div style="font-size:12.5px;color:var(--muted);margin-top:5px;">{{ b.notes }}</div></sc-if></div>'
+        + '<div style="text-align:right;flex-shrink:0;"><span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ b.statusBg }};color:{{ b.statusCol }};">{{ b.statusLabel }}</span>'
+        + '<div style="font-size:12.5px;margin-top:8px;color:var(--muted);">Coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div></div>'
+      + '</div>'
+      + '<sc-if value="{{ venueIsHC }}"><sc-if value="{{ b.active }}">'
+        + '<div style="display:flex;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
+          + '<select onchange="{{ b.reassign }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:9px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;cursor:pointer;"><sc-for list="{{ b.coachOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
+          + '<button onclick="{{ b.cancel }}" style="background:rgba(228,0,43,.1);border:1px solid rgba(228,0,43,.25);color:var(--volt);border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Batalkan</button>'
+        + '</div>'
+      + '</sc-if></sc-if>'
+    + '</div></sc-for>'
+  + '</div></sc-if>'
+  + '<sc-if value="{{ noVenueBookings }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada venue booking.</div></sc-if>'
+  + '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Hide Head Coach / Admin role buttons unless the account allows them
 template = template.replace(/(<button onclick="\{\{ setRoleHC \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canHC }}">$1</sc-if>');
 template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canAdmin }}">$1</sc-if>');
