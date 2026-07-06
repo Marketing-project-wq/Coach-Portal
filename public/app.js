@@ -35,7 +35,7 @@ class Component extends DCLogic {
       this.api('/api/coach/me').then((me) => {
         this.accountRole = me.role;
         this.state.user = this.userObj(me); this.state.loggedIn = true;
-        this.applyRole(me.role);
+        this.applyRole(me.role, true);
       }).catch(() => this.logout());
     }
   }
@@ -83,10 +83,18 @@ class Component extends DCLogic {
   setD(patch) { this.setState({ d: Object.assign({}, this.state.d, patch) }); }
   loadCalendar(ym) { if (this.MOCK) return; this.api('/api/coach/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
   toastMsg(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
-  go(screen) { this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
+  go(screen) { if (window.localStorage) localStorage.setItem('arena_screen', screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
-  applyRole(role) { const screen = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts'; this.setState({ role, screen }); if (!this.MOCK) this.loadScreen(screen); }
+  applyRole(role, restore) {
+    const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts';
+    let screen = def;
+    // On first load, return to the screen the user was last on (not always the role default).
+    if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq'].indexOf(saved) < 0) screen = saved; }
+    if (window.localStorage) localStorage.setItem('arena_screen', screen);
+    this.setState({ role, screen });
+    if (!this.MOCK) this.loadScreen(screen);
+  }
   setRole(role) {
     const rank = { coach: 0, hc: 1, admin: 2 };
     if (rank[role] > rank[this.accountRole]) return this.toastMsg('Tidak punya akses ke area ini.');

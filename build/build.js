@@ -176,6 +176,10 @@ const renames = [
 ];
 for (const [a, b] of renames) template = template.split(a).join(b);
 
+// Remove the "Feedback" nav item from the coach group (done after the nav injections
+// above, which anchor on this same button, so the other injected items stay intact).
+template = template.replace(/<button onclick="\{\{ goEmail \}\}"[\s\S]*?<\/button>/, '');
+
 // Full-bleed + mobile responsiveness. Targets the design's inline-styled containers
 // via [style*=...] selectors so no markup classes are needed; !important beats inline styles.
 const responsiveCss = `
