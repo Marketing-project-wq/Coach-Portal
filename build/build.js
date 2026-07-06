@@ -159,9 +159,7 @@ template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/butto
 const vInput = 'width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;';
 const vLabel = 'display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;';
 const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Venue Booking</div>'
-  + '<sc-if value="{{ venueIsHC }}"><div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Booking langsung dari Admin Hub. Untuk booking <b style="color:var(--text);">Arena + Coach</b>, tinggal pilih coach yang bertanggung jawab — booking otomatis masuk ke Schedule coach itu.<sc-if value="{{ hasVenueUnassigned }}"> <span style="color:var(--amber);font-weight:700;">{{ venueUnassignedCount }} booking belum ada coach.</span></sc-if></div></sc-if>'
-  + '<sc-if value="{{ venueIsCoach }}"><div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Booking Arena + Coach yang jadi tanggung jawab Anda. Booking ini juga muncul di Schedule Anda.</div></sc-if>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Venue Booking</div>'
   + '<sc-if value="{{ hasVenueBookings }}"><div style="display:flex;flex-direction:column;gap:12px;">'
     + '<sc-for list="{{ venueBookings }}" as="b"><div style="' + cardBox + 'padding:16px 18px;">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
@@ -190,8 +188,7 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '
 const menuNav = '<sc-if value="{{ showMenuNav }}"><button onclick="{{ goMenu }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.menu.bg }};color:{{ nav.menu.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.menu.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Menu Kelas</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goVenue \}\}"[\s\S]*?<\/button>)/, '$1' + menuNav);
 const menuScreen = '<sc-if value="{{ s.menu }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Menu Kelas</div>'
-  + '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Patokan menu / program tiap kelas — biar semua coach punya acuan yang sama saat mengajar. Semua coach bisa lihat &amp; menambah.</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Menu Kelas</div>'
   + '<div style="' + cardBox + 'padding:22px;margin-bottom:24px;">'
     + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;">'
       + '<div><label style="' + vLabel + '">Nama Menu / Sesi</label><input id="menuTitle" placeholder="mis. HYROX Complete — Full Simulation" style="' + vInput + '"></div>'
