@@ -151,11 +151,13 @@ class Component extends DCLogic {
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => { this.setState({ currentClass: d, screen: 'detail' }); this.setD({ classDetail: d }); }).catch((e) => this.toastMsg(e.message));
   }
   openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
+  openVenueAbsen(v) { this.setState({ absen: true, absenClass: { venueId: v.id, type: 'Arena + Coach · ' + (v.customer || 'Booking arena'), time: v.time || '' } }); }
   confirmAbsen() {
-    const cls = this.state.absenClass; const id = cls && cls.schedule_id;
-    if (this.MOCK || !id) { this.setState({ absen: false }); return this.toastMsg('Kelas dimulai · kehadiran tercatat'); }
+    const cls = this.state.absenClass; const id = cls && cls.schedule_id; const venueId = cls && cls.venueId;
+    if (this.MOCK || (!id && !venueId)) { this.setState({ absen: false }); return this.toastMsg('Kelas dimulai · kehadiran tercatat'); }
+    const path = venueId ? ('/api/venue/bookings/' + encodeURIComponent(venueId) + '/start') : ('/api/coach/class/' + encodeURIComponent(id) + '/start');
     const start = (coords) => {
-      this.api('/api/coach/class/' + encodeURIComponent(id) + '/start', { method: 'POST', body: JSON.stringify(coords || {}) })
+      this.api(path, { method: 'POST', body: JSON.stringify(coords || {}) })
         .then(() => { this.setState({ absen: false }); this.toastMsg('Kelas dimulai · kehadiran tercatat'); this.loadScreen('dash'); })
         .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
     };
@@ -445,7 +447,7 @@ class Component extends DCLogic {
     const noVenueBookings = venueBookings.length === 0;
     const venueUnassignedCount = venueBookings.filter((b) => b.needsCoach && !b.assigned).length;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
-    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Booking arena', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes }));
+    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Booking arena', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v) }));
     const hasScheduleVenues = scheduleVenues.length > 0;
     // menu kelas — shared class-program reference (patokan) for coaches
     const menuCanManage = !!D.menuCanManage;
@@ -633,7 +635,7 @@ class Component extends DCLogic {
       { id: 'v2', code: 'BK-20260701-0006', customer: 'Satrio', date: '2026-07-10', dateLabel: '10 Jul', dayLabel: 'Jum 10 Jul', time: '16:00', end: '20:00', needsCoach: true, coach: 'Rheza', status: 'confirmed' },
       { id: 'v3', code: 'BK-20260705-0001', customer: 'Yoshi', date: '2026-07-12', dateLabel: '12 Jul', dayLabel: 'Min 12 Jul', time: '13:00', end: '15:00', needsCoach: false, coach: '', status: 'pending_payment' },
     ];
-    d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Jum 10 Jul', isToday: true }];
+    d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Jum 10 Jul', isToday: true, canAbsen: true, started: false }, { id: 'v3', time: '09:00', end: '– 11:00', customer: 'Grup Corporate', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Jum 10 Jul', isToday: true, canAbsen: false, started: true }];
     d.menuCanManage = true;
     d.classMenus = [
       { id: 'm1', title: 'HYROX Complete — Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run tiap station:\n1) SkiErg 1000m\n2) Sled Push 50m\n3) Sled Pull 50m\n4) Burpee Broad Jump 80m\n5) Row 1000m\n6) Farmers Carry 200m\n7) Sandbag Lunge 100m\n8) Wall Balls 100 reps', by: 'Nando' },

@@ -325,6 +325,8 @@
               <sc-if value="{{ v.hasArena }}"><div style="font-size:13px;color:var(--muted);margin-top:4px;">{{ v.arena }}</div></sc-if>
               <sc-if value="{{ v.hasPhone }}"><div style="font-size:12.5px;color:var(--muted2);margin-top:3px;">{{ v.phone }}</div></sc-if>
               <sc-if value="{{ v.hasNotes }}"><div style="font-size:12.5px;color:var(--muted);margin-top:6px;">{{ v.notes }}</div></sc-if>
+              <sc-if value="{{ v.canAbsen }}"><button onclick="{{ v.openAbsen }}" style="width:100%;margin-top:14px;background:var(--volt);border:0;color:#ffffff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
+              <sc-if value="{{ v.started }}"><div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(28,138,75,.12);color:var(--green);font-size:12px;font-weight:700;padding:7px 13px;border-radius:100px;">✓ Sedang berlangsung</div></sc-if>
             </div>
             </sc-for>
           </div>
@@ -749,8 +751,8 @@
   </sc-if>
 
 </div></template>
-<script src="sc-runtime.js?v=8b2c7ea4"></script>
-<script src="app.js?v=8b2c7ea4"></script>
+<script src="sc-runtime.js?v=d32ef857"></script>
+<script src="app.js?v=d32ef857"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

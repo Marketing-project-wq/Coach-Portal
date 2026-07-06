@@ -416,8 +416,14 @@ async function coachAssignedBookings(coach, from, to, cols) {
 }
 // Venue bookings assigned to a coach within a date range, shaped like schedule cards.
 async function coachVenueCards(coach, from, to, today) {
-  const rows = await coachAssignedBookings(coach, from, to, 'id,full_name,booking_date,start_time,end_time');
-  return rows.map((b) => ({ id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Booking arena', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today }));
+  const asg = (await sb(`arena_venue_assignments?select=booking_id,started_at&coach_name=eq.${enc(coach)}`)) || [];
+  if (!asg.length) return [];
+  const startedMap = {}; for (const a of asg) startedMap[a.booking_id] = a.started_at;
+  const ids = asg.map((a) => a.booking_id);
+  let q = `arena_bookings?select=id,full_name,booking_date,start_time,end_time&id=in.(${ids.map(enc).join(',')})&status=neq.cancelled&booking_date=gte.${from}`;
+  if (to) q += `&booking_date=lte.${to}`;
+  const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
+  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Booking arena', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date === today && !started }; });
 }
 
 // List venue bookings — HC/admin see all upcoming from Admin Hub; a coach sees only bookings assigned to them.
@@ -447,6 +453,22 @@ route('POST', '/api/venue/bookings/:id/unassign', async (req, res, s, q, params)
   if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
   await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   return send(res, 200, { ok: true });
+});
+// The assigned coach starts (absen) their Arena + Coach session — GPS-checked like a class.
+route('POST', '/api/venue/bookings/:id/start', async (req, res, s, q, params) => {
+  const asg = await sb(`arena_venue_assignments?select=coach_name&booking_id=eq.${enc(params.id)}&limit=1`);
+  const a = asg && asg[0];
+  if (!a) return send(res, 404, { error: 'Booking belum di-assign ke coach.' });
+  if (a.coach_name !== s.c) return send(res, 403, { error: 'Bukan booking Anda.' });
+  const body = (await readBody(req)) || {};
+  const loc = await arenaLocation();
+  if (loc) {
+    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Aktifkan izin lokasi di HP kamu untuk mulai kelas.', needLocation: true });
+    const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
+    if (dist > loc.radius_m) return send(res, 403, { error: `Kamu harus berada di arena untuk mulai kelas (jarak kamu ~${Math.round(dist)} m dari arena).`, tooFar: true });
+  }
+  await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ started_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
+  return send(res, 200, { ok: true, started: true });
 });
 
 // ===== ARENA SETTINGS: GPS location lock for absen =====
