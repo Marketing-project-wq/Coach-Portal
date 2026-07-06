@@ -569,7 +569,7 @@ class Component extends DCLogic {
   // ---------- mock sample data (for ?mock=1 render tests) ----------
   mockData() {
     const d = this.emptyData();
-    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Akan Datang', canAbsen: true, dateLabel: 'Rab 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Terjadwal', canAbsen: false, dateLabel: 'Kam 2 Jul' }];
+    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Akan Datang', canAbsen: true, dateLabel: 'Rab 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Terjadwal', canAbsen: true, dateLabel: 'Kam 2 Jul' }];
     d.todayLabel = 'Rabu, 1 Juli 2026 · 1 kelas hari ini';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
     d.monthlyYear = '2026';

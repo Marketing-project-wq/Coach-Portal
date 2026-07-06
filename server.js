@@ -191,11 +191,14 @@ function cardsFrom(sched, counts, started, types, today) {
     const t = types[x.class_type_id] || {};
     const isToday = x.schedule_date === today;
     const isStarted = started.has(x.id);
+    const upcoming = x.schedule_date >= today; // today or later
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
       peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted,
       accent: isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C'),
       status: isStarted ? 'Sedang Berlangsung' : (isToday ? 'Akan Datang' : 'Terjadwal'),
-      canAbsen: isToday && !isStarted, dateLabel: dLabel(x.schedule_date) };
+      // Show the start button for any upcoming class (today or later) that isn't started yet,
+      // so a coach always finds it when they open the class — not only on the exact day.
+      canAbsen: upcoming && !isStarted, dateLabel: dLabel(x.schedule_date) };
   });
 }
 
@@ -423,7 +426,7 @@ async function coachVenueCards(coach, from, to, today) {
   let q = `arena_bookings?select=id,full_name,booking_date,start_time,end_time&id=in.(${ids.map(enc).join(',')})&status=neq.cancelled&booking_date=gte.${from}`;
   if (to) q += `&booking_date=lte.${to}`;
   const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
-  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Booking arena', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date === today && !started }; });
+  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Booking arena', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date >= today && !started }; });
 }
 
 // List venue bookings — HC/admin see all upcoming from Admin Hub; a coach sees only bookings assigned to them.
