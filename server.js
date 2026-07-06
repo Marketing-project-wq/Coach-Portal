@@ -476,25 +476,27 @@ route('POST', '/api/settings/arena-location', async (req, res, s) => {
   return send(res, 200, { ok: true });
 });
 
-// ===== COACH MANAGEMENT (open to all internal roles; external coaches excluded) =====
-route('GET', '/api/coach/manage/list', async (req, res, s) => {
-  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
-  const rows = await sb('arena_coach_users?select=id,coach_name,role,is_active&role=neq.admin&order=role.desc,coach_name.asc');
-  const pm = await coachPhotoMap();
-  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) })) });
+// ===== MENU KELAS — shared class-program reference (patokan) for coaches =====
+route('GET', '/api/coach/menu', async (req, res, s) => {
+  const rows = (await sb('arena_class_menus?select=*&order=created_at.desc&limit=200')) || [];
+  const canManage = requireHC(s);
+  return send(res, 200, { menus: rows.map((m) => ({ id: m.id, title: m.title, category: m.category || '', content: m.content || '', by: m.created_by || '', mine: m.created_by === s.d || m.created_by === s.c })), canManage });
 });
-route('POST', '/api/coach/manage/add', async (req, res, s) => {
-  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
+route('POST', '/api/coach/menu', async (req, res, s) => {
   const body = await readBody(req);
-  if (!body || !body.name) return send(res, 400, { error: 'Nama coach wajib diisi.' });
-  const role = body.role === 'hc' ? 'hc' : 'coach'; // admin can only be created from the Admin > Account screen
-  const username = (body.username || String(body.name).replace(/^coach\s*/i, '').trim().split(/\s+/)[0]).toLowerCase();
-  if (!username) return send(res, 400, { error: 'Nama coach tidak valid.' });
-  const pw = body.password || genPw();
-  const exists = await sb(`arena_coach_users?select=id&username=eq.${enc(username)}&limit=1`);
-  if (exists && exists.length) return send(res, 409, { error: 'Username sudah dipakai. Pilih nama/username lain.' });
-  await sb('arena_coach_users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username, password_hash: hashPassword(pw), password_plain: pw, coach_name: String(body.name).replace(/^coach\s*/i, '').trim(), display_name: String(body.name).trim(), role, email: body.email || (username + '@20fit.id'), phone: body.phone || null }) });
-  return send(res, 200, { ok: true, username, password: pw });
+  if (!body || !body.title || !body.content) return send(res, 400, { error: 'Nama menu & isi menu wajib diisi.' });
+  await sb('arena_class_menus', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ title: String(body.title).trim().slice(0, 160), category: body.category ? String(body.category).trim().slice(0, 80) : null, content: String(body.content).trim().slice(0, 4000), created_by: s.d || s.c }) });
+  return send(res, 200, { ok: true });
+});
+route('POST', '/api/coach/menu/:id/delete', async (req, res, s, q, params) => {
+  // The author or a Head Coach / Admin may remove a menu entry.
+  const rows = await sb(`arena_class_menus?select=created_by&id=eq.${enc(params.id)}&limit=1`);
+  const m = rows && rows[0];
+  if (!m) return send(res, 404, { error: 'Menu tidak ditemukan.' });
+  const mine = m.created_by === s.d || m.created_by === s.c;
+  if (!mine && !requireHC(s)) return send(res, 403, { error: 'Hanya pembuat atau Head Coach yang bisa menghapus.' });
+  await sb(`arena_class_menus?id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  return send(res, 200, { ok: true });
 });
 
 // ===== COACH: participants — how many times each attended + recency of last visit =====

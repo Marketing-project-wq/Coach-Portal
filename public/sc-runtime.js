@@ -76,9 +76,18 @@
       var content = tplEl.content ? tplEl.content : tplEl;
       logic.__render = function () {
         var vals = logic.renderVals();
+        // Preserve the main scroll position across a full re-render so an in-page
+        // update (e.g. clicking a calendar date) doesn't snap back to the top.
+        // Only when staying on the same screen — switching nav items starts at top.
+        var prev = mountEl.querySelector('[data-scroll]');
+        var prevTop = prev ? prev.scrollTop : 0;
+        var scr = logic.state ? logic.state.screen : null;
+        var same = logic.__lastScreen === scr;
+        logic.__lastScreen = scr;
         var out = []; processNodes(content.childNodes, vals, out);
         mountEl.innerHTML = '';
         for (var i = 0; i < out.length; i++) mountEl.appendChild(out[i]);
+        if (same && prevTop) { var next = mountEl.querySelector('[data-scroll]'); if (next) next.scrollTop = prevTop; }
       };
       logic.__render();
     },
