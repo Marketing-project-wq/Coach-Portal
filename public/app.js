@@ -97,7 +97,7 @@ class Component extends DCLogic {
     const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts';
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
-    if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq'].indexOf(saved) < 0) screen = saved; }
+    if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
     // External coaches may only reach Schedule, Monitoring, Rotation, Venue Booking and Menu Kelas.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu'].indexOf(screen) < 0) screen = 'dash';
     if (window.localStorage) localStorage.setItem('arena_screen', screen);

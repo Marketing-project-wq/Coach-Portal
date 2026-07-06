@@ -659,24 +659,6 @@
         </div>
         </sc-if>
 
-        <!-- ===== TEMPLATES (ADMIN) ===== -->
-        <sc-if value="{{ s.templates }}" hint-placeholder-val="{{ true }}">
-        <div style="max-width:760px;margin:0 auto;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <div style="color:var(--muted);font-size:14px;">Sistem memilih satu template secara acak tiap kelas selesai.</div>
-            <button onclick="{{ addTemplate }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:10px;padding:10px 16px;font-family:'Barlow Condensed';font-weight:800;font-size:13px;cursor:pointer;">+ Tambah Template</button>
-          </div>
-          <sc-for list="{{ templates }}" as="t" hint-placeholder-count="3">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start;">
-            <div style="font-family:'JetBrains Mono';font-size:12px;color:var(--volt);font-weight:700;padding-top:2px;">#{{ t.id }}</div>
-            <div style="flex:1;font-size:14.5px;line-height:1.55;color:var(--text);">{{ t.text }}</div>
-            <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:var(--volt-dim);color:var(--volt);">Aktif</span>
-          </div>
-          </sc-for>
-          <div style="background:rgba(255,176,32,.06);border:1px solid rgba(255,176,32,.2);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);margin-top:6px;">⚠ Hanya <span style="color:var(--text);font-weight:700;">Admin</span> yang dapat mengelola template. Coach &amp; Head Coach hanya melihat riwayat pengiriman.</div>
-        </div>
-        </sc-if>
-
         <!-- ===== SETTINGS (ADMIN) ===== -->
         <sc-if value="{{ s.settings }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:760px;margin:0 auto;">
@@ -767,8 +749,8 @@
   </sc-if>
 
 </div></template>
-<script src="sc-runtime.js?v=c374190e"></script>
-<script src="app.js?v=c374190e"></script>
+<script src="sc-runtime.js?v=161c6ddd"></script>
+<script src="app.js?v=161c6ddd"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
