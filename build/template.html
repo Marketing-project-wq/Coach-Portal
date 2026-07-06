@@ -869,7 +869,7 @@
               <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
                 <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.classes }}</div><div style="font-size:11px;color:var(--muted);">kelas</div></div>
                 <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.peserta }}</div><div style="font-size:11px;color:var(--muted);">pax</div></div>
-                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;color:{{ c.punctCol }};">{{ c.punctual }}%</div><div style="font-size:11px;color:var(--muted);">tepat</div></div>
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;color:{{ c.attCol }};">{{ c.attPct }}</div><div style="font-size:11px;color:var(--muted);">hadir</div></div>
               </div>
             </button>
             </sc-for>
@@ -890,8 +890,8 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Kelas</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Pax</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Tepat Waktu</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--green);">{{ sel.punctual }}%</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Peserta</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Kehadiran</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:{{ sel.attCol }};">{{ sel.attPct }}</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ sel.attended }}/{{ sel.classes }} kelas</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Penggantian</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
@@ -922,7 +922,7 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Kelas (tim)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Pax Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Penggantian Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
@@ -1036,7 +1036,7 @@
       <div style="width:60px;height:60px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;">⏱️</div>
       <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 8px;">Mulai Kelas Sekarang?</h2>
       <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">{{ absenLabel }}</p>
-      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Tepat Waktu · timestamp &amp; device tercatat</div>
+      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Kehadiran tercatat · timestamp &amp; device</div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · waktu server</div>
       <div style="display:flex;gap:11px;">
         <button onclick="{{ closeAbsen }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Batal</button>

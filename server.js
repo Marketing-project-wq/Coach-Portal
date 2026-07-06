@@ -848,14 +848,17 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const byCoach = {};
   for (const sc of scheds || []) { byCoach[sc.instructor] = byCoach[sc.instructor] || { classes: 0, ids: [] }; byCoach[sc.instructor].classes++; byCoach[sc.instructor].ids.push(sc.id); }
   const allIds = (scheds || []).map((x) => x.id);
-  const counts = await bookingCounts(allIds);
+  const [counts, started] = await Promise.all([bookingCounts(allIds), startedSet(allIds)]);
   const subs = await sb('arena_coach_substitutions?select=from_coach,status');
   const subCount = {}; for (const su of subs || []) subCount[su.from_coach] = (subCount[su.from_coach] || 0) + 1;
   const pm = await coachPhotoMap();
   const list = (users || []).filter((u) => u.role !== 'admin').map((u) => {
     const b = byCoach[u.coach_name] || { classes: 0, ids: [] };
     const peserta = b.ids.reduce((a, id) => a + ((counts[id] || {}).confirmed || 0), 0);
-    return { id: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', classes: b.classes, peserta, punctual: 100, subs: subCount[u.coach_name] || 0, status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) };
+    // Kehadiran = kelas yang benar-benar di-absen (Mulai Kelas) / total kelas terjadwal bulan ini.
+    const attended = b.ids.filter((id) => started.has(id)).length;
+    const punctual = b.classes ? Math.round((attended / b.classes) * 100) : 0;
+    return { id: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', classes: b.classes, peserta, attended, punctual, subs: subCount[u.coach_name] || 0, status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) };
   });
   return send(res, 200, { coaches: list });
 });

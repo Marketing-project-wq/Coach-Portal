@@ -102,8 +102,8 @@ template = template.replace(/<div style="display:grid;grid-template-columns:1\.4
 const statCard = (label, val, col) => '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">' + label + '</div><div style="font-family:\'Archivo\';font-weight:900;font-size:30px;' + (col ? 'color:' + col + ';' : '') + '">' + val + '</div></div>';
 const monthlyStats = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
   + statCard('Kelas Bulan Ini', '{{ mKelasBulan }}', 'var(--volt)')
-  + statCard('Pax Bulan Ini', '{{ mPesertaBulan }}', '#0068C9')
-  + statCard('Total Pax sejak Juli', '{{ mPesertaTahun }}', '#0068C9')
+  + statCard('Peserta Bulan Ini', '{{ mPesertaBulan }}', '#0068C9')
+  + statCard('Peserta sejak Juli', '{{ mPesertaTahun }}', '#0068C9')
   + '</div>';
 const monthlyPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;">'
   + '<div style="font-weight:800;font-family:\'Archivo\';font-size:16px;margin-bottom:4px;">Pax &amp; Kelas per Bulan · sejak Juli {{ monthlyYear }}</div>'
@@ -125,7 +125,7 @@ const cardBox = 'background:var(--panel);border:1px solid var(--border);border-r
 const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900px;margin:0 auto;">'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Peserta Saya</div>'
   + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
-  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Total Pax</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
+  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Peserta</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
   + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Aktif 30 Hari Terakhir</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--green);">{{ membersActive }}</div></div>'
   + '</div>'
   + '<sc-if value="{{ hasMembers }}"><div style="' + cardBox + 'overflow:hidden;">'
