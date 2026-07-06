@@ -301,29 +301,17 @@ class Component extends DCLogic {
       .then((r) => { this.toastMsg('Feedback terkirim ke ' + r.saved + ' peserta'); this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); })
       .catch((err) => this.toastMsg(err.message));
   }
-  submitVenue() {
-    const val = (id) => (document.getElementById(id) || {}).value || '';
-    const customer = val('venueCustomer').trim();
-    const date = val('venueDate');
-    const coach = val('venueCoach');
-    if (!date || !coach) return this.toastMsg('Pilih coach & tanggal dulu.');
-    const payload = { customer_name: customer, customer_phone: val('venuePhone').trim(), booking_date: date, start_time: val('venueTime') || null, end_time: val('venueEnd') || null, arena: val('venueArena').trim(), notes: val('venueNotes').trim(), coach_name: coach };
-    if (this.MOCK) return this.toastMsg('Venue booking terkirim ke ' + coach);
-    this.api('/api/venue/bookings', { method: 'POST', body: JSON.stringify(payload) })
-      .then(() => { this.toastMsg('Venue booking terkirim ke ' + coach); this.loadScreen('venue'); })
-      .catch((e) => this.toastMsg(e.message));
-  }
   assignVenue(id, coach) {
     if (!coach) return;
-    if (this.MOCK) return this.toastMsg('Coach penanggung jawab diganti ke ' + coach);
+    if (this.MOCK) return this.toastMsg('Coach penanggung jawab: ' + coach);
     this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/assign', { method: 'POST', body: JSON.stringify({ coach_name: coach }) })
-      .then(() => { this.toastMsg('Coach penanggung jawab diganti ke ' + coach); this.loadScreen('venue'); })
+      .then(() => { this.toastMsg('Coach penanggung jawab: ' + coach); this.loadScreen('venue'); })
       .catch((e) => this.toastMsg(e.message));
   }
-  cancelVenue(id) {
-    if (this.MOCK) return this.toastMsg('Venue booking dibatalkan');
-    this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/cancel', { method: 'POST' })
-      .then(() => { this.toastMsg('Venue booking dibatalkan'); this.loadScreen('venue'); })
+  unassignVenue(id) {
+    if (this.MOCK) return this.toastMsg('Assign coach dibatalkan');
+    this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/unassign', { method: 'POST' })
+      .then(() => { this.toastMsg('Assign coach dibatalkan'); this.loadScreen('venue'); })
       .catch((e) => this.toastMsg(e.message));
   }
   randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
@@ -429,18 +417,24 @@ class Component extends DCLogic {
     });
     const noBoard = leaderboard.length === 0;
     const recentClasses = D.recent || [];
-    // venue booking (arena + coach)
+    // venue booking — sourced from Admin Hub; HC assigns a coach to the "arena + coach" ones
     const venueIsHC = !!D.venueIsHC;
     const venueCoachOpts = (D.venueCoaches || []).map((c) => ({ name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · eksternal' : '') }));
-    const venueStatusMap = { assigned: ['Terjadwal', C.muted, 'rgba(136,143,156,.14)'], done: ['Selesai', C.green, 'rgba(28,138,75,.12)'], cancelled: ['Dibatalkan', C.red, 'rgba(228,0,43,.12)'] };
     const venueBookings = (D.venueBookings || []).map((b) => {
-      const stt = venueStatusMap[b.status] || venueStatusMap.assigned;
-      return Object.assign({}, b, { customer: b.customer || 'Booking arena', statusLabel: stt[0], statusCol: stt[1], statusBg: stt[2], isCancelled: b.status === 'cancelled', active: b.status !== 'cancelled',
-        timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Jam fleksibel', hasPhone: !!b.phone, hasArena: !!b.arena, hasNotes: !!b.notes,
+      const assigned = !!b.coach;
+      return {
+        id: b.id, code: b.code || '', customer: b.customer || '(tanpa nama)', dayLabel: b.dayLabel || '',
+        timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Jam belum diatur',
+        needsCoach: b.needsCoach, coach: b.coach || '', assigned,
+        typeLabel: b.needsCoach ? 'Arena + Coach' : 'Arena', typeCol: b.needsCoach ? C.volt : C.cyan,
+        typeBg: b.needsCoach ? 'var(--volt-dim)' : 'rgba(0,104,201,.1)',
+        assignLabel: assigned ? ('✓ ' + b.coach) : 'Belum ada coach', assignCol: assigned ? C.green : C.amber,
         coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
-        reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), cancel: () => this.cancelVenue(b.id) });
+        reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
+      };
     });
     const noVenueBookings = venueBookings.length === 0;
+    const venueUnassignedCount = venueBookings.filter((b) => b.needsCoach && !b.assigned).length;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
     const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Booking arena', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes }));
     const hasScheduleVenues = scheduleVenues.length > 0;
@@ -534,7 +528,7 @@ class Component extends DCLogic {
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       showVenueNav: true, goVenue: () => this.go('venue'), venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts, venueBookings, noVenueBookings, hasVenueBookings: !noVenueBookings,
-      submitVenue: () => this.submitVenue(), scheduleVenues, hasScheduleVenues,
+      venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus, submitMenu: () => this.submitMenu(),
       arenaLocSet, arenaRadius, arenaLocStatus, arenaLocCol, captureArenaLoc: () => this.captureArenaLoc(), clearArenaLoc: () => this.clearArenaLoc(),
       pageKicker: tt[0], pageTitle: tt[1],
@@ -623,10 +617,11 @@ class Component extends DCLogic {
     d.venueIsHC = true;
     d.venueCoaches = [{ name: 'Rheza', role: 'Coach', external: false }, { name: 'Elsen', role: 'Coach', external: false }, { name: 'Calysta', role: 'Coach', external: false }, { name: 'Nando', role: 'Head Coach', external: false }, { name: 'Brian', role: 'Coach', external: true }, { name: 'Gilang', role: 'Coach', external: true }, { name: 'Mae', role: 'Coach', external: true }, { name: 'YoKae', role: 'Coach', external: true }];
     d.venueBookings = [
-      { id: 'v1', customer: 'Bapak Andi', phone: '0812-3456-7890', date: '2026-07-08', dateLabel: '8 Jul', dayLabel: 'Rab 8 Jul', time: '10:00', end: '11:00', arena: 'Arena 1', notes: 'Sesi privat + coach', coach: 'Rheza', status: 'assigned', assignedBy: 'Nando' },
-      { id: 'v2', customer: 'Grup Corporate PT Maju', phone: '0821-1111-2222', date: '2026-07-02', dateLabel: '2 Jul', dayLabel: 'Kam 2 Jul', time: '15:00', end: '17:00', arena: 'Arena 2', notes: '', coach: 'Brian', status: 'assigned', assignedBy: 'Nando' },
+      { id: 'v1', code: 'BK-20260706-0002', customer: 'Grace Liu', date: '2026-07-08', dateLabel: '8 Jul', dayLabel: 'Rab 8 Jul', time: '16:00', end: '18:00', needsCoach: true, coach: '', status: 'confirmed' },
+      { id: 'v2', code: 'BK-20260701-0006', customer: 'Satrio', date: '2026-07-10', dateLabel: '10 Jul', dayLabel: 'Jum 10 Jul', time: '16:00', end: '20:00', needsCoach: true, coach: 'Rheza', status: 'confirmed' },
+      { id: 'v3', code: 'BK-20260705-0001', customer: 'Yoshi', date: '2026-07-12', dateLabel: '12 Jul', dayLabel: 'Min 12 Jul', time: '13:00', end: '15:00', needsCoach: false, coach: '', status: 'pending_payment' },
     ];
-    d.venues = [{ id: 'v2', time: '15:00', end: '– 17:00', customer: 'Grup Corporate PT Maju', phone: '0821-1111-2222', arena: 'Arena 2', notes: '', dateLabel: 'Kam 2 Jul', isToday: true }];
+    d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Jum 10 Jul', isToday: true }];
     d.menuCanManage = true;
     d.classMenus = [
       { id: 'm1', title: 'HYROX Complete — Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run tiap station:\n1) SkiErg 1000m\n2) Sled Push 50m\n3) Sled Pull 50m\n4) Burpee Broad Jump 80m\n5) Row 1000m\n6) Farmers Carry 200m\n7) Sandbag Lunge 100m\n8) Wall Balls 100 reps', by: 'Nando' },
