@@ -114,7 +114,7 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', reviewsScreen +
 // Inject the "Peserta Kelas" screen — attendance frequency + last-visit recency per participant
 const cardBox = 'background:var(--panel);border:1px solid var(--border);border-radius:16px;';
 const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Peserta Kelas Saya</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Peserta Saya</div>'
   + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
   + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Total Pax</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
   + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Aktif 30 Hari Terakhir</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--green);">{{ membersActive }}</div></div>'
