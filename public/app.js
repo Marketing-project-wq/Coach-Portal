@@ -83,7 +83,9 @@ class Component extends DCLogic {
   setD(patch) { this.setState({ d: Object.assign({}, this.state.d, patch) }); }
   loadCalendar(ym) { if (this.MOCK) return; this.api('/api/coach/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
   toastMsg(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
-  go(screen) { this.setState({ screen }); if (!this.MOCK) this.loadScreen(screen); }
+  go(screen) { this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
+  toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
+  closeMenu() { this.setState({ menuOpen: false }); }
   applyRole(role) { const screen = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts'; this.setState({ role, screen }); if (!this.MOCK) this.loadScreen(screen); }
   setRole(role) {
     const rank = { coach: 0, hc: 1, admin: 2 };
@@ -401,6 +403,7 @@ class Component extends DCLogic {
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
+      menuState: st.menuOpen ? 'open' : 'closed', toggleMenu: () => this.toggleMenu(), closeMenu: () => this.closeMenu(),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),

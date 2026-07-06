@@ -25,14 +25,22 @@ template = template.replace('>Email</label>', '>Name</label>');
 // Remove the promo hero panel; center the login form as a single column
 template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');
 template = template.replace('grid-template-columns:1.05fr .95fr', 'grid-template-columns:1fr');
-// Sidebar logo: drop the "20" badge + "20FIT ARENA"; keep only a larger "Coach Workspace" wordmark
+// Sidebar logo: drop the old "20" badge; show the 20FIT ARENA wordmark above "Coach Workspace"
 template = template.replace(
   '<div style="width:34px;height:34px;border-radius:9px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:#08090B;">20</div>',
   '');
+const arenaLogo = '<div style="display:flex;align-items:center;gap:5px;font-family:\'Archivo\';font-weight:900;font-size:18px;letter-spacing:-.01em;line-height:1;margin-bottom:7px;">'
+  + '<span style="color:var(--text);display:inline-flex;align-items:center;">2<span style="display:inline-flex;width:.62em;height:.62em;border:.13em solid var(--text);border-radius:50%;position:relative;margin:0 .03em;"><span style="position:absolute;inset:26%;background:#E4002B;border-radius:50%;"></span></span>FIT</span>'
+  + '<span style="color:var(--border2);font-weight:300;">|</span>'
+  + '<span style="color:#E4002B;">ARENA</span></div>';
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
-  '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;letter-spacing:.03em;line-height:1.05;">Coach Workspace</div>');
+  '<div>' + arenaLogo + '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.02em;line-height:1.05;color:var(--muted);">Coach Workspace</div></div>');
 template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation');
+// Mobile drawer: mark the app shell with the menu state + inject a tap-to-close backdrop
+template = template.replace(
+  '<div style="position:relative;z-index:2;display:grid;grid-template-columns:248px 1fr;min-height:100vh;">',
+  '<div data-menu="{{ menuState }}" style="position:relative;z-index:2;display:grid;grid-template-columns:248px 1fr;min-height:100vh;"><div class="menu-backdrop" onclick="{{ closeMenu }}"></div>');
 // coachToday card: Detail/Absen buttons become per-item (scoped to that loop)
 (() => {
   const start = template.indexOf('<sc-for list="{{ coachToday }}"');
@@ -172,6 +180,8 @@ for (const [a, b] of renames) template = template.split(a).join(b);
 // via [style*=...] selectors so no markup classes are needed; !important beats inline styles.
 const responsiveCss = `
   html, body { margin:0; padding:0; min-height:100%; background:linear-gradient(135deg,#F2E9E6 0%,#EDEBEA 46%,#E9EEF3 100%) fixed; font-family:'Manrope',system-ui,sans-serif; }
+  .hamburger { display:none; }
+  .menu-backdrop { display:none; }
   @media (max-width: 860px) {
     /* login: stack, hide the big hero, show only the form */
     [style*="grid-template-columns:1.05fr .95fr"] { grid-template-columns:minmax(0,1fr) !important; }
@@ -179,10 +189,11 @@ const responsiveCss = `
     [style*="justify-content:center;padding:40px"] { padding:22px !important; }
     /* app shell: stack sidebar above content */
     [style*="grid-template-columns:248px 1fr"] { grid-template-columns:minmax(0,1fr) !important; }
-    aside { position:static !important; height:auto !important; max-width:100vw !important; overflow:hidden !important; border-right:0 !important; border-bottom:1px solid var(--border) !important; }
-    aside nav { flex-direction:row !important; overflow-x:auto !important; overflow-y:hidden !important; gap:6px !important; padding:8px 10px !important; }
-    aside nav > div { display:none !important; }
-    aside nav button { white-space:nowrap !important; flex-shrink:0 !important; border-left-width:0 !important; padding:8px 12px !important; }
+    /* sidebar becomes a left slide-in drawer, toggled by the hamburger */
+    aside { position:fixed !important; left:0 !important; top:0 !important; height:100vh !important; width:270px !important; max-width:84vw !important; transform:translateX(-100%); transition:transform .22s ease; z-index:90 !important; overflow-y:auto !important; border-right:1px solid var(--border) !important; border-bottom:0 !important; box-shadow:0 20px 60px rgba(20,15,30,.18); }
+    [data-menu="open"] aside { transform:translateX(0) !important; }
+    [data-menu="open"] .menu-backdrop { display:block !important; position:fixed !important; inset:0 !important; background:rgba(20,15,30,.42); z-index:85; }
+    .hamburger { display:flex !important; }
     main { height:auto !important; overflow:visible !important; }
     header { padding:12px 16px !important; flex-wrap:wrap !important; gap:10px !important; }
     header div:has(> span[style*="pulseDot"]) { display:none !important; }   /* hide 'Sinkron' pill */
