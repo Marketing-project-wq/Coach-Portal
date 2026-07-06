@@ -16,6 +16,7 @@ class Component extends DCLogic {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
+      editMenuId: null, editMenu: { title: '', category: '', content: '' },
       toast: '',
       d: this.emptyData(),
     };
@@ -174,15 +175,23 @@ class Component extends DCLogic {
     const content = val('menuContent');
     if (!title || !content) return this.toastMsg('Nama menu & isi menu wajib diisi.');
     const payload = { title, category: val('menuCategory'), content };
-    if (this.MOCK) return this.toastMsg('Menu kelas tersimpan');
-    this.api('/api/coach/menu', { method: 'POST', body: JSON.stringify(payload) })
-      .then(() => { this.toastMsg('Menu kelas tersimpan'); this.loadScreen('menu'); })
+    const editId = this.state.editMenuId;
+    if (this.MOCK) { this.setState({ editMenuId: null, editMenu: { title: '', category: '', content: '' } }); return this.toastMsg(editId ? 'Menu diperbarui' : 'Menu kelas tersimpan'); }
+    const path = editId ? '/api/coach/menu/' + encodeURIComponent(editId) + '/update' : '/api/coach/menu';
+    this.api(path, { method: 'POST', body: JSON.stringify(payload) })
+      .then(() => { this.setState({ editMenuId: null, editMenu: { title: '', category: '', content: '' } }); this.toastMsg(editId ? 'Menu diperbarui' : 'Menu kelas tersimpan'); this.loadScreen('menu'); })
       .catch((e) => this.toastMsg(e.message));
   }
+  startEditMenu(m) {
+    this.setState({ editMenuId: m.id, editMenu: { title: m.title || '', category: m.category || '', content: m.content || '' } });
+    // scroll the form (top of the screen) into view after the re-render
+    const sc = document.querySelector('[data-scroll]'); if (sc) sc.scrollTop = 0;
+  }
+  cancelEditMenu() { this.setState({ editMenuId: null, editMenu: { title: '', category: '', content: '' } }); }
   deleteMenu(id) {
     if (this.MOCK) return this.toastMsg('Menu dihapus');
     this.api('/api/coach/menu/' + encodeURIComponent(id) + '/delete', { method: 'POST' })
-      .then(() => { this.toastMsg('Menu dihapus'); this.loadScreen('menu'); })
+      .then(() => { if (this.state.editMenuId === id) this.setState({ editMenuId: null, editMenu: { title: '', category: '', content: '' } }); this.toastMsg('Menu dihapus'); this.loadScreen('menu'); })
       .catch((e) => this.toastMsg(e.message));
   }
   captureArenaLoc() {
@@ -440,7 +449,7 @@ class Component extends DCLogic {
     const hasScheduleVenues = scheduleVenues.length > 0;
     // menu kelas — shared class-program reference (patokan) for coaches
     const menuCanManage = !!D.menuCanManage;
-    const classMenus = (D.classMenus || []).map((m) => ({ id: m.id, title: m.title, content: m.content, category: m.category || '', hasCategory: !!m.category, by: m.by || '', hasBy: !!m.by, canDelete: menuCanManage || m.mine, del: () => this.deleteMenu(m.id) }));
+    const classMenus = (D.classMenus || []).map((m) => { const can = menuCanManage || m.mine; return { id: m.id, title: m.title, content: m.content, category: m.category || '', hasCategory: !!m.category, by: m.by || '', hasBy: !!m.by, canDelete: can, canEdit: can, isEditing: st.editMenuId === m.id, del: () => this.deleteMenu(m.id), edit: () => this.startEditMenu(m) }; });
     const noClassMenus = classMenus.length === 0;
     // arena GPS lock (settings)
     const aloc = D.arenaLoc || { set: false, radius_m: 150 };
@@ -531,6 +540,8 @@ class Component extends DCLogic {
       showVenueNav: true, goVenue: () => this.go('venue'), venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts, venueBookings, noVenueBookings, hasVenueBookings: !noVenueBookings,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus, submitMenu: () => this.submitMenu(),
+      isEditingMenu: !!st.editMenuId, editMenuTitle: st.editMenu.title, editMenuCategory: st.editMenu.category, editMenuContent: st.editMenu.content,
+      menuFormTitle: st.editMenuId ? 'Edit Menu' : 'Tambah Menu Baru', menuSubmitLabel: st.editMenuId ? 'Update Menu' : 'Simpan Menu', cancelEditMenu: () => this.cancelEditMenu(),
       arenaLocSet, arenaRadius, arenaLocStatus, arenaLocCol, captureArenaLoc: () => this.captureArenaLoc(), clearArenaLoc: () => this.clearArenaLoc(),
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
