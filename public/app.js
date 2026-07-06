@@ -152,10 +152,10 @@ class Component extends DCLogic {
   openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
   confirmAbsen() {
     const cls = this.state.absenClass; const id = cls && cls.schedule_id;
-    if (this.MOCK || !id) { this.setState({ absen: false }); return this.toastMsg('Kelas dimulai · status Tepat Waktu'); }
+    if (this.MOCK || !id) { this.setState({ absen: false }); return this.toastMsg('Kelas dimulai · kehadiran tercatat'); }
     const start = (coords) => {
       this.api('/api/coach/class/' + encodeURIComponent(id) + '/start', { method: 'POST', body: JSON.stringify(coords || {}) })
-        .then(() => { this.setState({ absen: false }); this.toastMsg('Kelas dimulai · status Tepat Waktu'); this.loadScreen('dash'); })
+        .then(() => { this.setState({ absen: false }); this.toastMsg('Kelas dimulai · kehadiran tercatat'); this.loadScreen('dash'); })
         .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
     };
     // Attach current GPS so the server can verify the coach is at the arena (when the lock is on).
@@ -498,10 +498,11 @@ class Component extends DCLogic {
     const roleColor = (r) => r === 'Head Coach' ? { bg: C.voltDim, col: C.volt } : { bg: 'rgba(136,143,156,.14)', col: C.muted };
     const coaches = (D.coaches || []).map((c) => {
       const av = this.avatar(c.id); const rc = roleColor(c.role);
-      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
+      const cls = c.classes || 0, att = c.attended != null ? c.attended : cls;
+      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), attended: att, attPct: cls ? (c.punctual + '%') : '—', attCol: !cls ? C.muted2 : (c.punctual >= 90 ? C.green : (c.punctual >= 50 ? C.amber : C.red)), toggleLabel: c.status === 'Active' ? 'Nonaktifkan' : 'Aktifkan', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
     });
     const reportRows = coaches.slice(0, 12);
-    const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 100, subs: 0, photo: '', hasPhoto: false };
+    const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 0, attended: 0, attPct: '—', attCol: C.muted2, subs: 0, photo: '', hasPhoto: false };
     const statRows = D.stats || [];
     const statMonth = D.statMonth || '';
     // templates
@@ -611,7 +612,7 @@ class Component extends DCLogic {
     d.subs = { pending: [{ id: 's1', from: 'Gilang', to: 'Brian', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], history: [{ from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: '12 Jun', status: 'Approved' }] };
     d.rotations = { incoming: [{ id: 'r1', from: 'Gilang', to: 'Rheza', cls: 'HYROX Foundation', time: 'Sen, 17:00', reason: 'Sakit' }], outgoing: [{ id: 'r2', from: 'Rheza', to: 'Calysta', cls: 'HYROX Complete', time: 'Rab, 07:00', status: 'approved' }] };
     const PH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
-    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', password: 'nando456', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', password: 'rheza123', photo: PH + 'rheza-1778032238203.png' }];
+    d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, attended: 15, peserta: 198, punctual: 94, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', password: 'nando456', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, attended: 13, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', password: 'rheza123', photo: PH + 'rheza-1778032238203.png' }];
     d.statMonth = 'Juli 2026';
     // venue booking (arena + coach)
     d.venueIsHC = true;
