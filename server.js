@@ -133,8 +133,9 @@ async function coachSchedules(coach, from, to) {
 // normalized participant name -> { name, visits, last } across a coach's past classes (confirmed bookings)
 async function coachAttendanceMap(coach, today) {
   const scheds = await coachSchedules(coach, '2000-01-01', today);
-  const dateById = {}; const ids = [];
-  for (const x of scheds) { dateById[x.id] = x.schedule_date; ids.push(x.id); }
+  const types = await classTypes();
+  const metaById = {}; const ids = [];
+  for (const x of scheds) { metaById[x.id] = { date: x.schedule_date, type: shortType((types[x.class_type_id] || {}).name) }; ids.push(x.id); }
   const map = {};
   if (!ids.length) return map;
   const rows = await sb(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${ids.map(enc).join(',')})`);
@@ -142,13 +143,16 @@ async function coachAttendanceMap(coach, today) {
     const nm = String(b.full_name || '').trim();
     if (!nm) continue;
     const key = nm.toLowerCase();
-    const d = dateById[b.schedule_id] || '';
-    if (!map[key]) map[key] = { name: nm, visits: 0, last: '' };
+    const meta = metaById[b.schedule_id] || { date: '', type: '' };
+    if (!map[key]) map[key] = { name: nm, visits: 0, last: '', types: {} };
     map[key].visits++;
-    if (d > map[key].last) { map[key].last = d; map[key].name = nm; }
+    if (meta.type) map[key].types[meta.type] = (map[key].types[meta.type] || 0) + 1;
+    if (meta.date > map[key].last) { map[key].last = meta.date; map[key].name = nm; }
   }
   return map;
 }
+// "HYROX Complete, HYROX Foundation" — distinct classes a participant attended, most-frequent first.
+function classesLabelFor(h) { return (h && h.types) ? Object.keys(h.types).sort((a, b) => h.types[b] - h.types[a]).join(', ') : ''; }
 function daysSinceISO(dateISO, today) {
   if (!dateISO) return null;
   return Math.round((new Date(today + 'T00:00:00') - new Date(dateISO + 'T00:00:00')) / 86400000);
@@ -375,7 +379,7 @@ route('GET', '/api/coach/members', async (req, res, s) => {
   const map = await coachAttendanceMap(s.c, today);
   const members = Object.keys(map).map((k) => {
     const m = map[k];
-    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today) };
+    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today), classesLabel: classesLabelFor(m) };
   }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
   const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
   return send(res, 200, { members, total: members.length, active30 });
@@ -535,6 +539,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
+      classesLabel: classesLabelFor(h),
     };
   });
   return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota }, started, participants });

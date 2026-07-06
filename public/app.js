@@ -312,7 +312,7 @@ class Component extends DCLogic {
     const members = (D.members || []).map((m, i) => {
       const r = this.recencyLabel(m.daysSince);
       const av = this.avatar(m.name);
-      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1 };
+      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classesLabel: m.classesLabel || '', hasClasses: !!m.classesLabel };
     });
     const noMembers = members.length === 0;
     // participant reviews
@@ -331,7 +331,7 @@ class Component extends DCLogic {
     const noBoard = leaderboard.length === 0;
     const recentClasses = D.recent || [];
     // participants
-    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col }; });
+    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col, classesLabel: p.classesLabel || '', hasClasses: !!p.classesLabel }; });
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
@@ -438,12 +438,12 @@ class Component extends DCLogic {
     d.monthly = ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 0 }));
     d.mPesertaBulan = mPes[6]; d.mKelasBulan = mCount[6]; d.mPesertaTahun = mPes.reduce((a, b) => a + b, 0);
     d.members = [
-      { name: 'Jordan', visits: 8, lastVisit: '5 Mei', daysSince: 58 },
-      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9 },
-      { name: 'Woro Liana', visits: 5, lastVisit: '30 Jun', daysSince: 2 },
-      { name: 'Fathan', visits: 5, lastVisit: '14 Jun', daysSince: 18 },
-      { name: 'Ayu Fitri', visits: 5, lastVisit: '11 Mei', daysSince: 52 },
-      { name: 'Indah Wulansari', visits: 4, lastVisit: '1 Jul', daysSince: 1 },
+      { name: 'Jordan', visits: 8, lastVisit: '5 Mei', daysSince: 58, classesLabel: 'HYROX Complete' },
+      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9, classesLabel: 'HYROX Complete, HYROX Foundation' },
+      { name: 'Woro Liana', visits: 5, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Foundation' },
+      { name: 'Fathan', visits: 5, lastVisit: '14 Jun', daysSince: 18, classesLabel: 'HYROX Complete' },
+      { name: 'Ayu Fitri', visits: 5, lastVisit: '11 Mei', daysSince: 52, classesLabel: 'HYROX Foundation' },
+      { name: 'Indah Wulansari', visits: 4, lastVisit: '1 Jul', daysSince: 1, classesLabel: 'HYROX Complete' },
     ];
     d.membersTotal = 42; d.membersActive = 28;
     d.reviewAvg = 4.6; d.reviewCount = 2;
@@ -461,7 +461,7 @@ class Component extends DCLogic {
     d.week = [['SEN', '23', '2 kls', true], ['SEL', '24', '1 kls', false], ['RAB', '25', '2 kls', false], ['KAM', '26', '1 kls', false], ['JUM', '27', '2 kls', false], ['SAB', '28', '—', false], ['MIN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2 }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null }] };
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '' }] };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];
     d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Terkirim' }];
     d.fbClasses = [{ id: 'x1', label: 'HYROX Complete · 07:00 · 1 Jul' }, { id: 'x2', label: 'HYROX Foundation · 17:00 · 30 Jun' }];
