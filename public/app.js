@@ -23,7 +23,7 @@ class Component extends DCLogic {
     this.boot();
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'MENDATANG', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false };
   }
   boot() {
     if (this.MOCK) {
@@ -98,8 +98,8 @@ class Component extends DCLogic {
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
     if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq'].indexOf(saved) < 0) screen = saved; }
-    // External coaches may only reach Schedule, Monitoring and Rotation.
-    if (this.isExternal && ['dash', 'monthly', 'subreq'].indexOf(screen) < 0) screen = 'dash';
+    // External coaches may only reach Schedule, Monitoring, Rotation and Venue Booking.
+    if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue'].indexOf(screen) < 0) screen = 'dash';
     if (window.localStorage) localStorage.setItem('arena_screen', screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
@@ -118,6 +118,7 @@ class Component extends DCLogic {
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
+    else if (screen === 'venue') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
@@ -181,7 +182,7 @@ class Component extends DCLogic {
     if (from > to) return this.toastMsg('Tanggal "dari" harus sebelum "sampai".');
     const label = (this.fmtD(from) + ' – ' + this.fmtD(to)).toUpperCase();
     if (this.MOCK) return this.setD({ jadwalLabel: label });
-    this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
+    this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, venues: r.venues || [], jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
   }
   resetRange() { if (this.MOCK) return this.setD({ jadwalLabel: 'MENDATANG' }); this.loadScreen('dash'); }
   todayISO() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
@@ -191,7 +192,7 @@ class Component extends DCLogic {
     // Optimistic: move the highlight + header instantly, then load that day's cards.
     this.setD({ jadwalLabel: label, selDate: date });
     if (this.MOCK) return;
-    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes })).catch((e) => this.toastMsg(e.message));
+    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, venues: r.venues || [] })).catch((e) => this.toastMsg(e.message));
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Link review disalin')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
   decideRotation(id, action) {
@@ -249,6 +250,31 @@ class Component extends DCLogic {
       .then((r) => { this.toastMsg('Feedback terkirim ke ' + r.saved + ' peserta'); this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); })
       .catch((err) => this.toastMsg(err.message));
   }
+  submitVenue() {
+    const val = (id) => (document.getElementById(id) || {}).value || '';
+    const customer = val('venueCustomer').trim();
+    const date = val('venueDate');
+    const coach = val('venueCoach');
+    if (!customer || !date || !coach) return this.toastMsg('Nama customer, tanggal, & coach wajib diisi.');
+    const payload = { customer_name: customer, customer_phone: val('venuePhone').trim(), booking_date: date, start_time: val('venueTime') || null, end_time: val('venueEnd') || null, arena: val('venueArena').trim(), notes: val('venueNotes').trim(), coach_name: coach };
+    if (this.MOCK) return this.toastMsg('Venue booking terkirim ke ' + coach);
+    this.api('/api/venue/bookings', { method: 'POST', body: JSON.stringify(payload) })
+      .then(() => { this.toastMsg('Venue booking terkirim ke ' + coach); this.loadScreen('venue'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  assignVenue(id, coach) {
+    if (!coach) return;
+    if (this.MOCK) return this.toastMsg('Coach penanggung jawab diganti ke ' + coach);
+    this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/assign', { method: 'POST', body: JSON.stringify({ coach_name: coach }) })
+      .then(() => { this.toastMsg('Coach penanggung jawab diganti ke ' + coach); this.loadScreen('venue'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  cancelVenue(id) {
+    if (this.MOCK) return this.toastMsg('Venue booking dibatalkan');
+    this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/cancel', { method: 'POST' })
+      .then(() => { this.toastMsg('Venue booking dibatalkan'); this.loadScreen('venue'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
   addTemplate() {
     const text = (typeof prompt === 'function') ? prompt('Teks template feedback baru:') : '';
@@ -286,7 +312,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -301,9 +327,10 @@ class Component extends DCLogic {
     titles.monthly = ['Coach', 'Monitoring Kelas'];
     titles.members = ['Coach', 'Peserta'];
     titles.leaderboard = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Leaderboard'];
+    titles.venue = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Venue Booking'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -350,6 +377,21 @@ class Component extends DCLogic {
     });
     const noBoard = leaderboard.length === 0;
     const recentClasses = D.recent || [];
+    // venue booking (arena + coach)
+    const venueIsHC = !!D.venueIsHC;
+    const venueCoachOpts = (D.venueCoaches || []).map((c) => ({ name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · eksternal' : '') }));
+    const venueStatusMap = { assigned: ['Terjadwal', C.muted, 'rgba(136,143,156,.14)'], done: ['Selesai', C.green, 'rgba(28,138,75,.12)'], cancelled: ['Dibatalkan', C.red, 'rgba(228,0,43,.12)'] };
+    const venueBookings = (D.venueBookings || []).map((b) => {
+      const stt = venueStatusMap[b.status] || venueStatusMap.assigned;
+      return Object.assign({}, b, { statusLabel: stt[0], statusCol: stt[1], statusBg: stt[2], isCancelled: b.status === 'cancelled', active: b.status !== 'cancelled',
+        timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Jam fleksibel', hasPhone: !!b.phone, hasArena: !!b.arena, hasNotes: !!b.notes,
+        coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
+        reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), cancel: () => this.cancelVenue(b.id) });
+    });
+    const noVenueBookings = venueBookings.length === 0;
+    // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
+    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Jam fleksibel', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes }));
+    const hasScheduleVenues = scheduleVenues.length > 0;
     // participants
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + 'x datang · ') : '', lastLabel: r.label, lastCol: r.col, classesLabel: p.classesLabel || '', hasClasses: !!p.classesLabel }; });
     // sub options
@@ -421,6 +463,8 @@ class Component extends DCLogic {
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
+      showVenueNav: true, goVenue: () => this.go('venue'), venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts, venueBookings, noVenueBookings, hasVenueBookings: !noVenueBookings,
+      submitVenue: () => this.submitVenue(), scheduleVenues, hasScheduleVenues,
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       menuState: st.menuOpen ? 'open' : 'closed', toggleMenu: () => this.toggleMenu(), closeMenu: () => this.closeMenu(),
@@ -502,6 +546,14 @@ class Component extends DCLogic {
     const PH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
     d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, peserta: 198, punctual: 96, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', password: 'nando456', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', password: 'rheza123', photo: PH + 'rheza-1778032238203.png' }];
     d.statMonth = 'Juli 2026';
+    // venue booking (arena + coach)
+    d.venueIsHC = true;
+    d.venueCoaches = [{ name: 'Rheza', role: 'Coach', external: false }, { name: 'Elsen', role: 'Coach', external: false }, { name: 'Calysta', role: 'Coach', external: false }, { name: 'Nando', role: 'Head Coach', external: false }, { name: 'Brian', role: 'Coach', external: true }, { name: 'Gilang', role: 'Coach', external: true }, { name: 'Mae', role: 'Coach', external: true }, { name: 'YoKae', role: 'Coach', external: true }];
+    d.venueBookings = [
+      { id: 'v1', customer: 'Bapak Andi', phone: '0812-3456-7890', date: '2026-07-08', dateLabel: '8 Jul', dayLabel: 'Rab 8 Jul', time: '10:00', end: '11:00', arena: 'Arena 1', notes: 'Sesi privat + coach', coach: 'Rheza', status: 'assigned', assignedBy: 'Nando' },
+      { id: 'v2', customer: 'Grup Corporate PT Maju', phone: '0821-1111-2222', date: '2026-07-02', dateLabel: '2 Jul', dayLabel: 'Kam 2 Jul', time: '15:00', end: '17:00', arena: 'Arena 2', notes: '', coach: 'Brian', status: 'assigned', assignedBy: 'Nando' },
+    ];
+    d.venues = [{ id: 'v2', time: '15:00', end: '– 17:00', customer: 'Grup Corporate PT Maju', phone: '0821-1111-2222', arena: 'Arena 2', notes: '', dateLabel: 'Kam 2 Jul', isToday: true }];
     d.stats = [
       { date: '1 Jul', day: 'Rabu', time: '18:30', type: 'HYROX Complete', peserta: 14 },
       { date: '3 Jul', day: 'Jumat', time: '07:00', type: 'HYROX Foundation', peserta: 9 },

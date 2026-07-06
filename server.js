@@ -330,8 +330,8 @@ route('GET', '/api/coach/classes', async (req, res, s, q) => {
   const types = await classTypes();
   const sched = (await coachSchedules(s.c, from, to)).slice(0, 80);
   const ids = sched.map((x) => x.id);
-  const [counts, started] = await Promise.all([bookingCounts(ids), startedSet(ids)]);
-  return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today), from, to });
+  const [counts, started, venues] = await Promise.all([bookingCounts(ids), startedSet(ids), coachVenueCards(s.c, from, to, today)]);
+  return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today), venues, from, to });
 });
 
 // Per-month class count for the coach across the current year (monitoring bar chart).
@@ -364,6 +364,9 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
   const mEnd = `${ym}-${String(lastDay).padStart(2, '0')}`;
   const sched = await coachSchedules(s.c, `${ym}-01`, mEnd);
   const cnt = {}; for (const x of sched) cnt[x.schedule_date] = (cnt[x.schedule_date] || 0) + 1;
+  // Fold venue bookings into the same day markers so venue-only days still highlight & are clickable.
+  const venues = (await sb(`arena_venue_bookings?select=booking_date&coach_name=eq.${enc(s.c)}&status=neq.cancelled&booking_date=gte.${ym}-01&booking_date=lte.${mEnd}`)) || [];
+  for (const v of venues) cnt[v.booking_date] = (cnt[v.booking_date] || 0) + 1;
   const firstDow = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Monday-first offset
   const cells = [];
   for (let i = 0; i < firstDow; i++) cells.push({ blank: true });
@@ -378,6 +381,67 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
     ym, monthLabel: `${MON_FULL[month - 1]} ${year}`, cells,
     prevYm: `${pm.y}-${String(pm.m).padStart(2, '0')}`, nextYm: `${nm.y}-${String(nm.m).padStart(2, '0')}`,
   });
+});
+
+// ===== VENUE BOOKING (arena + coach) =====
+// Coaches that can be assigned a venue booking — all coaches + head coaches (external included), excludes admin.
+async function assignableCoaches() {
+  const users = await sb('arena_coach_users?select=coach_name,role,is_active&role=neq.admin&is_active=eq.true&order=role.desc,coach_name.asc');
+  return (users || []).map((u) => ({ name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', external: isExternalCoach(u.coach_name) }));
+}
+// Shape a DB row for the client.
+function venueRow(r) {
+  return { id: r.id, customer: r.customer_name, phone: r.customer_phone || '', date: r.booking_date, dateLabel: r.booking_date ? fmtDMon(r.booking_date) : '', dayLabel: r.booking_date ? dLabel(r.booking_date) : '', time: hhmm(r.start_time), end: hhmm(r.end_time), arena: r.arena || '', notes: r.notes || '', coach: r.coach_name || '', status: r.status || 'assigned', assignedBy: r.assigned_by || '' };
+}
+// Venue bookings assigned to a coach within a date range, shaped like schedule cards.
+async function coachVenueCards(coach, from, to, today) {
+  let q = `arena_venue_bookings?select=*&coach_name=eq.${enc(coach)}&status=neq.cancelled&booking_date=gte.${from}`;
+  if (to) q += `&booking_date=lte.${to}`;
+  const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
+  return rows.map((r) => ({ id: r.id, time: hhmm(r.start_time), end: r.end_time ? '– ' + hhmm(r.end_time) : '', customer: r.customer_name, phone: r.customer_phone || '', arena: r.arena || '', notes: r.notes || '', dateLabel: dLabel(r.booking_date), isToday: r.booking_date === today }));
+}
+
+// List venue bookings — HC/admin see all; a coach sees only their own.
+route('GET', '/api/venue/bookings', async (req, res, s) => {
+  const isHC = requireHC(s);
+  let q = 'arena_venue_bookings?select=*&order=booking_date.desc,start_time.asc&limit=200';
+  if (!isHC) q += `&coach_name=eq.${enc(s.c)}&status=neq.cancelled`;
+  const rows = await sb(q);
+  return send(res, 200, { bookings: (rows || []).map(venueRow), coaches: isHC ? await assignableCoaches() : [], isHC });
+});
+// Create a venue booking + assign the responsible coach (HC/admin only).
+route('POST', '/api/venue/bookings', async (req, res, s) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  const body = await readBody(req);
+  if (!body || !body.customer_name || !body.coach_name || !body.booking_date) return send(res, 400, { error: 'Nama customer, tanggal, & coach wajib diisi.' });
+  const payload = {
+    customer_name: String(body.customer_name).trim().slice(0, 120),
+    customer_phone: body.customer_phone ? String(body.customer_phone).trim().slice(0, 40) : null,
+    booking_date: body.booking_date,
+    start_time: body.start_time || null,
+    end_time: body.end_time || null,
+    arena: body.arena ? String(body.arena).trim().slice(0, 120) : null,
+    notes: body.notes ? String(body.notes).trim().slice(0, 500) : null,
+    coach_name: String(body.coach_name).trim(),
+    assigned_by: s.d || s.c,
+    status: 'assigned',
+  };
+  await sb('arena_venue_bookings', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
+  return send(res, 200, { ok: true });
+});
+// Reassign the responsible coach (HC/admin only).
+route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  const body = await readBody(req);
+  if (!body || !body.coach_name) return send(res, 400, { error: 'Coach wajib dipilih.' });
+  await sb(`arena_venue_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ coach_name: String(body.coach_name).trim(), assigned_by: s.d || s.c, updated_at: new Date().toISOString() }) });
+  return send(res, 200, { ok: true });
+});
+// Cancel a venue booking (HC/admin only).
+route('POST', '/api/venue/bookings/:id/cancel', async (req, res, s, q, params) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  await sb(`arena_venue_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'cancelled', updated_at: new Date().toISOString() }) });
+  return send(res, 200, { ok: true });
 });
 
 // ===== COACH: participants — how many times each attended + recency of last visit =====
