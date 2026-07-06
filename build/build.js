@@ -114,7 +114,7 @@ const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900p
   + '<sc-if value="{{ hasMembers }}"><div style="' + cardBox + 'overflow:hidden;">'
   + '<sc-for list="{{ members }}" as="m"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);">'
   + '<div style="width:38px;height:38px;border-radius:50%;background:{{ m.avBg }};color:{{ m.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;">{{ m.initials }}</div>'
-  + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ m.name }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">Terakhir: {{ m.lastVisit }} &#183; <span style="color:{{ m.lastCol }};font-weight:700;">{{ m.lastLabel }}</span></div></div>'
+  + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ m.name }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">Terakhir: {{ m.lastVisit }} &#183; <span style="color:{{ m.lastCol }};font-weight:700;">{{ m.lastLabel }}</span></div><sc-if value="{{ m.hasClasses }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">Kelas: {{ m.classesLabel }}</div></sc-if></div>'
   + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:20px;">{{ m.visits }}</div><div style="font-size:11px;color:var(--muted);">kali datang</div></div>'
   + '</div></sc-for></div></sc-if>'
   + '<sc-if value="{{ noMembers }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada peserta yang tercatat hadir di kelas Anda.</div></sc-if>'
