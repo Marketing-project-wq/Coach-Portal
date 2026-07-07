@@ -568,10 +568,6 @@
           <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:#08090B;position:relative;overflow:hidden;flex-shrink:0;">{{ user.initials }}<sc-if value="{{ user.hasPhoto }}"><img src="{{ user.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
           <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.name }}</div><div style="font-size:11px;color:var(--muted);">{{ user.role }}</div></div>
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:9px;">
-          <button onclick="{{ setLangEN }}" style="flex:1;background:{{ langEnBg }};color:{{ langEnFg }};border:1px solid var(--border2);border-radius:8px;padding:7px;font-family:'Hanken Grotesk';font-weight:700;font-size:12px;cursor:pointer;">EN</button>
-          <button onclick="{{ setLangID }}" style="flex:1;background:{{ langIdBg }};color:{{ langIdFg }};border:1px solid var(--border2);border-radius:8px;padding:7px;font-family:'Hanken Grotesk';font-weight:700;font-size:12px;cursor:pointer;">ID</button>
-        </div>
         <button onclick="{{ logout }}" style="width:100%;background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-family:'Hanken Grotesk';font-weight:700;font-size:13.5px;cursor:pointer;transition:background .15s,border-color .15s;" style-hover="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.4);">Logout</button>
       </div>
     </aside>
@@ -649,6 +645,7 @@
               <sc-if value="{{ v.hasNotes }}"><div style="font-size:12.5px;color:var(--muted);margin-top:6px;">{{ v.notes }}</div></sc-if>
               <sc-if value="{{ v.canAbsen }}"><button onclick="{{ v.openAbsen }}" style="width:100%;margin-top:14px;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button></sc-if>
               <sc-if value="{{ v.started }}"><div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(28,138,75,.12);color:var(--green);font-size:12px;font-weight:700;padding:7px 13px;border-radius:100px;">✓ In progress</div></sc-if>
+              <button onclick="{{ v.gcal }}" style="width:100%;margin-top:9px;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--volt);">📅 Add to Google Calendar</button>
             </div>
             </sc-for>
           </div>

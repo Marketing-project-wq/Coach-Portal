@@ -59,6 +59,9 @@ window.__I18N = (function () {
     // ---- venue ----
     'No coach yet': 'Belum ada coach', 'Time not set': 'Jam belum diatur', 'Remove': 'Hapus',
     'No upcoming arena bookings.': 'Belum ada booking arena mendatang.', 'Flexible time': 'Jam fleksibel',
+    'Add to Google Calendar': 'Tambah ke Google Calendar',
+    'Calendar reminder created (2 days & 12 hours before).': 'Pengingat kalender dibuat (2 hari & 12 jam sebelumnya).',
+    'Booking date not available.': 'Tanggal booking tidak tersedia.',
     // ---- menu ----
     'Edit Menu': 'Edit Menu', 'Cancel': 'Batal', 'MENU LIST': 'DAFTAR MENU', 'Edit': 'Edit',
     'Menu / Session Name': 'Nama Menu / Sesi', 'Class Type': 'Jenis Kelas', 'Menu / Program Content': 'Isi Menu / Program',

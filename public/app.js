@@ -203,6 +203,35 @@ class Component extends DCLogic {
   }
   openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
   openVenueAbsen(v) { this.setState({ absen: true, absenClass: { venueId: v.id, type: 'Arena + Coach · ' + (v.customer || 'Arena booking'), time: v.time || '' } }); }
+  // Build a calendar (.ics) event for an assigned arena rental, with reminders at
+  // H-2 days and H-12 hours. Opening the file adds it (with those reminders) to
+  // the coach's calendar (Google Calendar on most phones).
+  addToCalendar(o) {
+    if (!o || !o.date) return this.toastMsg('Booking date not available.');
+    const id = this.state.lang === 'id';
+    const pad = (n) => String(n).padStart(2, '0');
+    const clean = (t) => String(t || '').replace(/[^0-9:]/g, ''); // "– 20:00" -> "20:00"
+    const dt = (d, t) => { const p = clean(t).split(':'); return String(d).replace(/-/g, '') + 'T' + (p[0] || '00').padStart(2, '0') + (p[1] || '00').padStart(2, '0') + '00'; };
+    const now = new Date();
+    const stamp = now.getUTCFullYear() + pad(now.getUTCMonth() + 1) + pad(now.getUTCDate()) + 'T' + pad(now.getUTCHours()) + pad(now.getUTCMinutes()) + pad(now.getUTCSeconds()) + 'Z';
+    const title = (id ? 'Sewa Arena — ' : 'Arena Rental — ') + (o.title || 'Booking') + ' (Coach)';
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//20FIT Arena//Coach Portal//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+      'BEGIN:VEVENT', 'UID:venue-' + (o.id || o.date) + '@20fit.id', 'DTSTAMP:' + stamp,
+      'DTSTART:' + dt(o.date, o.start), 'DTEND:' + dt(o.date, o.end || o.start),
+      'SUMMARY:' + title,
+      'DESCRIPTION:' + (id ? 'Sewa arena + coach di 20FIT Arena.' : 'Arena rental + coach at 20FIT Arena.'),
+      'LOCATION:20FIT Arena, Menteng',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + (id ? 'Sewa arena 2 hari lagi' : 'Arena rental in 2 days'), 'TRIGGER:-P2D', 'END:VALARM',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + (id ? 'Sewa arena 12 jam lagi' : 'Arena rental in 12 hours'), 'TRIGGER:-PT12H', 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = 'sewa-arena-' + (o.date || '') + '.ics'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    this.toastMsg('Calendar reminder created (2 days & 12 hours before).');
+  }
   confirmAbsen() {
     const cls = this.state.absenClass; const id = cls && cls.schedule_id; const venueId = cls && cls.venueId;
     if (this.MOCK || (!id && !venueId)) { this.setState({ absen: false }); return this.toastMsg('Class started · attendance recorded'); }
@@ -493,12 +522,13 @@ class Component extends DCLogic {
         assignLabel: assigned ? ('✓ ' + b.coach) : 'No coach yet', assignCol: assigned ? C.green : C.amber,
         coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
+        gcal: () => this.addToCalendar({ id: b.id, date: b.date, start: b.time, end: b.end, title: b.customer }),
       };
     });
     const noVenueBookings = venueBookings.length === 0;
     const venueUnassignedCount = venueBookings.filter((b) => b.needsCoach && !b.assigned).length;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
-    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Arena booking', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Flexible time', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v) }));
+    const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Arena booking', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Flexible time', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v), gcal: () => this.addToCalendar({ id: v.id, date: v.calDate, start: v.calStart, end: v.calEnd, title: v.customer }) }));
     const hasScheduleVenues = scheduleVenues.length > 0;
     // menu kelas — shared class-program reference (patokan) for coaches
     const menuCanManage = !!D.menuCanManage;
@@ -689,7 +719,7 @@ class Component extends DCLogic {
       { id: 'v2', code: 'BK-20260701-0006', customer: 'Satrio', date: '2026-07-10', dateLabel: '10 Jul', dayLabel: 'Fri 10 Jul', time: '16:00', end: '20:00', needsCoach: true, coach: 'Rheza', status: 'confirmed' },
       { id: 'v3', code: 'BK-20260705-0001', customer: 'Yoshi', date: '2026-07-12', dateLabel: '12 Jul', dayLabel: 'Sun 12 Jul', time: '13:00', end: '15:00', needsCoach: false, coach: '', status: 'pending_payment' },
     ];
-    d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: true, started: false }, { id: 'v3', time: '09:00', end: '– 11:00', customer: 'Corporate Group', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: false, started: true }];
+    d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: true, started: false, calDate: '2026-07-10', calStart: '16:00', calEnd: '20:00' }, { id: 'v3', time: '09:00', end: '– 11:00', customer: 'Corporate Group', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: false, started: true, calDate: '2026-07-10', calStart: '09:00', calEnd: '11:00' }];
     d.menuCanManage = true;
     d.classMenus = [
       { id: 'm1', title: 'HYROX Complete — Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station:\n1) SkiErg 1000m\n2) Sled Push 50m\n3) Sled Pull 50m\n4) Burpee Broad Jump 80m\n5) Row 1000m\n6) Farmers Carry 200m\n7) Sandbag Lunge 100m\n8) Wall Balls 100 reps', by: 'Nando' },
