@@ -195,6 +195,8 @@ async function coachAttendanceMap(coach, today) {
 }
 // "HYROX Complete, HYROX Foundation" — distinct classes a participant attended, most-frequent first.
 function classesLabelFor(h) { return (h && h.types) ? Object.keys(h.types).sort((a, b) => h.types[b] - h.types[a]).join(', ') : ''; }
+// Distinct menus/classes a participant attended, as {name, count} chips (most-frequent first).
+function classChipsFor(h) { return (h && h.types) ? Object.keys(h.types).sort((a, b) => h.types[b] - h.types[a]).map((name) => ({ name, count: h.types[name] })) : []; }
 function daysSinceISO(dateISO, today) {
   if (!dateISO) return null;
   return Math.round((new Date(today + 'T00:00:00') - new Date(dateISO + 'T00:00:00')) / 86400000);
@@ -624,7 +626,7 @@ route('GET', '/api/coach/members', async (req, res, s) => {
   const map = await coachAttendanceMap(s.c, today);
   const members = Object.keys(map).map((k) => {
     const m = map[k];
-    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today), classesLabel: classesLabelFor(m) };
+    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today), classesLabel: classesLabelFor(m), classes: classChipsFor(m) };
   }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
   const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
   return send(res, 200, { members, total: members.length, active30 });

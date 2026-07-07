@@ -462,7 +462,8 @@ class Component extends DCLogic {
     const members = (D.members || []).map((m, i) => {
       const r = this.recencyLabel(m.daysSince);
       const av = this.avatar(m.name);
-      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classesLabel: m.classesLabel || '', hasClasses: !!m.classesLabel };
+      const classes = (m.classes || []).map((c) => ({ label: c.count > 1 ? (c.name + ' ×' + c.count) : c.name }));
+      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classes, hasClasses: classes.length > 0 };
     });
     const noMembers = members.length === 0;
     // participant reviews
@@ -652,12 +653,12 @@ class Component extends DCLogic {
     d.monthly = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 0 }));
     d.mPesertaBulan = mPes[6]; d.mKelasBulan = mCount[6]; d.mPesertaTahun = mPes.reduce((a, b) => a + b, 0);
     d.members = [
-      { name: 'Jordan', visits: 8, lastVisit: '5 May', daysSince: 58, classesLabel: 'HYROX Complete' },
-      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9, classesLabel: 'HYROX Complete, HYROX Foundation' },
-      { name: 'Woro Liana', visits: 5, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Foundation' },
-      { name: 'Fathan', visits: 5, lastVisit: '14 Jun', daysSince: 18, classesLabel: 'HYROX Complete' },
-      { name: 'Ayu Fitri', visits: 5, lastVisit: '11 May', daysSince: 52, classesLabel: 'HYROX Foundation' },
-      { name: 'Indah Wulansari', visits: 4, lastVisit: '1 Jul', daysSince: 1, classesLabel: 'HYROX Complete' },
+      { name: 'Jordan', visits: 8, lastVisit: '5 May', daysSince: 58, classes: [{ name: 'HYROX Complete', count: 8 }] },
+      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9, classes: [{ name: 'HYROX Complete', count: 4 }, { name: 'HYROX Foundation', count: 2 }] },
+      { name: 'Woro Liana', visits: 5, lastVisit: '30 Jun', daysSince: 2, classes: [{ name: 'HYROX Foundation', count: 5 }] },
+      { name: 'Fathan', visits: 5, lastVisit: '14 Jun', daysSince: 18, classes: [{ name: 'HYROX Complete', count: 5 }] },
+      { name: 'Ayu Fitri', visits: 5, lastVisit: '11 May', daysSince: 52, classes: [{ name: 'HYROX Foundation', count: 5 }] },
+      { name: 'Indah Wulansari', visits: 4, lastVisit: '1 Jul', daysSince: 1, classes: [{ name: 'HYROX Complete', count: 3 }, { name: 'HYROX Foundation', count: 1 }] },
     ];
     d.membersTotal = 42; d.membersActive = 28;
     d.reviewAvg = 4.6; d.reviewCount = 2;
