@@ -244,7 +244,9 @@ class Component extends DCLogic {
     });
     return mb;
   }
-  addMenuBlock() { const mb = this._syncBuilder(); const L = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']; const used = mb.blocks.map((b) => b.label); const next = L.filter((x) => used.indexOf(x) < 0)[0] || ''; mb.blocks.push(this._emptyBlock(next)); this.setState({ menuBuilder: mb }); }
+  _nextBlockLabel(mb) { const L = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']; const used = mb.blocks.map((b) => b.label); return L.filter((x) => used.indexOf(x) < 0)[0] || ''; }
+  addMenuBlock() { const mb = this._syncBuilder(); mb.blocks.push(this._emptyBlock(this._nextBlockLabel(mb))); this.setState({ menuBuilder: mb }); }
+  addMenuBlockAfter(bi) { const mb = this._syncBuilder(); mb.blocks.splice(bi + 1, 0, this._emptyBlock(this._nextBlockLabel(mb))); this.setState({ menuBuilder: mb }); }
   removeMenuBlock(bi) { const mb = this._syncBuilder(); mb.blocks.splice(bi, 1); if (!mb.blocks.length) mb.blocks.push(this._emptyBlock('A')); this.setState({ menuBuilder: mb }); }
   addMenuItem(bi) { const mb = this._syncBuilder(); mb.blocks[bi].items.push(this._emptyItem()); this.setState({ menuBuilder: mb }); }
   removeMenuItem(bi, ii) { const mb = this._syncBuilder(); mb.blocks[bi].items.splice(ii, 1); if (!mb.blocks[bi].items.length) mb.blocks[bi].items.push(this._emptyItem()); this.setState({ menuBuilder: mb }); }
@@ -576,7 +578,7 @@ class Component extends DCLogic {
     const mbUnitList = [{ v: 'meter', l: 'meter' }, { v: 'lap', l: 'lap' }, { v: 'kali', l: 'kali' }];
     const mbBlocks = mb ? mb.blocks.map((b, bi) => ({
       label: b.label || '', labelAttr: 'b' + bi + 'label', blockNo: bi + 1,
-      removeBlock: () => this.removeMenuBlock(bi), addItem: () => this.addMenuItem(bi),
+      removeBlock: () => this.removeMenuBlock(bi), addItem: () => this.addMenuItem(bi), addBlockAfter: () => this.addMenuBlockAfter(bi),
       items: b.items.map((it, ii) => ({
         amount: it.amount || '', amountAttr: 'b' + bi + 'i' + ii + 'amount',
         unitAttr: 'b' + bi + 'i' + ii + 'unit',
