@@ -228,7 +228,7 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', menuScreen + '\
 // ---- Class Menu builder modal (structured: note + blocks + exercises with unit/weight) ----
 const mi = 'background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:9px 10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;outline:0;box-sizing:border-box;';
 const menuModal = '<sc-if value="{{ showMenuModal }}" hint-placeholder-val="{{ false }}">'
-  + '<div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;" onclick="{{ closeMenuModal }}">'
+  + '<div data-modalscroll style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;" onclick="{{ closeMenuModal }}">'
   + '<div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:24px;max-width:660px;width:100%;margin:auto;">'
     + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;">'
       + '<h2 style="font-family:\'Archivo\';font-weight:800;font-size:21px;margin:0;">{{ menuModalTitle }}</h2>'

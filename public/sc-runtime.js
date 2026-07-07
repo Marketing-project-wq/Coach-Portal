@@ -85,6 +85,10 @@
         // ANY re-render (switching nav items must not snap the navbar back to the top).
         var prevNav = mountEl.querySelector('[data-navscroll]');
         var prevNavTop = prevNav ? prevNav.scrollTop : 0;
+        // A scrollable modal (e.g. the menu builder) must not jump back to the top when
+        // adding a block/exercise re-renders it.
+        var prevModal = mountEl.querySelector('[data-modalscroll]');
+        var prevModalTop = prevModal ? prevModal.scrollTop : 0;
         var scr = logic.state ? logic.state.screen : null;
         var same = logic.__lastScreen === scr;
         logic.__lastScreen = scr;
@@ -93,6 +97,7 @@
         for (var i = 0; i < out.length; i++) mountEl.appendChild(out[i]);
         if (same && prevTop) { var next = mountEl.querySelector('[data-scroll]'); if (next) next.scrollTop = prevTop; }
         if (prevNavTop) { var nn = mountEl.querySelector('[data-navscroll]'); if (nn) nn.scrollTop = prevNavTop; }
+        if (prevModalTop) { var mm = mountEl.querySelector('[data-modalscroll]'); if (mm) mm.scrollTop = prevModalTop; }
         if (logic.__afterRender) logic.__afterRender(mountEl);
       };
       logic.__render();
