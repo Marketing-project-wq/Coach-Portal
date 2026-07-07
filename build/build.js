@@ -40,12 +40,12 @@ const arenaLogo = '<div style="display:flex;align-items:center;gap:6px;font-fami
   + '<span style="color:var(--muted2);font-weight:400;">|</span>'
   + '<span style="color:#E4002B;">ARENA</span></div>';
 // Primary: the uploaded brand PNG. If it isn't present yet, fall back to the CSS wordmark above.
-const arenaLogoImg = '<img src="/logo-20fit-arena.png" alt="20FIT Arena" style="height:22px;width:auto;object-fit:contain;display:block;margin:0 auto 7px;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+const arenaLogoImg = '<img src="/logo-20fit-arena.png" alt="20FIT Arena" style="height:22px;width:auto;object-fit:contain;display:block;margin:0 auto 7px;filter:brightness(0) invert(1);" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
   + '<div style="display:none;justify-content:center;">' + arenaLogo + '</div>';
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
   '<div style="flex:1;text-align:center;min-width:0;">' + arenaLogoImg + '<div style="font-family:\'Archivo\';font-weight:800;font-size:14px;letter-spacing:.02em;line-height:1.05;color:var(--muted);text-align:center;">Coach Workspace</div></div>');
-template = template.replace('Ajukan ke Head Coach', 'Kirim Permintaan Rotation');
+template = template.replace('Submit to Head Coach', 'Send Coverage Request');
 // Mobile drawer: mark the app shell with the menu state + inject a tap-to-close backdrop
 template = template.replace(
   '<div style="position:relative;z-index:2;display:grid;grid-template-columns:248px 1fr;min-height:100vh;">',
@@ -220,7 +220,7 @@ template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\
 
 // ---- Rotation flow: rotation coach approves; head coach = notification only ----
 // Inject a "Rotation" nav item into the COACH group (only in coach view)
-const rotNav = '<sc-if value="{{ showCoachNav }}"><button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><sc-if value="{{ hasIncoming }}"><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:\'Archivo\';">{{ incomingCount }}</span></sc-if></button></sc-if>';
+const rotNav = '<sc-if value="{{ showCoachNav }}"><button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Coverage</span><sc-if value="{{ hasIncoming }}"><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:\'Archivo\';">{{ incomingCount }}</span></sc-if></button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goEmail \}\}"[\s\S]*?<\/button>)/, '$1' + rotNav);
 // "Review" nav (peserta review) — hidden for external coaches; screen is role-aware (coach=own, HC=all)
 const reviewNav = '<button onclick="{{ goReviews }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reviews.bg }};color:{{ nav.reviews.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reviews.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Review</button>';
@@ -242,7 +242,7 @@ template = template.replace(/(<button onclick="\{\{ p\.approve \}\}"[\s\S]*?<\/b
 template = template.replace(/(<button onclick="\{\{ p\.cancel \}\}"[\s\S]*?<\/button>)/g, '<sc-if value="{{ p.canDecide }}">$1</sc-if><sc-if value="{{ p.notify }}"><span style="color:var(--amber);font-size:12.5px;font-weight:700;">⏳ Awaiting {{ p.to }}</span></sc-if>');
 // Role-aware header on the rotation screen + corrected submit note
 template = template.replace('AWAITING ACTION', '{{ rotHeader }}');
-template = template.replace('until the Head Coach approves it.', 'until the rotation coach approves it.');
+template = template.replace('until the Head Coach approves it.', 'until the coverage coach approves it.');
 
 // ---- Label renames (longest/upper variants first) ----
 const renames = [
@@ -331,12 +331,12 @@ const themeCss = `
   [style*="Barlow Condensed"]{ text-transform:uppercase; letter-spacing:.012em; }
   header { background:rgba(255,255,255,.55) !important; backdrop-filter:blur(20px) !important; -webkit-backdrop-filter:blur(20px) !important; }
   [style*="radial-gradient(900px 600px at 12% -8%"] { display:none !important; }
-  /* Sidebar: light glass surface with ink text; active nav item = red pill (design system) */
-  aside { background:rgba(255,255,255,.55) !important; backdrop-filter:blur(22px) !important; -webkit-backdrop-filter:blur(22px) !important; color:#1D1D1F !important; border-right:1px solid rgba(17,17,20,.08) !important; box-shadow:0 10px 30px rgba(35,25,45,.05) !important;
-    --bg:rgba(255,255,255,.5); --panel:rgba(255,255,255,.6); --panel2:rgba(255,255,255,.5); --raised:rgba(255,255,255,.6);
-    --border:rgba(17,17,20,.10); --border2:rgba(17,17,20,.15);
-    --text:#1D1D1F; --muted:#6E6E73; --muted2:#9A9A9E; }
-  aside [style*="background:var(--panel)"]{ backdrop-filter:none !important; box-shadow:none !important; }
+  /* Sidebar: dark black->gray surface with white text; active nav item = red pill */
+  aside { background:linear-gradient(180deg,#171719 0%,#2b2b30 100%) !important; backdrop-filter:blur(22px) !important; -webkit-backdrop-filter:blur(22px) !important; color:#FFFFFF !important; border-right:1px solid rgba(255,255,255,.08) !important; box-shadow:0 10px 30px rgba(0,0,0,.28) !important;
+    --bg:rgba(255,255,255,.06); --panel:rgba(255,255,255,.07); --panel2:rgba(255,255,255,.10); --raised:rgba(255,255,255,.08);
+    --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.18);
+    --text:#FFFFFF; --muted:rgba(255,255,255,.66); --muted2:rgba(255,255,255,.46); }
+  aside [style*="background:var(--panel)"]{ background:rgba(255,255,255,.06) !important; backdrop-filter:none !important; box-shadow:none !important; }
   aside nav button { font-family:'Barlow Condensed',system-ui,sans-serif !important; text-transform:uppercase; letter-spacing:.03em; font-weight:700 !important; font-size:15px !important; }
   /* Active nav item stays red on hover so its white label doesn't vanish.
      During hover the JS handler normalizes #E4002B -> rgb(228, 0, 43), so match that. */

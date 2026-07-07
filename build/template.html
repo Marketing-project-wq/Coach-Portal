@@ -546,7 +546,7 @@
         <sc-if value="{{ isHC }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;">HEAD COACH</div>
                 <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Team Schedule</button>
-        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
+        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Coverage</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
         <button onclick="{{ goMonitor }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monitor.bg }};color:{{ nav.monitor.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monitor.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Coach Monitoring</button>
         <button onclick="{{ goReports }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reports.bg }};color:{{ nav.reports.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reports.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Reports</button>
         </sc-if>
@@ -560,11 +560,11 @@
       </nav>
 
       <div style="padding:14px;border-top:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:11px;padding:8px;border-radius:11px;background:var(--panel);">
-          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:#08090B;position:relative;overflow:hidden;">{{ user.initials }}<sc-if value="{{ user.hasPhoto }}"><img src="{{ user.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:4px 6px 12px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:#08090B;position:relative;overflow:hidden;flex-shrink:0;">{{ user.initials }}<sc-if value="{{ user.hasPhoto }}"><img src="{{ user.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
           <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.name }}</div><div style="font-size:11px;color:var(--muted);">{{ user.role }}</div></div>
-          <button onclick="{{ logout }}" title="Log out" style="background:transparent;border:0;color:var(--muted2);cursor:pointer;font-size:16px;padding:4px;" style-hover="color:var(--red);">⏻</button>
         </div>
+        <button onclick="{{ logout }}" style="width:100%;background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-family:'Hanken Grotesk';font-weight:700;font-size:13.5px;cursor:pointer;transition:background .15s,border-color .15s;" style-hover="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.4);">Logout</button>
       </div>
     </aside>
 
@@ -711,9 +711,9 @@
         <div style="max-width:620px;margin:0 auto;">
           <button onclick="{{ openClass }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Back</button>
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;">
-            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Request Coach Rotation</h2>
+            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Request Coverage</h2>
             <div style="color:var(--muted);font-size:14px;margin-bottom:22px;">HYROX Complete · Monday, 07:00 — the class is fully transferred to the substitute coach.</div>
-            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">SELECT ROTATION COACH</div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">SELECT COVERAGE COACH</div>
             <div style="display:flex;flex-direction:column;gap:10px;">
               <sc-for list="{{ subOptions }}" as="o" hint-placeholder-count="4">
               <button onclick="{{ o.pick }}" disabled="{{ o.disabled }}" style="display:flex;align-items:center;gap:13px;padding:14px;border-radius:12px;border:1px solid {{ o.border }};background:{{ o.bg }};cursor:{{ o.cursor }};text-align:left;width:100%;transition:border-color .15s;">
@@ -781,7 +781,7 @@
               </sc-for>
             </div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;height:fit-content;">
-              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Rotation</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Pending</span></div>
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Coverage</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Pending</span></div>
               <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
               <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
                 <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px;">{{ p.from }} <span style="color:var(--volt);">→</span> {{ p.to }}</div>
@@ -846,7 +846,7 @@
           </sc-for>
           <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:36px;text-align:center;color:var(--muted);">All requests have been handled ✓</div></sc-if>
 
-          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">ROTATION HISTORY</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">COVERAGE HISTORY</div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
             <sc-for list="{{ subHistory }}" as="h" hint-placeholder-count="3">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);">
@@ -894,7 +894,7 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Classes</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Participants</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Attendance</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:{{ sel.attCol }};">{{ sel.attPct }}</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ sel.attended }}/{{ sel.classes }} classes</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Rotations</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Coverage</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Per-Class Breakdown — {{ statMonth }}</div>
@@ -925,11 +925,11 @@
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Participants Served</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Rotations This Month</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Coverage This Month</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">All-Coach Report — June 2026</div>
-            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div><div style="text-align:right;">ROTATED</div><div style="text-align:right;"></div></div>
+            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div><div style="text-align:right;">COVERED</div><div style="text-align:right;"></div></div>
             <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
               <div style="display:flex;align-items:center;gap:11px;"><div style="width:32px;height:32px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:12px;color:{{ r.avFg }};">{{ r.initials }}</div><div><span style="font-weight:700;">{{ r.name }}</span> <span style="font-size:11px;color:var(--muted);">{{ r.role }}</span></div></div>
