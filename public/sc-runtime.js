@@ -81,6 +81,10 @@
         // Only when staying on the same screen — switching nav items starts at top.
         var prev = mountEl.querySelector('[data-scroll]');
         var prevTop = prev ? prev.scrollTop : 0;
+        // The sidebar nav persists across every screen, so keep its scroll position on
+        // ANY re-render (switching nav items must not snap the navbar back to the top).
+        var prevNav = mountEl.querySelector('[data-navscroll]');
+        var prevNavTop = prevNav ? prevNav.scrollTop : 0;
         var scr = logic.state ? logic.state.screen : null;
         var same = logic.__lastScreen === scr;
         logic.__lastScreen = scr;
@@ -88,6 +92,7 @@
         mountEl.innerHTML = '';
         for (var i = 0; i < out.length; i++) mountEl.appendChild(out[i]);
         if (same && prevTop) { var next = mountEl.querySelector('[data-scroll]'); if (next) next.scrollTop = prevTop; }
+        if (prevNavTop) { var nn = mountEl.querySelector('[data-navscroll]'); if (nn) nn.scrollTop = prevNavTop; }
         if (logic.__afterRender) logic.__afterRender(mountEl);
       };
       logic.__render();
