@@ -99,7 +99,7 @@ class Component extends DCLogic {
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
     if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
-    // External coaches may only reach Schedule, Monitoring, Rotation, Venue Booking and Menu Kelas.
+    // External coaches may only reach Schedule, Monitoring, Coverage, Venue Booking and Class Menu.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu'].indexOf(screen) < 0) screen = 'dash';
     if (window.localStorage) localStorage.setItem('arena_screen', screen);
     this.setState({ role, screen });
@@ -217,14 +217,14 @@ class Component extends DCLogic {
       .catch((e) => this.toastMsg(e.message));
   }
   submitSub() {
-    if (!this.state.selSub) return this.toastMsg('Select a rotation coach first.');
+    if (!this.state.selSub) return this.toastMsg('Select a coverage coach first.');
     const cur = this.state.currentClass && this.state.currentClass.schedule;
     const reasonEl = document.querySelector('#app textarea');
     const payload = { to_coach: this.state.selSub, schedule_id: cur ? cur.schedule_id : null, class_label: cur ? cur.type : null, time_label: cur ? cur.time : null, reason: reasonEl ? reasonEl.value : '' };
     const toName = this.state.selSub;
-    if (this.MOCK) { this.toastMsg('Rotation request sent to ' + toName); return this.go('dash'); }
+    if (this.MOCK) { this.toastMsg('Coverage request sent to ' + toName); return this.go('dash'); }
     this.api('/api/coach/subs', { method: 'POST', body: JSON.stringify(payload) })
-      .then(() => { this.setState({ selSub: '' }); this.toastMsg('Rotation request sent to ' + toName); this.go('dash'); })
+      .then(() => { this.setState({ selSub: '' }); this.toastMsg('Coverage request sent to ' + toName); this.go('dash'); })
       .catch((e) => this.toastMsg(e.message));
   }
   loadRotations() { if (this.MOCK) return; this.api('/api/coach/rotations').then((d) => this.setD({ rotations: d })).catch(() => {}); }
@@ -258,9 +258,9 @@ class Component extends DCLogic {
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Review link copied')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
   decideRotation(id, action) {
-    if (this.MOCK) { const inc = this.state.d.rotations.incoming.filter((p) => p.id !== id); this.setD({ rotations: Object.assign({}, this.state.d.rotations, { incoming: inc }) }); return this.toastMsg(action === 'approve' ? 'Rotation approved' : 'Rotation rejected'); }
+    if (this.MOCK) { const inc = this.state.d.rotations.incoming.filter((p) => p.id !== id); this.setD({ rotations: Object.assign({}, this.state.d.rotations, { incoming: inc }) }); return this.toastMsg(action === 'approve' ? 'Coverage approved' : 'Coverage rejected'); }
     this.api('/api/coach/rotations/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
-      .then(() => { this.toastMsg(action === 'approve' ? 'Rotation approved · this is now your class' : 'Rotation rejected'); this.loadRotations(); })
+      .then(() => { this.toastMsg(action === 'approve' ? 'Coverage approved · this is now your class' : 'Coverage rejected'); this.loadRotations(); })
       .catch((e) => this.toastMsg(e.message));
   }
   openReset(c) { this.setState({ reset: c.name, resetId: c.id, resetPwd: '' }); }
@@ -372,7 +372,7 @@ class Component extends DCLogic {
     const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
     const canAdmin = this.accountRole === 'admin';
 
-    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Class Detail'], subreq: ['Coach', 'Rotation Coach'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Rotation'], monitor: ['Head Coach', 'Coach Monitoring'], stats: ['Head Coach', 'Monthly Statistics'], reports: ['Head Coach', 'Coach Report'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Add Coach'], templates: ['Admin', 'Feedback Template'], settings: ['Admin', 'Settings'], perms: ['Admin', 'Role Permissions'] };
+    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Class Detail'], subreq: ['Coach', 'Coverage'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Coverage'], monitor: ['Head Coach', 'Coach Monitoring'], stats: ['Head Coach', 'Monthly Statistics'], reports: ['Head Coach', 'Coach Report'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Add Coach'], templates: ['Admin', 'Feedback Template'], settings: ['Admin', 'Settings'], perms: ['Admin', 'Role Permissions'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
     titles.monthly = ['Coach', 'Class Monitoring'];
     titles.members = ['Coach', 'Participants'];
@@ -380,7 +380,7 @@ class Component extends DCLogic {
     titles.venue = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Venue Booking'];
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
     let tt = titles[scr] || ['', ''];
-    if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Rotation'];
+    if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
     const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
@@ -499,7 +499,7 @@ class Component extends DCLogic {
     }
     const pendingCount = pendingSubs.length; const noPending = pendingCount === 0;
     const hasIncoming = incomingCount > 0;
-    const rotHeader = isCoachView ? 'AWAITING YOUR APPROVAL' : 'ROTATION NOTIFICATIONS';
+    const rotHeader = isCoachView ? 'AWAITING YOUR APPROVAL' : 'COVERAGE NOTIFICATIONS';
     // all-coach schedule — a clean, time-sorted list of classes (one card per class)
     const scheduleDateLabel = (D.schedule && (D.schedule.dateLabelEn || D.schedule.dateLabel)) || '';
     const scheduleList = ((D.schedule && D.schedule.list) || []).map((x) => { const comp = String(x.type).includes('Complete'); return { time: x.time, coach: x.coach, type: String(x.type).replace('HYROX ', ''), pax: x.pax, initials: this.ini(x.coach), photo: x.photo || '', hasPhoto: !!x.photo, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.06)' : 'rgba(0,104,201,.06)' }; });
@@ -520,7 +520,7 @@ class Component extends DCLogic {
     const templates = D.templates || [];
     // permissions (static matrix)
     const Y = '✓', N = '·';
-    const permRaw = [['View own class schedule & participants', 1, 1, 1], ['Check in to own classes', 1, 1, 1], ['Request rotation (own classes)', 1, 1, 1], ['View all coaches’ schedules', 0, 1, 1], ['Change teaching coach (any class)', 0, 1, 1], ['Approve / Cancel rotations', 0, 1, 1], ['View all coaches’ attendance', 0, 1, 1], ['Access & export all-coach reports', 0, 1, 1], ['Manage appreciation message templates', 0, 0, 1], ['Add accounts & set initial password', 0, 0, 1], ['Reset coach passwords', 0, 0, 1], ['Deactivate coach accounts', 0, 0, 1], ['Set user roles', 0, 0, 1]];
+    const permRaw = [['View own class schedule & participants', 1, 1, 1], ['Check in to own classes', 1, 1, 1], ['Request coverage (own classes)', 1, 1, 1], ['View all coaches’ schedules', 0, 1, 1], ['Change teaching coach (any class)', 0, 1, 1], ['Approve / Cancel coverage', 0, 1, 1], ['View all coaches’ attendance', 0, 1, 1], ['Access & export all-coach reports', 0, 1, 1], ['Manage appreciation message templates', 0, 0, 1], ['Add accounts & set initial password', 0, 0, 1], ['Reset coach passwords', 0, 0, 1], ['Deactivate coach accounts', 0, 0, 1], ['Set user roles', 0, 0, 1]];
     const perms = permRaw.map((p) => ({ act: p[0], c: p[1] ? Y : N, cCol: p[1] ? C.volt : C.muted2, h: p[2] ? Y : N, hCol: p[2] ? C.volt : C.muted2, a: p[3] ? Y : N, aCol: p[3] ? C.volt : C.muted2 }));
 
     return {

@@ -808,7 +808,7 @@ route('GET', '/api/coach/subs/options', async (req, res, s, q) => {
 });
 route('POST', '/api/coach/subs', async (req, res, s) => {
   const body = await readBody(req);
-  if (!body || !body.to_coach) return send(res, 400, { error: 'Please select a rotation coach.' });
+  if (!body || !body.to_coach) return send(res, 400, { error: 'Please select a coverage coach.' });
   await sb('arena_coach_substitutions', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: body.schedule_id || null, from_coach: s.c, to_coach: body.to_coach, class_label: body.class_label || null, time_label: body.time_label || null, reason: body.reason || null, status: 'pending' }) });
   return send(res, 200, { ok: true });
 });
@@ -825,8 +825,8 @@ route('POST', '/api/coach/rotations/:id/decide', async (req, res, s, q, params) 
   const status = body && body.action === 'approve' ? 'approved' : 'rejected';
   const rows = await sb(`arena_coach_substitutions?select=to_coach,schedule_id&id=eq.${enc(params.id)}&limit=1`);
   const r = rows && rows[0];
-  if (!r) return send(res, 404, { error: 'Rotation request not found.' });
-  if (r.to_coach !== s.c) return send(res, 403, { error: 'Only the rotation coach can approve/reject this.' });
+  if (!r) return send(res, 404, { error: 'Coverage request not found.' });
+  if (r.to_coach !== s.c) return send(res, 403, { error: 'Only the coverage coach can approve/reject this.' });
   await sb(`arena_coach_substitutions?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status, decided_by: s.c, decided_at: new Date().toISOString() }) });
   // On approval, transfer the class to the new coach — the schedule's instructor is
   // what every dashboard (and the shared Admin Hub) reads, so this is the real handover.
