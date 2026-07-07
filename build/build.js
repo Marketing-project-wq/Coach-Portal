@@ -259,7 +259,7 @@ const menuModal = '<sc-if value="{{ showMenuModal }}" hint-placeholder-val="{{ f
       + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">'
         + '<input data-mb="{{ blk.labelAttr }}" value="{{ blk.label }}" placeholder="Block (A, B, Wu…)" style="' + mi + 'width:150px;font-weight:700;">'
         + '<div style="flex:1;"></div>'
-        + '<button onclick="{{ blk.removeBlock }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 11px;font-weight:700;font-size:11.5px;cursor:pointer;white-space:nowrap;">✕ Block</button>'
+        + '<button onclick="{{ blk.removeBlock }}" title="Delete block" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;width:34px;height:34px;flex-shrink:0;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>'
       + '</div>'
       + '<sc-for list="{{ blk.items }}" as="it"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:7px;">'
         + '<input data-mb="{{ it.amountAttr }}" value="{{ it.amount }}" placeholder="qty" inputmode="decimal" style="' + mi + 'width:62px;text-align:center;">'
