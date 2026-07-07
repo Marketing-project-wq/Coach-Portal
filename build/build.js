@@ -204,16 +204,9 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '
 const menuNav = '<sc-if value="{{ showMenuNav }}"><button onclick="{{ goMenu }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.menu.bg }};color:{{ nav.menu.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.menu.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Class Menu</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goVenue \}\}"[\s\S]*?<\/button>)/, '$1' + menuNav);
 const menuScreen = '<sc-if value="{{ s.menu }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Class Menu</div>'
-  + '<div style="' + cardBox + 'padding:20px;margin-bottom:24px;">'
-    + '<sc-if value="{{ isEditingMenu }}"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--volt);">Edit Menu</div><button onclick="{{ cancelEditMenu }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:7px 14px;font-weight:700;font-size:12.5px;cursor:pointer;">Cancel</button></div></sc-if>'
-    + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;">'
-      + '<div><label style="' + vLabel + '">Menu / Session Name</label><input id="menuTitle" value="{{ editMenuTitle }}" placeholder="e.g. HYROX Complete — Full Simulation" style="' + vInput + '"></div>'
-      + '<div><label style="' + vLabel + '">Class Type <span style="color:var(--muted2);font-weight:400;">(optional)</span></label><input id="menuCategory" value="{{ editMenuCategory }}" placeholder="e.g. HYROX Complete" style="' + vInput + '"></div>'
-    + '</div>'
-    + '<label style="' + vLabel + 'margin-top:14px;">Menu / Program Content</label>'
-    + '<textarea id="menuContent" rows="6" placeholder="Write the class program details: stations, distance, reps, order, pacing notes…" style="' + vInput + 'resize:vertical;line-height:1.55;">{{ editMenuContent }}</textarea>'
-    + '<button onclick="{{ submitMenu }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:13px;font-family:\'Archivo\';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">{{ menuSubmitLabel }}</button>'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">Class Menu</div>'
+    + '<button onclick="{{ openMenuModal }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:11px 18px;font-family:\'Archivo\';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;">+ Add Menu</button>'
   + '</div>'
   + '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;">MENU LIST</div>'
   + '<sc-if value="{{ hasClassMenus }}"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;align-items:start;">'
@@ -231,6 +224,47 @@ const menuScreen = '<sc-if value="{{ s.menu }}"><div style="max-width:900px;marg
     + '<sc-if value="{{ noClassMenus }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No class menus yet. Add the first one above &#128221;</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', menuScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Class Menu builder modal (structured: note + blocks + exercises with unit/weight) ----
+const mi = 'background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:9px 10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;outline:0;box-sizing:border-box;';
+const menuModal = '<sc-if value="{{ showMenuModal }}" hint-placeholder-val="{{ false }}">'
+  + '<div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;" onclick="{{ closeMenuModal }}">'
+  + '<div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:24px;max-width:660px;width:100%;margin:auto;">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;">'
+      + '<h2 style="font-family:\'Archivo\';font-weight:800;font-size:21px;margin:0;">{{ menuModalTitle }}</h2>'
+      + '<button onclick="{{ closeMenuModal }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:9px;width:30px;height:30px;flex-shrink:0;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>'
+    + '</div>'
+    + '<label style="' + vLabel + '">Menu Name</label>'
+    + '<input data-mb="title" value="{{ mbTitle }}" placeholder="e.g. HYROX Complete — Full Simulation" style="' + mi + 'width:100%;margin-bottom:12px;">'
+    + '<div style="display:grid;grid-template-columns:1fr 1.3fr;gap:10px;margin-bottom:6px;">'
+      + '<div><label style="' + vLabel + '">Class Type <span style="color:var(--muted2);font-weight:400;">(optional)</span></label><input data-mb="category" value="{{ mbCategory }}" placeholder="e.g. HYROX Complete" style="' + mi + 'width:100%;"></div>'
+      + '<div><label style="' + vLabel + '">Top Note <span style="color:var(--muted2);font-weight:400;">(optional)</span></label><input data-mb="note" value="{{ mbNote }}" placeholder="e.g. 10 min amrap / 2 min rest" style="' + mi + 'width:100%;"></div>'
+    + '</div>'
+    + '<div style="border-top:1px solid var(--border);margin:16px 0 4px;"></div>'
+    // Blocks
+    + '<sc-for list="{{ mbBlocks }}" as="blk"><div style="' + cardBox + 'padding:12px 13px;margin-bottom:12px;background:var(--panel);">'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">'
+        + '<input data-mb="{{ blk.labelAttr }}" value="{{ blk.label }}" placeholder="Block (A, B, Wu…)" style="' + mi + 'width:150px;font-weight:700;">'
+        + '<div style="flex:1;"></div>'
+        + '<button onclick="{{ blk.removeBlock }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 11px;font-weight:700;font-size:11.5px;cursor:pointer;white-space:nowrap;">✕ Block</button>'
+      + '</div>'
+      + '<sc-for list="{{ blk.items }}" as="it"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:7px;">'
+        + '<input data-mb="{{ it.amountAttr }}" value="{{ it.amount }}" placeholder="qty" inputmode="decimal" style="' + mi + 'width:62px;text-align:center;">'
+        + '<select data-mb="{{ it.unitAttr }}" style="' + mi + 'width:84px;cursor:pointer;"><sc-for list="{{ it.unitOpts }}" as="o"><option value="{{ o.v }}" selected="{{ o.picked }}">{{ o.l }}</option></sc-for></select>'
+        + '<input data-mb="{{ it.nameAttr }}" value="{{ it.name }}" placeholder="exercise (e.g. Wallballs)" style="' + mi + 'flex:1;min-width:130px;">'
+        + '<input data-mb="{{ it.weightAttr }}" value="{{ it.weight }}" placeholder="kg (opt)" style="' + mi + 'width:80px;">'
+        + '<button onclick="{{ it.remove }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;width:32px;height:34px;flex-shrink:0;cursor:pointer;font-size:13px;line-height:1;">✕</button>'
+      + '</div></sc-for>'
+      + '<button onclick="{{ blk.addItem }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-weight:700;font-size:12px;cursor:pointer;margin-top:2px;">+ Add Exercise</button>'
+    + '</div></sc-for>'
+    + '<button onclick="{{ addMenuBlock }}" style="width:100%;background:transparent;border:1px dashed var(--border2);color:var(--muted);border-radius:10px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:16px;">+ Add Block</button>'
+    + '<div style="display:flex;gap:11px;">'
+      + '<button onclick="{{ closeMenuModal }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>'
+      + '<button onclick="{{ saveMenuBuilder }}" style="flex:1.5;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:\'Archivo\';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Save Menu</button>'
+    + '</div>'
+  + '</div></div></sc-if>';
+template = template.replace('<!-- ===== TOAST ===== -->', menuModal + '\n\n  <!-- ===== TOAST ===== -->');
+
 // Hide Head Coach / Admin role buttons unless the account allows them
 template = template.replace(/(<button onclick="\{\{ setRoleHC \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canHC }}">$1</sc-if>');
 template = template.replace(/(<button onclick="\{\{ setRoleAdmin \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ canAdmin }}">$1</sc-if>');

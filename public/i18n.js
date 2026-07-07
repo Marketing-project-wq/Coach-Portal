@@ -66,6 +66,10 @@ window.__I18N = (function () {
     'Edit Menu': 'Edit Menu', 'Cancel': 'Batal', 'MENU LIST': 'DAFTAR MENU', 'Edit': 'Edit',
     'Menu / Session Name': 'Nama Menu / Sesi', 'Class Type': 'Jenis Kelas', 'Menu / Program Content': 'Isi Menu / Program',
     'Save Menu': 'Simpan Menu', 'Update Menu': 'Update Menu', 'Add New Menu': 'Tambah Menu Baru',
+    // structured menu builder
+    'Add Menu': 'Tambah Menu', '+ Add Menu': '+ Tambah Menu', 'Menu Name': 'Nama Menu', 'Top Note': 'Catatan Atas',
+    '+ Add Exercise': '+ Tambah Exercise', '+ Add Block': '+ Tambah Blok', 'Block': 'Blok',
+    'exercise (e.g. Wallballs)': 'exercise (mis. Wallballs)', 'kg (opt)': 'kg (ops)',
     // ---- reports ----
     'This Month': 'Bulan Ini', 'This Week': 'Minggu Ini', 'Total Classes (team)': 'Total Kelas (tim)',
     // ---- accounts / add coach ----
