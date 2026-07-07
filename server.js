@@ -145,6 +145,14 @@ async function startedSet(ids) {
   for (const r of rows || []) s.add(r.schedule_id);
   return s;
 }
+// schedule_id -> session status ('ongoing' after check-in, 'completed' after check-out).
+async function sessionStatusMap(ids) {
+  const m = {};
+  if (!ids.length) return m;
+  const rows = await sb(`arena_class_sessions?select=schedule_id,status&schedule_id=in.(${ids.map(enc).join(',')})`);
+  for (const r of rows || []) m[r.schedule_id] = r.status || 'ongoing';
+  return m;
+}
 
 // Admin Hub sometimes stores co-taught classes as combined names,
 // e.g. "Cindy Lauw & Rheza" or "Elsen & Ade Midhun". Split into individual
@@ -222,20 +230,21 @@ async function coachWeek(coach, weekStartISO, today) {
 }
 
 // Build class-card objects (used by the dashboard list and the date-range filter).
-function cardsFrom(sched, counts, started, types, today) {
+function cardsFrom(sched, counts, sessionMap, types, today) {
   return sched.map((x) => {
     const c = counts[x.id] || { confirmed: 0, pending: 0 };
     const t = types[x.class_type_id] || {};
     const isToday = x.schedule_date === today;
-    const isStarted = started.has(x.id);
+    const st = sessionMap[x.id]; // undefined | 'ongoing' | 'completed'
+    const isStarted = st != null;
+    const checkedOut = st === 'completed';
     const upcoming = x.schedule_date >= today; // today or later
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
-      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted,
-      accent: isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C'),
-      status: isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled'),
-      // Show the start button for any upcoming class (today or later) that isn't started yet,
-      // so a coach always finds it when they open the class — not only on the exact day.
-      canAbsen: upcoming && !isStarted, dateLabel: dLabel(x.schedule_date) };
+      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted, checkedOut,
+      accent: checkedOut ? '#3ED598' : (isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C')),
+      status: checkedOut ? 'Finished' : (isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled')),
+      // Check In shows for an upcoming class not yet started; Check Out shows while it's ongoing.
+      canAbsen: upcoming && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date) };
   });
 }
 
@@ -335,7 +344,7 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
   const upcomingSched = (await coachSchedules(s.c, today, null)).slice(0, 8);
   const upIds = upcomingSched.map((x) => x.id);
   const upCounts = await bookingCounts(upIds);
-  const upStarted = await startedSet(upIds);
+  const upStarted = await sessionStatusMap(upIds);
   const todayList = cardsFrom(upcomingSched, upCounts, upStarted, types, today);
   const todayCount = upcomingSched.filter((x) => x.schedule_date === today).length;
   const todayLabel = `${DOW_FULL[d0.getDay()]}, ${d0.getDate()} ${MON_FULL[d0.getMonth()]} ${d0.getFullYear()} · ` + (todayCount > 0 ? `${todayCount} classes today` : `${todayList.length} upcoming classes`);
@@ -372,7 +381,7 @@ route('GET', '/api/coach/classes', async (req, res, s, q) => {
   const types = await classTypes();
   const sched = (await coachSchedules(s.c, from, to)).slice(0, 80);
   const ids = sched.map((x) => x.id);
-  const [counts, started, venues] = await Promise.all([bookingCounts(ids), startedSet(ids), coachVenueCards(s.c, from, to, today)]);
+  const [counts, started, venues] = await Promise.all([bookingCounts(ids), sessionStatusMap(ids), coachVenueCards(s.c, from, to, today)]);
   return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today), venues, from, to });
 });
 
@@ -822,7 +831,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const bookings = await sb(`arena_class_bookings?select=id,booking_code,full_name,status,created_at&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
   const att = await sb(`arena_class_attendance?select=booking_id,status&schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; for (const a of att || []) attMap[a.booking_id] = a.status;
-  const started = (await sb(`arena_class_sessions?select=schedule_id&schedule_id=eq.${enc(params.id)}&limit=1`) || []).length > 0;
+  const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
+  const started = !!sess0; const checkedOut = !!(sess0 && sess0.status === 'completed'); const canCheckout = !!(sess0 && sess0.status === 'ongoing');
   const today = todayJakarta();
   // For co-taught classes use the logged-in coach's own history; HC/admin keep the class instructor.
   const histCoach = s.r === 'coach' ? s.c : sc.instructor;
@@ -837,7 +847,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
       classesLabel: classesLabelFor(h),
     };
   });
-  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota }, started, participants });
+  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, started, checkedOut, canCheckout }, started, participants });
 });
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   const body = (await readBody(req)) || {};
@@ -850,6 +860,24 @@ route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   }
   await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: s.c, status: 'ongoing' }) });
   return send(res, 200, { ok: true, started: true });
+});
+// Check out — the coach ends the class. Records completion, counts participants NOW (so late
+// bookings made just before the class are included) and returns a session recap for the app.
+route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) => {
+  const scs = await sb(`arena_class_schedules?select=instructor,class_type_id,schedule_date,start_time,end_time&id=eq.${enc(params.id)}&limit=1`);
+  const sc = scs && scs[0];
+  if (!sc) return send(res, 404, { error: 'Class not found.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'This is not your class.' });
+  const sess = (await sb(`arena_class_sessions?select=status,created_at&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
+  if (!sess) return send(res, 400, { error: 'Check in first before you can check out.' });
+  await sb(`arena_class_sessions?schedule_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'completed' }) });
+  const participants = await sbCount(`arena_class_bookings?select=id&status=eq.confirmed&schedule_id=eq.${enc(params.id)}`);
+  const types = await classTypes();
+  const nowIso = new Date().toISOString();
+  const checkinIso = sess.created_at || nowIso;
+  const durationMin = Math.max(0, Math.round((new Date(nowIso) - new Date(checkinIso)) / 60000));
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  return send(res, 200, { ok: true, recap: { type: shortType((types[sc.class_type_id] || {}).name), dateLabel: dLabel(sc.schedule_date), checkin: hm(checkinIso), checkout: hm(nowIso), durationMin, participants } });
 });
 route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   const body = await readBody(req);

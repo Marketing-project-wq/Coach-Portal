@@ -307,9 +307,11 @@
               </div>
               <div style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;letter-spacing:-.01em;">{{ c.type }}</div>
               <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;margin-top:3px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax</div>
-              <sc-if value="{{ canOpenClass || c.canAbsen }}"><div style="display:flex;gap:8px;margin-top:12px;">
+              <sc-if value="{{ canOpenClass || c.canAbsen || c.canCheckout || c.checkedOut }}"><div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
                 <sc-if value="{{ canOpenClass }}"><button onclick="{{ c.openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Class Detail</button></sc-if>
-                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ c.openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#ffffff;border-radius:9px;padding:9px;font-family:'Barlow Condensed';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button></sc-if>
+                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ c.openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#ffffff;border-radius:9px;padding:9px;font-family:'Barlow Condensed';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check In</button></sc-if>
+                <sc-if value="{{ c.canCheckout }}"><button onclick="{{ c.checkOut }}" style="flex:1;background:var(--green);border:0;color:#ffffff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check Out</button></sc-if>
+                <sc-if value="{{ c.checkedOut }}"><span style="flex:1;text-align:center;background:rgba(28,138,75,.12);color:var(--green);border-radius:10px;padding:11px;font-weight:800;font-size:12.5px;">✓ Finished</span></sc-if>
               </div></sc-if>
             </div>
             </sc-for>
@@ -329,7 +331,7 @@
               <sc-if value="{{ v.hasArena }}"><div style="font-size:13px;color:var(--muted);margin-top:4px;">{{ v.arena }}</div></sc-if>
               <sc-if value="{{ v.hasPhone }}"><div style="font-size:12.5px;color:var(--muted2);margin-top:3px;">{{ v.phone }}</div></sc-if>
               <sc-if value="{{ v.hasNotes }}"><div style="font-size:12.5px;color:var(--muted);margin-top:6px;">{{ v.notes }}</div></sc-if>
-              <sc-if value="{{ v.canAbsen }}"><button onclick="{{ v.openAbsen }}" style="width:100%;margin-top:14px;background:var(--volt);border:0;color:#ffffff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button></sc-if>
+              <sc-if value="{{ v.canAbsen }}"><button onclick="{{ v.openAbsen }}" style="width:100%;margin-top:14px;background:var(--volt);border:0;color:#ffffff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check In</button></sc-if>
               <sc-if value="{{ v.started }}"><div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(28,138,75,.12);color:var(--green);font-size:12px;font-weight:700;padding:7px 13px;border-radius:100px;">✓ In progress</div></sc-if>
             </div>
             </sc-for>
@@ -365,7 +367,9 @@
             </div>
             <div style="display:flex;gap:10px;">
               <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Change Coach</button>
-              <button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:12px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button>
+              <sc-if value="{{ detailCanCheckin }}"><button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:12px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check In</button></sc-if>
+              <sc-if value="{{ detailCanCheckout }}"><button onclick="{{ detailCheckOut }}" style="background:var(--green);border:0;color:#ffffff;border-radius:11px;padding:12px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check Out</button></sc-if>
+              <sc-if value="{{ detailCheckedOut }}"><span style="background:rgba(28,138,75,.12);color:var(--green);border-radius:11px;padding:12px 20px;font-weight:800;font-size:13px;">✓ Finished</span></sc-if>
             </div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
@@ -718,14 +722,42 @@
   <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeAbsen }}">
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:28px;max-width:420px;width:100%;text-align:center;">
       <div style="width:60px;height:60px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;">⏱️</div>
-      <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;margin:0 0 8px;">Start Class Now?</h2>
+      <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;margin:0 0 8px;">Check In Now?</h2>
       <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">{{ absenLabel }}</p>
       <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Attendance recorded · timestamp &amp; device</div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · server time</div>
       <div style="display:flex;gap:11px;">
         <button onclick="{{ closeAbsen }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>
-        <button onclick="{{ confirmAbsen }}" style="flex:1.4;background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Start Class</button>
+        <button onclick="{{ confirmAbsen }}" style="flex:1.4;background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Check In</button>
       </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== CHECK-OUT MODAL ===== -->
+  <sc-if value="{{ showCheckout }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeCheckout }}">
+    <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:28px;max-width:430px;width:100%;text-align:center;">
+      <sc-if value="{{ checkoutConfirm }}">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(28,138,75,.14);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 18px;">🏁</div>
+        <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;margin:0 0 8px;">Check Out?</h2>
+        <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 22px;">End <b style="color:var(--text);">{{ checkoutLabel }}</b> and record this coaching session.</p>
+        <div style="display:flex;gap:11px;">
+          <button onclick="{{ closeCheckout }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>
+          <button onclick="{{ confirmCheckout }}" style="flex:1.4;background:var(--green);border:0;color:#ffffff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Check Out</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ checkoutHasRecap }}">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(28,138,75,.14);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px;">✓</div>
+        <p style="color:var(--text);font-size:14.5px;line-height:1.55;margin:0 0 18px;font-weight:600;">Your coaching session has been recorded in Coach Portal.</p>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px 18px;text-align:left;margin-bottom:22px;">
+          <div style="font-family:'Barlow Condensed';font-weight:800;font-size:15px;">{{ coType }}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">{{ coDate }}</div>
+          <div style="font-size:13px;color:var(--text);margin-top:10px;">Check-in <b>{{ coCheckin }}</b> → Check-out <b>{{ coCheckout }}</b> · <b>{{ coDuration }}</b></div>
+          <div style="font-size:13px;color:var(--text);margin-top:4px;">Participants: <b>{{ coParticipants }}</b></div>
+        </div>
+        <button onclick="{{ closeCheckout }}" style="width:100%;background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Done</button>
+      </sc-if>
     </div>
   </div>
   </sc-if>
@@ -759,9 +791,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=181cb64a"></script>
-<script src="sc-runtime.js?v=181cb64a"></script>
-<script src="app.js?v=181cb64a"></script>
+<script src="i18n.js?v=6d9e3ff3"></script>
+<script src="sc-runtime.js?v=6d9e3ff3"></script>
+<script src="app.js?v=6d9e3ff3"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

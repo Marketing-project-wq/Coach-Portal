@@ -29,6 +29,10 @@ window.__I18N = (function () {
     'In progress': 'Sedang berlangsung',
     // ---- class detail ----
     'Class Detail': 'Detail Kelas', 'Change Coach': 'Ganti Coach', 'Start Class': 'Mulai Kelas',
+    'Check In': 'Check In', 'Check Out': 'Check Out', 'Finished': 'Selesai', 'Done': 'Selesai',
+    'Check In Now?': 'Check In Sekarang?', 'Check Out?': 'Check Out?',
+    'Your coaching session has been recorded in Coach Portal.': 'Sesi coaching kamu sudah tercatat di Coach Portal.',
+    'Checked in · attendance recorded': 'Check-in berhasil · absen tercatat',
     'Participant List': 'Daftar Peserta', 'Class booking': 'Booking kelas',
     // ---- coverage / substitution ----
     'Request Coverage': 'Ajukan Coverage', 'SELECT COVERAGE COACH': 'PILIH COACH COVERAGE',

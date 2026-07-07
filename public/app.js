@@ -15,7 +15,7 @@ class Component extends DCLogic {
     this.state = {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
-      absen: false, absenClass: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
+      absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
       toast: '',
@@ -31,7 +31,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -206,11 +206,11 @@ class Component extends DCLogic {
   openVenueAbsen(v) { this.setState({ absen: true, absenClass: { venueId: v.id, type: 'Arena + Coach · ' + (v.customer || 'Arena booking'), time: v.time || '' } }); }
   confirmAbsen() {
     const cls = this.state.absenClass; const id = cls && cls.schedule_id; const venueId = cls && cls.venueId;
-    if (this.MOCK || (!id && !venueId)) { this.setState({ absen: false }); return this.toastMsg('Class started · attendance recorded'); }
+    if (this.MOCK || (!id && !venueId)) { this.setState({ absen: false }); return this.toastMsg('Checked in · attendance recorded'); }
     const path = venueId ? ('/api/venue/bookings/' + encodeURIComponent(venueId) + '/start') : ('/api/coach/class/' + encodeURIComponent(id) + '/start');
     const start = (coords) => {
       this.api(path, { method: 'POST', body: JSON.stringify(coords || {}) })
-        .then(() => { this.setState({ absen: false }); this.toastMsg('Class started · attendance recorded'); this.loadScreen('dash'); })
+        .then(() => { this.setState({ absen: false }); this.toastMsg('Checked in · attendance recorded'); if (id && this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
         .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
     };
     // Attach current GPS so the server can verify the coach is at the arena (when the lock is on).
@@ -222,6 +222,17 @@ class Component extends DCLogic {
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
       );
     } else { start(null); }
+  }
+  // ---- Check Out: coach ends the class; shows an in-app session recap ----
+  openCheckout(cls) { this.setState({ checkoutModal: true, checkoutClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule), checkoutData: null }); }
+  closeCheckout() { this.setState({ checkoutModal: false, checkoutClass: null, checkoutData: null }); }
+  confirmCheckout() {
+    const cls = this.state.checkoutClass; const id = cls && cls.schedule_id;
+    if (this.MOCK) { return this.setState({ checkoutData: { type: (cls && cls.type) || 'Class', dateLabel: (cls && cls.dateLabel) || '', checkin: '07:02', checkout: '08:00', durationMin: 58, participants: (cls && cls.peserta) || 12 } }); }
+    if (!id) return this.closeCheckout();
+    this.api('/api/coach/class/' + encodeURIComponent(id) + '/checkout', { method: 'POST' })
+      .then((r) => { this.setState({ checkoutData: r.recap || {} }); if (this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
+      .catch((e) => { this.toastMsg(e.message); });
   }
   // ---------- Class Menu builder (structured popup: note + blocks + exercises) ----------
   _emptyItem() { return { amount: '', unit: 'kali', name: '', weight: '' }; }
@@ -507,7 +518,7 @@ class Component extends DCLogic {
     // coach today
     const coachToday = (D.today || []).map((c) => {
       const p = this.statusPill(c.status);
-      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c) });
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c) });
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(228,0,43,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
@@ -628,6 +639,14 @@ class Component extends DCLogic {
     const detailTimeRange = (cd.time || '') + (cd.end ? '–' + cd.end : '');
     const ac = st.absenClass || {};
     const absenLabel = ac.type ? (ac.type + (ac.time ? ' · ' + ac.time : '')) : '';
+    // check-out modal + class-detail check-in/out states
+    const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut, detailCanCheckout = !!cd.canCheckout, detailCanCheckin = !detailStarted;
+    const co = st.checkoutData; const coCls = st.checkoutClass || {};
+    const checkoutLabel = coCls.type ? (coCls.type + (coCls.time ? ' · ' + coCls.time : '')) : 'this class';
+    const checkoutHasRecap = !!co;
+    const coType = co ? (co.type || 'Class') : '', coDate = co ? (co.dateLabel || '') : '';
+    const coCheckin = co ? (co.checkin || '') : '', coCheckout = co ? (co.checkout || '') : '';
+    const coDuration = co && co.durationMin != null ? (co.durationMin + ' min') : '', coParticipants = co && co.participants != null ? String(co.participants) : '0';
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, classesLabel: p.classesLabel || '', hasClasses: !!p.classesLabel }; });
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
@@ -729,6 +748,9 @@ class Component extends DCLogic {
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
+      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(),
+      showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
+      coType, coDate, coCheckin, coCheckout, coDuration, coParticipants,
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       exportCSV: () => this.exportCSV(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
@@ -740,7 +762,7 @@ class Component extends DCLogic {
   // ---------- mock sample data (for ?mock=1 render tests) ----------
   mockData() {
     const d = this.emptyData();
-    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: false, accent: '#888F9C', status: 'Scheduled', canAbsen: true, dateLabel: 'Thu 2 Jul' }];
+    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, canCheckout: false, checkedOut: false, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: true, accent: '#D6FF3D', status: 'In Progress', canAbsen: false, canCheckout: true, checkedOut: false, dateLabel: 'Thu 2 Jul' }, { schedule_id: 'x3', time: '19:00', end: '– 20:00', type: 'HYROX Complete', peserta: 10, cap: 14, started: true, accent: '#3ED598', status: 'Finished', canAbsen: false, canCheckout: false, checkedOut: true, dateLabel: 'Thu 2 Jul' }];
     d.todayLabel = 'Wednesday, 1 July 2026 · 1 class today';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
     d.monthlyYear = '2026';
