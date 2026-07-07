@@ -73,11 +73,10 @@ template = template.replace(
   template = template.slice(0, start) + block + template.slice(end);
 })();
 // Schedule heading: no date-range filter — the calendar drives which day is shown.
-const jadwalHead = '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL · {{ jadwalLabel }}</div>';
-template = template.replace('<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL HARI INI</div>', jadwalHead);
-template = template.replace('Senin, 30 Juni 2026 · 2 kelas hari ini', '{{ todayLabel }}');
-// Dashboard: drop the "Kelas Bulan Ini" / "Peserta Dilayani" stat cards (not needed)
-template = template.replace(/<div style="display:flex;gap:12px;">\s*<div style="background:var\(--panel\)[\s\S]*?Peserta Dilayani[\s\S]*?<\/div><\/div>\s*<\/div>/, '');
+const jadwalHead = '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">SCHEDULE · {{ jadwalLabel }}</div>';
+template = template.replace('<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">TODAY\'S SCHEDULE</div>', jadwalHead);
+// Dashboard: drop the "Classes This Month" / "Participants Served" stat cards (not needed)
+template = template.replace(/<div style="display:flex;gap:12px;">\s*<div style="background:var\(--panel\)[\s\S]*?Participants Served[\s\S]*?<\/div><\/div>\s*<\/div>/, '');
 // Tighter grid for the (now smaller) schedule cards
 template = template.replace('<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">', '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">');
 // Monthly teaching calendar on the Schedule screen — shows which dates the coach teaches
@@ -86,28 +85,28 @@ const calPanel = '<div style="background:var(--panel);border:1px solid var(--bor
   + '<div style="display:flex;gap:8px;"><button onclick="{{ calPrev }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8249;</button><button onclick="{{ calNext }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8250;</button></div></div>'
   + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">'
   + '<sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0 4px;">{{ d }}</div></sc-for>'
-  + '<sc-for list="{{ calCells }}" as="c"><div onclick="{{ c.pick }}" style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};cursor:{{ c.cursor }};" style-hover="border-color:var(--muted);"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:{{ c.countCol }};font-weight:700;margin-top:1px;">{{ c.count }} kls</div></sc-if></sc-if></div></sc-for>'
+  + '<sc-for list="{{ calCells }}" as="c"><div onclick="{{ c.pick }}" style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};cursor:{{ c.cursor }};" style-hover="border-color:var(--muted);"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:{{ c.countCol }};font-weight:700;margin-top:1px;">{{ c.count }} cls</div></sc-if></sc-if></div></sc-for>'
   + '</div>'
-  + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Ada kelas ngajar · klik tanggal untuk lihat jadwalnya</div>'
+  + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Has a class · click a date to see its schedule</div>'
   + '</div>';
 template = template.replace(jadwalHead, calPanel + jadwalHead);
 // Empty state when the selected day has no classes
-const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">Tidak ada kelas di tanggal ini.</div></sc-if>';
+const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>';
 template = template.replace(jadwalHead, jadwalHead + noClassBox);
 // Remove the bottom grid entirely (the old "Kalender Minggu Ini" + "Riwayat Terakhir" panels)
 // from the Schedule screen — the JADWAL cards are the last section now.
-template = template.replace(/<div style="display:grid;grid-template-columns:1\.4fr 1fr;gap:16px;margin-top:24px;">[\s\S]*?Riwayat Terakhir[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
+template = template.replace(/<div style="display:grid;grid-template-columns:1\.4fr 1fr;gap:16px;margin-top:24px;">[\s\S]*?Recent History[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');
 // "Monitoring Kelas per Bulan" is its own screen (separate nav item), not on the dashboard.
 // Summary stat cards (current-month peserta/kelas + full-year peserta) sit above the chart.
 const statCard = (label, val, col) => '<div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">' + label + '</div><div style="font-family:\'Archivo\';font-weight:900;font-size:30px;' + (col ? 'color:' + col + ';' : '') + '">' + val + '</div></div>';
 const monthlyStats = '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
-  + statCard('Kelas Bulan Ini', '{{ mKelasBulan }}', 'var(--volt)')
-  + statCard('Peserta Bulan Ini', '{{ mPesertaBulan }}', '#0068C9')
-  + statCard('Peserta sejak Juli', '{{ mPesertaTahun }}', '#0068C9')
+  + statCard('Classes This Month', '{{ mKelasBulan }}', 'var(--volt)')
+  + statCard('Participants This Month', '{{ mPesertaBulan }}', '#0068C9')
+  + statCard('Participants since July', '{{ mPesertaTahun }}', '#0068C9')
   + '</div>';
 const monthlyPanel = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;">'
-  + '<div style="font-weight:800;font-family:\'Archivo\';font-size:16px;margin-bottom:4px;">Pax &amp; Kelas per Bulan · sejak Juli {{ monthlyYear }}</div>'
-  + '<div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Tinggi batang = jumlah <b style="color:#0068C9;">pax</b>. Angka di bawah nama bulan = jumlah <b style="color:var(--volt);">kelas</b>.</div>'
+  + '<div style="font-weight:800;font-family:\'Archivo\';font-size:16px;margin-bottom:4px;">Pax &amp; Classes per Month · since July {{ monthlyYear }}</div>'
+  + '<div style="font-size:12px;color:var(--muted);margin-bottom:22px;">Bar height = number of <b style="color:#0068C9;">pax</b>. The number under each month name = number of <b style="color:var(--volt);">classes</b>.</div>'
   + '<div style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;align-items:end;">'
   + '<sc-for list="{{ monthly }}" as="m"><div style="text-align:center;">'
   + '<div style="font-size:13px;font-weight:800;font-family:\'Archivo\';margin-bottom:6px;color:{{ m.pesertaCol }};">{{ m.pesertaLabel }}</div>'
@@ -115,39 +114,39 @@ const monthlyPanel = '<div style="background:var(--panel);border:1px solid var(-
   + '<div style="font-size:11px;color:{{ m.monthCol }};margin-top:8px;font-weight:700;">{{ m.month }}</div>'
   + '<div style="font-size:10.5px;color:var(--muted2);margin-top:2px;">{{ m.kelasLabel }}</div>'
   + '</div></sc-for></div></div>';
-const monthlyScreen = '<sc-if value="{{ s.monthly }}"><div style="max-width:980px;margin:0 auto;"><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Monitoring Kelas</div>' + monthlyStats + monthlyPanel + '</div></sc-if>';
+const monthlyScreen = '<sc-if value="{{ s.monthly }}"><div style="max-width:980px;margin:0 auto;"><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Class Monitoring</div>' + monthlyStats + monthlyPanel + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', monthlyScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Review Peserta" screen (sibling screen in the scroll area)
-const reviewsScreen = '<sc-if value="{{ s.reviews }}"><div style="max-width:820px;margin:0 auto;"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;"><div><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">Review Peserta</div></div><div style="display:flex;gap:12px;"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 18px;text-align:center;min-width:96px;"><div style="font-family:\'Archivo\';font-weight:900;font-size:26px;color:var(--amber);">{{ reviewAvg }}</div><div style="font-size:11px;color:var(--muted);">Rata-rata &#9733;</div></div><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 18px;text-align:center;min-width:96px;"><div style="font-family:\'Archivo\';font-weight:900;font-size:26px;">{{ reviewCount }}</div><div style="font-size:11px;color:var(--muted);">Total review</div></div></div></div><sc-if value="{{ hasReviewCats }}"><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"><sc-for list="{{ reviewCats }}" as="rc"><span style="background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:7px 13px;font-size:12.5px;"><span style="color:var(--muted);">{{ rc.label }}</span> <span style="color:var(--amber);font-weight:700;">{{ rc.avg }}&#9733;</span></span></sc-for></div></sc-if><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div style="font-size:13px;color:var(--muted);">Link review untuk peserta:<br><span style="color:var(--volt);font-family:\'JetBrains Mono\';font-size:13px;">{{ reviewLink }}</span></div><button onclick="{{ copyReviewLink }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;">Salin Link</button></div><sc-for list="{{ reviews }}" as="rv"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="font-weight:700;font-size:14px;">{{ rv.name }} <span style="color:var(--muted2);font-weight:400;font-size:12px;">&#183; {{ rv.cls }}{{ rv.coachSuffix }}</span></div><div style="color:var(--amber);font-size:15px;letter-spacing:2px;">{{ rv.stars }}</div></div><sc-if value="{{ rv.hasComment }}"><div style="color:var(--text);font-size:13.5px;margin-top:8px;">{{ rv.comment }}</div></sc-if><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;"><sc-for list="{{ rv.tags }}" as="t"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:3px 11px;font-size:11.5px;font-weight:700;">{{ t }}</span></sc-for></div><div style="color:var(--muted2);font-size:11.5px;margin-top:9px;">{{ rv.date }}</div></div></sc-for><sc-if value="{{ noReviews }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:40px;text-align:center;color:var(--muted);">Belum ada review. Bagikan link di atas ke peserta Anda &#10024;</div></sc-if></div></sc-if>';
+const reviewsScreen = '<sc-if value="{{ s.reviews }}"><div style="max-width:820px;margin:0 auto;"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;"><div><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">Participant Reviews</div></div><div style="display:flex;gap:12px;"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 18px;text-align:center;min-width:96px;"><div style="font-family:\'Archivo\';font-weight:900;font-size:26px;color:var(--amber);">{{ reviewAvg }}</div><div style="font-size:11px;color:var(--muted);">Average &#9733;</div></div><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 18px;text-align:center;min-width:96px;"><div style="font-family:\'Archivo\';font-weight:900;font-size:26px;">{{ reviewCount }}</div><div style="font-size:11px;color:var(--muted);">Total reviews</div></div></div></div><sc-if value="{{ hasReviewCats }}"><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"><sc-for list="{{ reviewCats }}" as="rc"><span style="background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:7px 13px;font-size:12.5px;"><span style="color:var(--muted);">{{ rc.label }}</span> <span style="color:var(--amber);font-weight:700;">{{ rc.avg }}&#9733;</span></span></sc-for></div></sc-if><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div style="font-size:13px;color:var(--muted);">Review link for participants:<br><span style="color:var(--volt);font-family:\'JetBrains Mono\';font-size:13px;">{{ reviewLink }}</span></div><button onclick="{{ copyReviewLink }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;">Copy Link</button></div><sc-for list="{{ reviews }}" as="rv"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="font-weight:700;font-size:14px;">{{ rv.name }} <span style="color:var(--muted2);font-weight:400;font-size:12px;">&#183; {{ rv.cls }}{{ rv.coachSuffix }}</span></div><div style="color:var(--amber);font-size:15px;letter-spacing:2px;">{{ rv.stars }}</div></div><sc-if value="{{ rv.hasComment }}"><div style="color:var(--text);font-size:13.5px;margin-top:8px;">{{ rv.comment }}</div></sc-if><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;"><sc-for list="{{ rv.tags }}" as="t"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:3px 11px;font-size:11.5px;font-weight:700;">{{ t }}</span></sc-for></div><div style="color:var(--muted2);font-size:11.5px;margin-top:9px;">{{ rv.date }}</div></div></sc-for><sc-if value="{{ noReviews }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:40px;text-align:center;color:var(--muted);">No reviews yet. Share the link above with your participants &#10024;</div></sc-if></div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', reviewsScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Peserta Kelas" screen — attendance frequency + last-visit recency per participant
 const cardBox = 'background:var(--panel);border:1px solid var(--border);border-radius:16px;';
 const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Peserta Saya</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">My Participants</div>'
   + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
-  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Peserta</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
-  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Aktif 30 Hari Terakhir</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--green);">{{ membersActive }}</div></div>'
+  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Participants</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
+  + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Active Last 30 Days</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--green);">{{ membersActive }}</div></div>'
   + '</div>'
   + '<sc-if value="{{ hasMembers }}"><div style="' + cardBox + 'overflow:hidden;">'
   + '<sc-for list="{{ members }}" as="m"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);">'
   + '<div style="width:38px;height:38px;border-radius:50%;background:{{ m.avBg }};color:{{ m.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;">{{ m.initials }}</div>'
-  + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ m.name }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">Terakhir: {{ m.lastVisit }} &#183; <span style="color:{{ m.lastCol }};font-weight:700;">{{ m.lastLabel }}</span></div><sc-if value="{{ m.hasClasses }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">Kelas: {{ m.classesLabel }}</div></sc-if></div>'
-  + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:20px;">{{ m.visits }}</div><div style="font-size:11px;color:var(--muted);">kali datang</div></div>'
+  + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ m.name }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">Last: {{ m.lastVisit }} &#183; <span style="color:{{ m.lastCol }};font-weight:700;">{{ m.lastLabel }}</span></div><sc-if value="{{ m.hasClasses }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">Classes: {{ m.classesLabel }}</div></sc-if></div>'
+  + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:20px;">{{ m.visits }}</div><div style="font-size:11px;color:var(--muted);">visits</div></div>'
   + '</div></sc-for></div></sc-if>'
-  + '<sc-if value="{{ noMembers }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada peserta yang tercatat hadir di kelas Anda.</div></sc-if>'
+  + '<sc-if value="{{ noMembers }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No participants recorded as attending your classes yet.</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', membersScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Leaderboard Coach" screen — ranked by average participant rating
 const boardScreen = '<sc-if value="{{ s.leaderboard }}"><div style="max-width:760px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Leaderboard Coach</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">Coach Leaderboard</div>'
   + '<sc-if value="{{ hasBoard }}"><div style="' + cardBox + 'overflow:hidden;">'
   + '<sc-for list="{{ leaderboard }}" as="l"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);background:{{ l.rowBg }};">'
   + '<div style="width:30px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:{{ l.rankCol }};">{{ l.medal }}</div>'
   + '<div style="width:38px;height:38px;border-radius:50%;background:{{ l.avBg }};color:{{ l.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;position:relative;overflow:hidden;">{{ l.initials }}<sc-if value="{{ l.hasPhoto }}"><img src="{{ l.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>'
-  + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ l.name }}{{ l.meLabel }}</div><div style="font-size:12px;color:var(--muted);margin-top:1px;">{{ l.classes }} kelas</div></div>'
+  + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ l.name }}{{ l.meLabel }}</div><div style="font-size:12px;color:var(--muted);margin-top:1px;">{{ l.classes }} classes</div></div>'
   + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:19px;">{{ l.peserta }}</div><div style="font-size:11px;color:var(--muted);">pax</div></div>'
   + '</div></sc-for></div></sc-if>'
-  + '<sc-if value="{{ noBoard }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada data booking peserta.</div></sc-if>'
+  + '<sc-if value="{{ noBoard }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No participant booking data yet.</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', boardScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
@@ -172,47 +171,47 @@ const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;ma
         + '<sc-if value="{{ venueIsHC }}"><div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
           + '<div style="font-size:12.5px;font-weight:700;color:{{ b.assignCol }};margin-bottom:9px;">{{ b.assignLabel }}</div>'
           + '<div style="display:flex;gap:10px;align-items:center;">'
-            + '<select onchange="{{ b.reassign }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;cursor:pointer;"><option value="">— pilih coach yang bertanggung jawab —</option><sc-for list="{{ b.coachOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
-            + '<sc-if value="{{ b.assigned }}"><button onclick="{{ b.unassign }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:10px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Hapus</button></sc-if>'
+            + '<select onchange="{{ b.reassign }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;cursor:pointer;"><option value="">— select the responsible coach —</option><sc-for list="{{ b.coachOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
+            + '<sc-if value="{{ b.assigned }}"><button onclick="{{ b.unassign }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:10px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Remove</button></sc-if>'
           + '</div>'
         + '</div></sc-if>'
-        + '<sc-if value="{{ venueIsCoach }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Coach penanggung jawab: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div></sc-if>'
+        + '<sc-if value="{{ venueIsCoach }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div></sc-if>'
       + '</sc-if>'
     + '</div></sc-for>'
   + '</div></sc-if>'
-  + '<sc-if value="{{ noVenueBookings }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada booking arena mendatang.</div></sc-if>'
+  + '<sc-if value="{{ noVenueBookings }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No upcoming arena bookings.</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
 // ---- Menu Kelas — shared class-program reference (patokan) for every coach ----
-const menuNav = '<sc-if value="{{ showMenuNav }}"><button onclick="{{ goMenu }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.menu.bg }};color:{{ nav.menu.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.menu.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Menu Kelas</button></sc-if>';
+const menuNav = '<sc-if value="{{ showMenuNav }}"><button onclick="{{ goMenu }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.menu.bg }};color:{{ nav.menu.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.menu.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Class Menu</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goVenue \}\}"[\s\S]*?<\/button>)/, '$1' + menuNav);
 const menuScreen = '<sc-if value="{{ s.menu }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Menu Kelas</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Class Menu</div>'
   + '<div style="' + cardBox + 'padding:20px;margin-bottom:24px;">'
-    + '<sc-if value="{{ isEditingMenu }}"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--volt);">Edit Menu</div><button onclick="{{ cancelEditMenu }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:7px 14px;font-weight:700;font-size:12.5px;cursor:pointer;">Batal</button></div></sc-if>'
+    + '<sc-if value="{{ isEditingMenu }}"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--volt);">Edit Menu</div><button onclick="{{ cancelEditMenu }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:7px 14px;font-weight:700;font-size:12.5px;cursor:pointer;">Cancel</button></div></sc-if>'
     + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;">'
-      + '<div><label style="' + vLabel + '">Nama Menu / Sesi</label><input id="menuTitle" value="{{ editMenuTitle }}" placeholder="mis. HYROX Complete — Full Simulation" style="' + vInput + '"></div>'
-      + '<div><label style="' + vLabel + '">Jenis Kelas <span style="color:var(--muted2);font-weight:400;">(opsional)</span></label><input id="menuCategory" value="{{ editMenuCategory }}" placeholder="mis. HYROX Complete" style="' + vInput + '"></div>'
+      + '<div><label style="' + vLabel + '">Menu / Session Name</label><input id="menuTitle" value="{{ editMenuTitle }}" placeholder="e.g. HYROX Complete — Full Simulation" style="' + vInput + '"></div>'
+      + '<div><label style="' + vLabel + '">Class Type <span style="color:var(--muted2);font-weight:400;">(optional)</span></label><input id="menuCategory" value="{{ editMenuCategory }}" placeholder="e.g. HYROX Complete" style="' + vInput + '"></div>'
     + '</div>'
-    + '<label style="' + vLabel + 'margin-top:14px;">Isi Menu / Program</label>'
-    + '<textarea id="menuContent" rows="6" placeholder="Tulis detail program kelas: station, jarak, reps, urutan, catatan pacing…" style="' + vInput + 'resize:vertical;line-height:1.55;">{{ editMenuContent }}</textarea>'
+    + '<label style="' + vLabel + 'margin-top:14px;">Menu / Program Content</label>'
+    + '<textarea id="menuContent" rows="6" placeholder="Write the class program details: stations, distance, reps, order, pacing notes…" style="' + vInput + 'resize:vertical;line-height:1.55;">{{ editMenuContent }}</textarea>'
     + '<button onclick="{{ submitMenu }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:13px;font-family:\'Archivo\';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">{{ menuSubmitLabel }}</button>'
   + '</div>'
-  + '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;">DAFTAR MENU</div>'
+  + '<div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:0 0 12px;">MENU LIST</div>'
   + '<sc-if value="{{ hasClassMenus }}"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;align-items:start;">'
     + '<sc-for list="{{ classMenus }}" as="m"><div style="' + cardBox + 'padding:14px 16px;">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">'
         + '<div style="min-width:0;"><div style="font-weight:800;font-size:14.5px;">{{ m.title }}</div><sc-if value="{{ m.hasCategory }}"><span style="display:inline-block;margin-top:5px;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:100px;background:var(--volt-dim);color:var(--volt);">{{ m.category }}</span></sc-if></div>'
         + '<div style="display:flex;gap:7px;flex-shrink:0;">'
           + '<sc-if value="{{ m.canEdit }}"><button onclick="{{ m.edit }}" style="background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 12px;font-weight:700;font-size:11.5px;cursor:pointer;white-space:nowrap;">Edit</button></sc-if>'
-          + '<sc-if value="{{ m.canDelete }}"><button onclick="{{ m.del }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:6px 12px;font-weight:700;font-size:11.5px;cursor:pointer;white-space:nowrap;">Hapus</button></sc-if>'
+          + '<sc-if value="{{ m.canDelete }}"><button onclick="{{ m.del }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:6px 12px;font-weight:700;font-size:11.5px;cursor:pointer;white-space:nowrap;">Remove</button></sc-if>'
         + '</div>'
       + '</div>'
       + '<div style="font-size:12px;color:var(--text);margin-top:9px;line-height:1.45;white-space:pre-wrap;">{{ m.content }}</div>'
-      + '<sc-if value="{{ m.hasBy }}"><div style="font-size:11px;color:var(--muted2);margin-top:9px;">Ditambahkan oleh {{ m.by }}</div></sc-if>'
+      + '<sc-if value="{{ m.hasBy }}"><div style="font-size:11px;color:var(--muted2);margin-top:9px;">Added by {{ m.by }}</div></sc-if>'
     + '</div></sc-for></div></sc-if>'
-    + '<sc-if value="{{ noClassMenus }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada menu kelas. Tambahkan yang pertama di atas &#128221;</div></sc-if>'
+    + '<sc-if value="{{ noClassMenus }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No class menus yet. Add the first one above &#128221;</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', menuScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Hide Head Coach / Admin role buttons unless the account allows them
@@ -230,7 +229,7 @@ template = template.replace(/(<button onclick="\{\{ goEmail \}\}"[\s\S]*?<\/butt
 const monthlyNav = '<sc-if value="{{ showCoachNav }}"><button onclick="{{ goMonthly }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monthly.bg }};color:{{ nav.monthly.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monthly.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goReviews \}\}"[\s\S]*?<\/button>)/, '$1' + monthlyNav);
 // "Peserta" nav (coach-only + admin, hidden for external coaches) — per-coach member attendance frequency & recency
-const membersNav = '<sc-if value="{{ showMembers }}"><button onclick="{{ goMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.members.bg }};color:{{ nav.members.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.members.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Peserta</button></sc-if>';
+const membersNav = '<sc-if value="{{ showMembers }}"><button onclick="{{ goMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.members.bg }};color:{{ nav.members.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.members.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Participants</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goReviews \}\}"[\s\S]*?<\/button>)/, '$1' + membersNav);
 // "Leaderboard" nav — hidden for external coaches; ranks coaches by participant rating
 const leaderboardNav = '<sc-if value="{{ showLeaderboard }}"><button onclick="{{ goLeaderboard }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.leaderboard.bg }};color:{{ nav.leaderboard.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.leaderboard.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Leaderboard</button></sc-if>';
@@ -240,10 +239,10 @@ template = template.replace(/(<button onclick="\{\{ goReviews \}\}"[\s\S]*?<\/bu
 template = template.replace(/(<button onclick="\{\{ goReviews \}\}"[\s\S]*?<\/button>)/, '<sc-if value="{{ showReview }}">$1</sc-if>');
 // Approve/Reject buttons only when the current user may decide (the rotation coach)
 template = template.replace(/(<button onclick="\{\{ p\.approve \}\}"[\s\S]*?<\/button>)/g, '<sc-if value="{{ p.canDecide }}">$1</sc-if>');
-template = template.replace(/(<button onclick="\{\{ p\.cancel \}\}"[\s\S]*?<\/button>)/g, '<sc-if value="{{ p.canDecide }}">$1</sc-if><sc-if value="{{ p.notify }}"><span style="color:var(--amber);font-size:12.5px;font-weight:700;">⏳ Menunggu {{ p.to }}</span></sc-if>');
+template = template.replace(/(<button onclick="\{\{ p\.cancel \}\}"[\s\S]*?<\/button>)/g, '<sc-if value="{{ p.canDecide }}">$1</sc-if><sc-if value="{{ p.notify }}"><span style="color:var(--amber);font-size:12.5px;font-weight:700;">⏳ Awaiting {{ p.to }}</span></sc-if>');
 // Role-aware header on the rotation screen + corrected submit note
-template = template.replace('MENUNGGU TINDAKAN', '{{ rotHeader }}');
-template = template.replace('sampai Head Coach menyetujui', 'sampai coach rotation menyetujui');
+template = template.replace('AWAITING ACTION', '{{ rotHeader }}');
+template = template.replace('until the Head Coach approves it.', 'until the rotation coach approves it.');
 
 // ---- Label renames (longest/upper variants first) ----
 const renames = [
@@ -277,7 +276,7 @@ const responsiveCss = `
     .hamburger { display:flex !important; }
     main { height:auto !important; overflow:visible !important; }
     header { padding:12px 16px !important; flex-wrap:wrap !important; gap:10px !important; }
-    header div:has(> span[style*="pulseDot"]) { display:none !important; }   /* hide 'Sinkron' pill */
+    header div:has(> span[style*="pulseDot"]) { display:none !important; }   /* hide sync pill */
     [style*="align-items:center;gap:14px"] { flex-wrap:wrap !important; }     /* topbar right group */
     [style*="overflow-y:auto;padding:28px"] { padding:16px !important; overflow-x:auto !important; }
     /* two-column blocks -> single column */
@@ -291,7 +290,7 @@ const responsiveCss = `
     /* team schedule grid: keep width, scroll horizontally */
     [style*="70px repeat("] { min-width:520px; }
     [style*="border-radius:18px"]:has([style*="70px repeat("]) { overflow-x:auto !important; }
-    /* per-class stats table (TGL/HARI/JAM/JENIS/PESERTA): keep columns, scroll horizontally */
+    /* per-class stats table (DATE/DAY/TIME/TYPE/PAX): keep columns, scroll horizontally */
     [style*="80px 90px 70px 1fr 90px"] { min-width:520px; }
     [style*="border-radius:18px"]:has([style*="80px 90px 70px 1fr 90px"]) { overflow-x:auto !important; }
   }

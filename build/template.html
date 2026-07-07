@@ -498,18 +498,18 @@
       <div style="position:relative;">
         <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border2);border-radius:100px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--volt);margin-bottom:26px;">Official HYROX Training Club</div>
         <h1 style="font-family:'Archivo';font-weight:900;font-size:64px;line-height:.96;letter-spacing:-.03em;margin:0 0 18px;text-transform:uppercase;">Coach<br>Portal</h1>
-        <p style="color:var(--muted);font-size:16px;line-height:1.6;max-width:380px;margin:0;">Satu tempat untuk jadwal, peserta, absensi, dan penggantian coach — tersinkron langsung dengan Admin Hub Arena.</p>
+        <p style="color:var(--muted);font-size:16px;line-height:1.6;max-width:380px;margin:0;">One place for schedules, participants, attendance, and coach substitutions — synced directly with Admin Hub Arena.</p>
       </div>
       <div style="display:flex;gap:36px;position:relative;">
-        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">8</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Coach Aktif</div></div>
-        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">1</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Lokasi · Menteng</div></div>
+        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">8</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Active Coaches</div></div>
+        <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">1</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Location · Menteng</div></div>
         <div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">HYROX</div><div style="font-size:12px;color:var(--muted);letter-spacing:.04em;">Complete · Foundation</div></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:center;padding:40px;">
       <div style="width:100%;max-width:380px;">
         <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Welcome back</div>
-        <h2 style="font-family:'Archivo';font-weight:800;font-size:30px;margin:0 0 30px;letter-spacing:-.01em;">Masuk sebagai Coach</h2>
+        <h2 style="font-family:'Archivo';font-weight:800;font-size:30px;margin:0 0 30px;letter-spacing:-.01em;">Sign in as Coach</h2>
         <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Email</label>
         <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:18px;">
           <span style="color:var(--muted2);font-size:15px;">@</span>
@@ -541,21 +541,21 @@
       <nav style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:3px;">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:8px 10px 6px;">COACH</div>
         <button onclick="{{ goDash }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.dash.bg }};color:{{ nav.dash.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.dash.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Dashboard</button>
-        <button onclick="{{ goEmail }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.email.bg }};color:{{ nav.email.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.email.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Email Apresiasi</button>
+        <button onclick="{{ goEmail }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.email.bg }};color:{{ nav.email.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.email.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Appreciation Email</button>
 
         <sc-if value="{{ isHC }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;">HEAD COACH</div>
-                <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Jadwal Tim</button>
-        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Penggantian</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
-        <button onclick="{{ goMonitor }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monitor.bg }};color:{{ nav.monitor.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monitor.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Monitoring Coach</button>
-        <button onclick="{{ goReports }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reports.bg }};color:{{ nav.reports.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reports.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Laporan</button>
+                <button onclick="{{ goSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.schedule.bg }};color:{{ nav.schedule.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.schedule.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Team Schedule</button>
+        <button onclick="{{ goSubReview }}" style="display:flex;align-items:center;justify-content:space-between;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.subrev.bg }};color:{{ nav.subrev.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.subrev.bar }};transition:background .15s;" style-hover="background:var(--panel2);"><span>Rotation</span><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:1px 7px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }}</span></button>
+        <button onclick="{{ goMonitor }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.monitor.bg }};color:{{ nav.monitor.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.monitor.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Coach Monitoring</button>
+        <button onclick="{{ goReports }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.reports.bg }};color:{{ nav.reports.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.reports.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Reports</button>
         </sc-if>
 
         <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;display:flex;align-items:center;gap:7px;">ADMIN <span style="width:5px;height:5px;border-radius:50%;background:var(--volt);"></span></div>
         <button onclick="{{ goAccounts }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.accounts.bg }};color:{{ nav.accounts.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.accounts.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Account</button>
-        <button onclick="{{ goSettings }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.settings.bg }};color:{{ nav.settings.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.settings.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Setting</button>
-        <button onclick="{{ goPerms }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.perms.bg }};color:{{ nav.perms.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.perms.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Hak Akses</button>
+        <button onclick="{{ goSettings }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.settings.bg }};color:{{ nav.settings.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.settings.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Settings</button>
+        <button onclick="{{ goPerms }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.perms.bg }};color:{{ nav.perms.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.perms.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Permissions</button>
         </sc-if>
       </nav>
 
@@ -563,7 +563,7 @@
         <div style="display:flex;align-items:center;gap:11px;padding:8px;border-radius:11px;background:var(--panel);">
           <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:14px;color:#08090B;position:relative;overflow:hidden;">{{ user.initials }}<sc-if value="{{ user.hasPhoto }}"><img src="{{ user.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
           <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ user.name }}</div><div style="font-size:11px;color:var(--muted);">{{ user.role }}</div></div>
-          <button onclick="{{ logout }}" title="Keluar" style="background:transparent;border:0;color:var(--muted2);cursor:pointer;font-size:16px;padding:4px;" style-hover="color:var(--red);">⏻</button>
+          <button onclick="{{ logout }}" title="Log out" style="background:transparent;border:0;color:var(--muted2);cursor:pointer;font-size:16px;padding:4px;" style-hover="color:var(--red);">⏻</button>
         </div>
       </div>
     </aside>
@@ -580,7 +580,7 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;">
-          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 13px;border:1px solid var(--border);border-radius:100px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulseDot 1.8s infinite;"></span>Sinkron dengan Admin Hub</div>
+          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 13px;border:1px solid var(--border);border-radius:100px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulseDot 1.8s infinite;"></span>Synced with Admin Hub</div>
           <div style="display:flex;background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:3px;">
             <button onclick="{{ setRoleCoach }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.coach.bg }};color:{{ rseg.coach.fg }};transition:background-color .15s,color .15s;">Coach</button>
             <button onclick="{{ setRoleHC }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.hc.bg }};color:{{ rseg.hc.fg }};transition:background-color .15s,color .15s;">Head Coach</button>
@@ -597,16 +597,16 @@
         <div style="max-width:1080px;margin:0 auto;">
           <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:14px;">
             <div>
-              <div style="font-family:'Archivo';font-weight:900;font-size:32px;letter-spacing:-.02em;">Halo, {{ user.first }} 👋</div>
-              <div style="color:var(--muted);font-size:15px;margin-top:4px;">Senin, 30 Juni 2026 · 2 kelas hari ini</div>
+              <div style="font-family:'Archivo';font-weight:900;font-size:32px;letter-spacing:-.02em;">Hello, {{ user.first }} 👋</div>
+              <div style="color:var(--muted);font-size:15px;margin-top:4px;">{{ todayLabel }}</div>
             </div>
             <div style="display:flex;gap:12px;">
-              <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 20px;min-width:120px;"><div style="font-size:12px;color:var(--muted);font-weight:600;">Kelas Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);line-height:1.1;">18</div></div>
-              <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 20px;min-width:120px;"><div style="font-size:12px;color:var(--muted);font-weight:600;">Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;line-height:1.1;">162</div></div>
+              <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 20px;min-width:120px;"><div style="font-size:12px;color:var(--muted);font-weight:600;">Classes This Month</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);line-height:1.1;">18</div></div>
+              <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 20px;min-width:120px;"><div style="font-size:12px;color:var(--muted);font-weight:600;">Participants Served</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;line-height:1.1;">162</div></div>
             </div>
           </div>
 
-          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">JADWAL HARI INI</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">TODAY'S SCHEDULE</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <sc-for list="{{ coachToday }}" as="c" hint-placeholder-count="2">
             <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:20px;position:relative;overflow:hidden;">
@@ -618,8 +618,8 @@
               <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
               <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax</div>
               <sc-if value="{{ canOpenClass || c.canAbsen }}"><div style="display:flex;gap:10px;margin-top:18px;">
-                <sc-if value="{{ canOpenClass }}"><button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Detail Kelas</button></sc-if>
-                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
+                <sc-if value="{{ canOpenClass }}"><button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Class Detail</button></sc-if>
+                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button></sc-if>
               </div></sc-if>
             </div>
             </sc-for>
@@ -639,8 +639,8 @@
               <sc-if value="{{ v.hasArena }}"><div style="font-size:13px;color:var(--muted);margin-top:4px;">{{ v.arena }}</div></sc-if>
               <sc-if value="{{ v.hasPhone }}"><div style="font-size:12.5px;color:var(--muted2);margin-top:3px;">{{ v.phone }}</div></sc-if>
               <sc-if value="{{ v.hasNotes }}"><div style="font-size:12.5px;color:var(--muted);margin-top:6px;">{{ v.notes }}</div></sc-if>
-              <sc-if value="{{ v.canAbsen }}"><button onclick="{{ v.openAbsen }}" style="width:100%;margin-top:14px;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button></sc-if>
-              <sc-if value="{{ v.started }}"><div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(28,138,75,.12);color:var(--green);font-size:12px;font-weight:700;padding:7px 13px;border-radius:100px;">✓ Sedang berlangsung</div></sc-if>
+              <sc-if value="{{ v.canAbsen }}"><button onclick="{{ v.openAbsen }}" style="width:100%;margin-top:14px;background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button></sc-if>
+              <sc-if value="{{ v.started }}"><div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(28,138,75,.12);color:var(--green);font-size:12px;font-weight:700;padding:7px 13px;border-radius:100px;">✓ In progress</div></sc-if>
             </div>
             </sc-for>
           </div>
@@ -648,7 +648,7 @@
 
           <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Kalender Minggu Ini</div><div style="font-size:13px;color:var(--muted);">23–29 Jun</div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">This Week's Calendar</div><div style="font-size:13px;color:var(--muted);">23–29 Jun</div></div>
               <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
                 <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
                 <div style="text-align:center;padding:12px 4px;border-radius:11px;background:{{ d.bg }};border:1px solid {{ d.border }};">
@@ -660,11 +660,11 @@
               </div>
             </div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
-              <div style="font-weight:800;font-family:'Archivo';font-size:16px;margin-bottom:14px;">Riwayat Terakhir</div>
+              <div style="font-weight:800;font-family:'Archivo';font-size:16px;margin-bottom:14px;">Recent History</div>
               <sc-for list="{{ recentClasses }}" as="r" hint-placeholder-count="3">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
                 <div><div style="font-weight:700;font-size:14px;">{{ r.type }}</div><div style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono';">{{ r.date }} · {{ r.time }}</div></div>
-                <div style="text-align:right;"><div style="font-weight:700;font-size:14px;">{{ r.peserta }}</div><div style="font-size:11px;color:var(--green);">Selesai</div></div>
+                <div style="text-align:right;"><div style="font-weight:700;font-size:14px;">{{ r.peserta }}</div><div style="font-size:11px;color:var(--green);">Completed</div></div>
               </div>
               </sc-for>
             </div>
@@ -682,22 +682,22 @@
               <div style="color:var(--muted);font-size:14px;margin-top:6px;">{{ detailDate }} · {{ detailTimeRange }}</div>
             </div>
             <div style="display:flex;gap:10px;">
-              <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Ganti Coach</button>
-              <button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 20px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Mulai Kelas</button>
+              <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Change Coach</button>
+              <button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 20px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Start Class</button>
             </div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;">
-              <div style="font-weight:800;font-family:'Archivo';font-size:16px;">Daftar Peserta</div>
-              <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Cari peserta…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:13.5px;"></div>
+              <div style="font-weight:800;font-family:'Archivo';font-size:16px;">Participant List</div>
+              <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Search participants…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:13.5px;"></div>
             </div>
             <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
-              <div>#</div><div>NAMA PAX</div><div>BOOKING</div><div>STATUS</div>
+              <div>#</div><div>NAME</div><div>BOOKING</div><div>STATUS</div>
             </div>
             <sc-for list="{{ participants }}" as="p" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
               <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;">{{ p.n }}</div>
-              <div><div style="font-weight:600;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ p.attendInfo }}<span style="color:{{ p.lastCol }};font-weight:600;">{{ p.lastLabel }}</span></div><sc-if value="{{ p.hasClasses }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">Kelas: {{ p.classesLabel }}</div></sc-if></div>
+              <div><div style="font-weight:600;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ p.attendInfo }}<span style="color:{{ p.lastCol }};font-weight:600;">{{ p.lastLabel }}</span></div><sc-if value="{{ p.hasClasses }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">Classes: {{ p.classesLabel }}</div></sc-if></div>
               <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ p.booking }}</div>
               <div><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:{{ p.bg }};color:{{ p.col }};">{{ p.status }}</span></div>
             </div>
@@ -711,9 +711,9 @@
         <div style="max-width:620px;margin:0 auto;">
           <button onclick="{{ openClass }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Back</button>
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:24px;">
-            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Ajukan Penggantian Coach</h2>
-            <div style="color:var(--muted);font-size:14px;margin-bottom:22px;">HYROX Complete · Senin, 07:00 — kelas dipindahkan sepenuhnya ke coach pengganti.</div>
-            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">PILIH COACH PENGGANTI</div>
+            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 4px;">Request Coach Rotation</h2>
+            <div style="color:var(--muted);font-size:14px;margin-bottom:22px;">HYROX Complete · Monday, 07:00 — the class is fully transferred to the substitute coach.</div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;">SELECT ROTATION COACH</div>
             <div style="display:flex;flex-direction:column;gap:10px;">
               <sc-for list="{{ subOptions }}" as="o" hint-placeholder-count="4">
               <button onclick="{{ o.pick }}" disabled="{{ o.disabled }}" style="display:flex;align-items:center;gap:13px;padding:14px;border-radius:12px;border:1px solid {{ o.border }};background:{{ o.bg }};cursor:{{ o.cursor }};text-align:left;width:100%;transition:border-color .15s;">
@@ -723,40 +723,40 @@
               </button>
               </sc-for>
             </div>
-            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin:22px 0 10px;">ALASAN (OPSIONAL)</div>
-            <textarea placeholder="mis. Sakit / ada keperluan mendadak…" style="width:100%;min-height:84px;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
-            <button onclick="{{ submitSub }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Ajukan ke Head Coach</button>
-            <p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:14px;">Permintaan akan berstatus <span style="color:var(--amber);font-weight:700;">Menunggu</span> sampai Head Coach menyetujui.</p>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin:22px 0 10px;">REASON (OPTIONAL)</div>
+            <textarea placeholder="e.g. Sick / urgent matter…" style="width:100%;min-height:84px;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
+            <button onclick="{{ submitSub }}" style="width:100%;margin-top:18px;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Submit to Head Coach</button>
+            <p style="text-align:center;color:var(--muted2);font-size:12.5px;margin-top:14px;">The request will be <span style="color:var(--amber);font-weight:700;">Pending</span> until the Head Coach approves it.</p>
           </div>
         </div>
         </sc-if>
 
-        <!-- ===== EMAIL APRESIASI (COACH) ===== -->
+        <!-- ===== APPRECIATION EMAIL (COACH) ===== -->
         <sc-if value="{{ s.email }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:760px;margin:0 auto;">
-          <div style="font-family:'Archivo';font-weight:800;font-size:22px;margin-bottom:4px;">Feedback Peserta</div>
-          <div style="color:var(--muted);font-size:13.5px;margin-bottom:20px;">Tulis feedback untuk tiap peserta yang hadir. Feedback dikirim ke email masing-masing peserta.</div>
+          <div style="font-family:'Archivo';font-weight:800;font-size:22px;margin-bottom:4px;">Participant Feedback</div>
+          <div style="color:var(--muted);font-size:13.5px;margin-bottom:20px;">Write feedback for each participant who attended. Feedback is sent to each participant's email.</div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:16px;">
-            <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Pilih Kelas</label>
+            <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:8px;">Select Class</label>
             <select onchange="{{ pickFbClass }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px 13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;">
-              <option value="">— Pilih kelas —</option>
+              <option value="">— Select a class —</option>
               <sc-for list="{{ fbClasses }}" as="c"><option value="{{ c.id }}">{{ c.label }}</option></sc-for>
             </select>
           </div>
           <sc-if value="{{ hasFbParticipants }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Peserta · {{ fbClassLabel }}</div>
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Participants · {{ fbClassLabel }}</div>
             <sc-for list="{{ fbParticipants }}" as="p">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);">
               <div style="font-weight:700;font-size:14.5px;margin-bottom:8px;">{{ p.name }}</div>
-              <textarea id="{{ p.fieldId }}" placeholder="Tulis feedback untuk {{ p.name }}…" style="width:100%;min-height:64px;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
+              <textarea id="{{ p.fieldId }}" placeholder="Write feedback for {{ p.name }}…" style="width:100%;min-height:64px;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;resize:vertical;"></textarea>
             </div>
             </sc-for>
-            <div style="padding:16px 20px;"><button onclick="{{ submitFeedback }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:14px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Kirim Feedback</button></div>
+            <div style="padding:16px 20px;"><button onclick="{{ submitFeedback }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:14px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Send Feedback</button></div>
           </div>
           </sc-if>
-          <sc-if value="{{ fbEmpty }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;color:var(--muted);">Pilih kelas dulu untuk menulis feedback pesertanya.</div></sc-if>
-          <sc-if value="{{ fbNoParticipants }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;color:var(--muted);">Belum ada peserta confirmed di kelas ini.</div></sc-if>
+          <sc-if value="{{ fbEmpty }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;color:var(--muted);">Select a class first to write feedback for its participants.</div></sc-if>
+          <sc-if value="{{ fbNoParticipants }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;color:var(--muted);">No confirmed participants in this class yet.</div></sc-if>
         </div>
         </sc-if>
 
@@ -764,14 +764,14 @@
         <sc-if value="{{ s.overview }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
           <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:22px;">
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Coach Aktif</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;">7</div></div>
-            <div style="background:linear-gradient(160deg,rgba(255,176,32,.12),var(--panel));border:1px solid rgba(255,176,32,.3);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--amber);font-weight:600;">⚠ Belum Absen</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--amber);">2</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);font-weight:600;">Active Coaches</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;">7</div></div>
+            <div style="background:linear-gradient(160deg,rgba(255,176,32,.12),var(--panel));border:1px solid rgba(255,176,32,.3);border-radius:16px;padding:18px;"><div style="font-size:12.5px;color:var(--amber);font-weight:600;">⚠ Not Checked In</div><div style="font-family:'Archivo';font-weight:800;font-size:34px;line-height:1.1;margin-top:4px;color:var(--amber);">2</div></div>
           </div>
 
           <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Jadwal Hari Ini — Seluruh Coach</div></div>
-              <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>JAM</div><div>COACH · KELAS</div><div>ABSEN</div></div>
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Today's Schedule — All Coaches</div></div>
+              <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TIME</div><div>COACH · CLASS</div><div>CHECK-IN</div></div>
               <sc-for list="{{ todayAll }}" as="t" hint-placeholder-count="6">
               <div style="display:grid;grid-template-columns:64px 1fr 100px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;">
                 <div style="font-family:'JetBrains Mono';font-weight:700;font-size:14px;">{{ t.time }}</div>
@@ -781,24 +781,24 @@
               </sc-for>
             </div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;height:fit-content;">
-              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Penggantian</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Menunggu</span></div>
+              <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">Rotation</div><span style="background:var(--amber);color:#08090B;font-size:11px;font-weight:800;padding:2px 9px;border-radius:100px;font-family:'Archivo';">{{ pendingCount }} Pending</span></div>
               <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
               <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
                 <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px;">{{ p.from }} <span style="color:var(--volt);">→</span> {{ p.to }}</div>
-                <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">{{ p.cls }} · {{ p.time }} · Alasan: {{ p.reason }}</div>
+                <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">{{ p.cls }} · {{ p.time }} · Reason: {{ p.reason }}</div>
                 <div style="display:flex;gap:9px;">
-                  <button onclick="{{ p.approve }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:9px;font-weight:800;font-size:13px;cursor:pointer;font-family:'Archivo';">Setujui</button>
-                  <button onclick="{{ p.cancel }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:9px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Tolak</button>
+                  <button onclick="{{ p.approve }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:9px;font-weight:800;font-size:13px;cursor:pointer;font-family:'Archivo';">Approve</button>
+                  <button onclick="{{ p.cancel }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:9px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Reject</button>
                 </div>
               </div>
               </sc-for>
-              <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 20px;text-align:center;color:var(--muted2);font-size:13px;">Tidak ada permintaan menunggu ✓</div></sc-if>
+              <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="padding:30px 20px;text-align:center;color:var(--muted2);font-size:13px;">No pending requests ✓</div></sc-if>
             </div>
           </div>
         </div>
         </sc-if>
 
-        <!-- ===== JADWAL TIM ===== -->
+        <!-- ===== TEAM SCHEDULE ===== -->
         <sc-if value="{{ s.schedule }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
           <div style="display:flex;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
@@ -819,7 +819,7 @@
           </div>
           </sc-if>
           <sc-if value="{{ noSchedule }}">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:48px 24px;text-align:center;color:var(--muted);">Tidak ada kelas terjadwal pada hari ini.</div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:48px 24px;text-align:center;color:var(--muted);">No classes scheduled for this day.</div>
           </sc-if>
         </div>
         </sc-if>
@@ -827,7 +827,7 @@
         <!-- ===== SUB REVIEW ===== -->
         <sc-if value="{{ s.subrev }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:820px;margin:0 auto;">
-          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--amber);margin-bottom:12px;">MENUNGGU TINDAKAN ({{ pendingCount }})</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--amber);margin-bottom:12px;">AWAITING ACTION ({{ pendingCount }})</div>
           <sc-for list="{{ pendingSubs }}" as="p" hint-placeholder-count="1">
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid rgba(255,176,32,.28);border-radius:16px;padding:20px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
@@ -835,7 +835,7 @@
                 <div style="text-align:center;"><div style="width:46px;height:46px;border-radius:50%;background:var(--raised);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:15px;margin:0 auto;">{{ p.fromIni }}</div><div style="font-size:12px;color:var(--muted);margin-top:6px;">{{ p.from }}</div></div>
                 <div style="font-family:'Archivo';font-size:22px;color:var(--volt);">→</div>
                 <div style="text-align:center;"><div style="width:46px;height:46px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:15px;color:var(--volt);margin:0 auto;">{{ p.toIni }}</div><div style="font-size:12px;color:var(--muted);margin-top:6px;">{{ p.to }}</div></div>
-                <div style="padding-left:8px;border-left:1px solid var(--border);"><div style="font-weight:700;font-size:15px;">{{ p.cls }}</div><div style="font-size:13px;color:var(--muted);">{{ p.time }}</div><div style="font-size:13px;color:var(--muted);margin-top:2px;">Alasan: <span style="color:var(--text);">{{ p.reason }}</span></div></div>
+                <div style="padding-left:8px;border-left:1px solid var(--border);"><div style="font-weight:700;font-size:15px;">{{ p.cls }}</div><div style="font-size:13px;color:var(--muted);">{{ p.time }}</div><div style="font-size:13px;color:var(--muted);margin-top:2px;">Reason: <span style="color:var(--text);">{{ p.reason }}</span></div></div>
               </div>
               <div style="display:flex;gap:10px;">
                 <button onclick="{{ p.approve }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 22px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Approve</button>
@@ -844,9 +844,9 @@
             </div>
           </div>
           </sc-for>
-          <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:36px;text-align:center;color:var(--muted);">Semua permintaan sudah ditindak ✓</div></sc-if>
+          <sc-if value="{{ noPending }}" hint-placeholder-val="{{ false }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:36px;text-align:center;color:var(--muted);">All requests have been handled ✓</div></sc-if>
 
-          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">RIWAYAT PENGGANTIAN</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:26px 0 12px;">ROTATION HISTORY</div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
             <sc-for list="{{ subHistory }}" as="h" hint-placeholder-count="3">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);">
@@ -869,9 +869,9 @@
                 <div><div style="font-weight:700;font-size:14.5px;">{{ c.name }}</div><div style="font-size:11.5px;color:{{ c.roleCol }};font-weight:600;">{{ c.role }}</div></div>
               </div>
               <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);">
-                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.classes }}</div><div style="font-size:11px;color:var(--muted);">kelas</div></div>
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.classes }}</div><div style="font-size:11px;color:var(--muted);">classes</div></div>
                 <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;">{{ c.peserta }}</div><div style="font-size:11px;color:var(--muted);">pax</div></div>
-                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;color:{{ c.attCol }};">{{ c.attPct }}</div><div style="font-size:11px;color:var(--muted);">hadir</div></div>
+                <div><div style="font-family:'Archivo';font-weight:800;font-size:20px;color:{{ c.attCol }};">{{ c.attPct }}</div><div style="font-size:11px;color:var(--muted);">attended</div></div>
               </div>
             </button>
             </sc-for>
@@ -888,17 +888,17 @@
               <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#9BD11E);display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:20px;color:#08090B;position:relative;overflow:hidden;">{{ sel.initials }}<sc-if value="{{ sel.hasPhoto }}"><img src="{{ sel.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
               <div><h2 style="font-family:'Archivo';font-weight:800;font-size:24px;margin:0;">{{ sel.name }}</h2><div style="color:var(--muted);font-size:13.5px;margin-top:3px;">{{ sel.role }} · {{ sel.phone }} · {{ sel.email }}</div></div>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);">Bulan: {{ statMonth }}</div><button onclick="{{ exportCSV }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ Ekspor</button></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="font-size:13px;color:var(--muted);">Month: {{ statMonth }}</div><button onclick="{{ exportCSV }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ Export</button></div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Kelas</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Peserta</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Kehadiran</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:{{ sel.attCol }};">{{ sel.attPct }}</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ sel.attended }}/{{ sel.classes }} kelas</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Penggantian</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Classes</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Participants</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.peserta }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Attendance</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;color:{{ sel.attCol }};">{{ sel.attPct }}</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ sel.attended }}/{{ sel.classes }} classes</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Rotations</div><div style="font-family:'Archivo';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Rincian per Kelas — {{ statMonth }}</div>
-            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>TGL</div><div>HARI</div><div>JAM</div><div>JENIS KELAS</div><div style="text-align:right;">PAX</div></div>
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Per-Class Breakdown — {{ statMonth }}</div>
+            <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>DATE</div><div>DAY</div><div>TIME</div><div>CLASS TYPE</div><div style="text-align:right;">PAX</div></div>
             <sc-for list="{{ statRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
               <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ r.date }}</div>
@@ -917,19 +917,19 @@
         <div style="max-width:1000px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
             <div style="display:flex;gap:8px;">
-              <div style="font-size:13px;font-weight:700;color:#08090B;background:var(--volt);padding:8px 14px;border-radius:9px;">Bulan Ini</div>
-              <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">Minggu Ini</div>
+              <div style="font-size:13px;font-weight:700;color:#08090B;background:var(--volt);padding:8px 14px;border-radius:9px;">This Month</div>
+              <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">This Week</div>
                           </div>
-            <button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 20px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Ekspor Excel / PDF</button>
+            <button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 20px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Export Excel / PDF</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Kelas (tim)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Peserta Dilayani</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Penggantian Bulan Ini</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Participants Served</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Rotations This Month</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">Laporan Seluruh Coach — Juni 2026</div>
-            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">KELAS</div><div style="text-align:right;">PAX</div><div style="text-align:right;">DIGANTI</div><div style="text-align:right;"></div></div>
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">All-Coach Report — June 2026</div>
+            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div><div style="text-align:right;">ROTATED</div><div style="text-align:right;"></div></div>
             <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
               <div style="display:flex;align-items:center;gap:11px;"><div style="width:32px;height:32px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:12px;color:{{ r.avFg }};">{{ r.initials }}</div><div><span style="font-weight:700;">{{ r.name }}</span> <span style="font-size:11px;color:var(--muted);">{{ r.role }}</span></div></div>
@@ -947,8 +947,8 @@
         <sc-if value="{{ s.accounts }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:920px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-            <div style="color:var(--muted);font-size:14px;">Password dibuat &amp; dibagikan manual oleh Admin (format: nama + angka).</div>
-            <button onclick="{{ goAddCoach }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">+ Tambah Coach</button>
+            <div style="color:var(--muted);font-size:14px;">Passwords are created &amp; shared manually by the Admin (format: name + number).</div>
+            <button onclick="{{ goAddCoach }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">+ Add Coach</button>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="8">
@@ -970,17 +970,17 @@
         <div style="max-width:560px;margin:0 auto;">
           <button onclick="{{ goAccounts }}" style="background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0 0 14px;" style-hover="color:var(--text);">← Back</button>
           <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:26px;">
-            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 22px;">Tambah Coach Baru</h2>
-            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Nama Lengkap</label>
-            <input placeholder="mis. Coach Dimas" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
+            <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 22px;">Add New Coach</h2>
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Full Name</label>
+            <input placeholder="e.g. Coach Dimas" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
             <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Email</label>
             <input placeholder="dimas@20fit.id" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
-            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Nomor Telepon</label>
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Phone Number</label>
             <input placeholder="0812-xxxx-xxxx" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Hanken Grotesk';font-size:14.5px;outline:0;margin-bottom:16px;">
-            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Awal <span style="color:var(--muted2);font-weight:400;">(nama + angka)</span></label>
-            <div style="display:flex;gap:10px;margin-bottom:8px;"><input id="newCoachPw" value="" placeholder="ketik password awal…" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:14.5px;outline:0;"><button onclick="{{ randomPw }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;">↻ Acak</button></div>
-            <div style="background:rgba(77,212,242,.07);border:1px solid rgba(77,212,242,.2);border-radius:10px;padding:12px;font-size:12.5px;color:var(--muted);margin-bottom:22px;">ℹ️ Akun langsung <span style="color:var(--text);font-weight:700;">Active</span>. Bagikan email &amp; password ini ke coach secara manual (WhatsApp).</div>
-            <button onclick="{{ submitAddCoach }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Simpan Coach Baru</button>
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Initial Password <span style="color:var(--muted2);font-weight:400;">(name + number)</span></label>
+            <div style="display:flex;gap:10px;margin-bottom:8px;"><input id="newCoachPw" value="" placeholder="type initial password…" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:14.5px;outline:0;"><button onclick="{{ randomPw }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:0 16px;font-size:13px;font-weight:700;cursor:pointer;">↻ Random</button></div>
+            <div style="background:rgba(77,212,242,.07);border:1px solid rgba(77,212,242,.2);border-radius:10px;padding:12px;font-size:12.5px;color:var(--muted);margin-bottom:22px;">ℹ️ The account is immediately <span style="color:var(--text);font-weight:700;">Active</span>. Share this email &amp; password with the coach manually (WhatsApp).</div>
+            <button onclick="{{ submitAddCoach }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:12px;padding:15px;font-family:'Archivo';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Save New Coach</button>
           </div>
         </div>
         </sc-if>
@@ -990,30 +990,30 @@
         <div style="max-width:760px;margin:0 auto;">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
-              <div><div style="font-weight:700;font-size:15px;">Rentang Waktu Tombol Absen</div><div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:440px;">Aktif mulai H-1 jam; batas wajar H-10 menit sebelum kelas. Lewat dari itu berstatus <span style="color:var(--amber);">Terlambat</span> (tombol tetap aktif).</div></div>
-              <span style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;">Ditetapkan</span>
+              <div><div style="font-weight:700;font-size:15px;">Check-In Button Time Window</div><div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:440px;">Active from 1 hour before class; the reasonable limit is 10 minutes before. After that it is marked <span style="color:var(--amber);">Late</span> (the button stays active).</div></div>
+              <span style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;">Set</span>
             </div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;">
-            <div style="font-weight:700;font-size:15px;">Kunci Lokasi saat Absen (GPS)</div>
-            <div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:520px;">Coach cuma bisa "Mulai Kelas" kalau HP-nya berada di arena. Buka halaman ini <b style="color:var(--text);">saat kamu di arena</b>, atur radius, lalu simpan lokasinya.</div>
+            <div style="font-weight:700;font-size:15px;">Location Lock for Check-In (GPS)</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px;max-width:520px;">A coach can only "Start Class" when their phone is at the arena. Open this page <b style="color:var(--text);">while you are at the arena</b>, set the radius, then save the location.</div>
             <div style="font-size:13px;margin-top:12px;color:{{ arenaLocCol }};font-weight:700;">{{ arenaLocStatus }}</div>
             <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap;">
-              <button onclick="{{ captureArenaLoc }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">📍 Pakai Lokasi Saya Sekarang</button>
-              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;color:var(--muted);">Radius</span><input id="arenaRadius" type="number" min="20" max="2000" value="{{ arenaRadius }}" style="width:82px;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:9px;color:var(--text);font-family:'JetBrains Mono';font-size:13px;outline:0;"><span style="font-size:13px;color:var(--muted);">meter</span></div>
-              <sc-if value="{{ arenaLocSet }}"><button onclick="{{ clearArenaLoc }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer;">Matikan Kunci</button></sc-if>
+              <button onclick="{{ captureArenaLoc }}" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">📍 Use My Location Now</button>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;color:var(--muted);">Radius</span><input id="arenaRadius" type="number" min="20" max="2000" value="{{ arenaRadius }}" style="width:82px;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:9px;color:var(--text);font-family:'JetBrains Mono';font-size:13px;outline:0;"><span style="font-size:13px;color:var(--muted);">meters</span></div>
+              <sc-if value="{{ arenaLocSet }}"><button onclick="{{ clearArenaLoc }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer;">Disable Lock</button></sc-if>
             </div>
           </div>
-          <div style="background:rgba(214,255,61,.05);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);">20FIT Arena beroperasi di <span style="color:var(--text);font-weight:700;">satu lokasi</span> (Menteng Prada) — pemilihan studio dihapus dari seluruh portal.</div>
+          <div style="background:rgba(214,255,61,.05);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12.5px;color:var(--muted);">20FIT Arena operates at <span style="color:var(--text);font-weight:700;">one location</span> (Menteng Prada) — studio selection has been removed from the entire portal.</div>
         </div>
         </sc-if>
 
         <!-- ===== PERMISSIONS (ADMIN) ===== -->
         <sc-if value="{{ s.perms }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:860px;margin:0 auto;">
-          <div style="color:var(--muted);font-size:14px;margin-bottom:18px;">Admin adalah superset Head Coach + kewenangan kelola akun.</div>
+          <div style="color:var(--muted);font-size:14px;margin-bottom:18px;">Admin is a superset of Head Coach plus account management permissions.</div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="display:grid;grid-template-columns:1fr 90px 110px 90px;gap:8px;padding:13px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>AKSI</div><div style="text-align:center;">COACH</div><div style="text-align:center;">HEAD COACH</div><div style="text-align:center;">ADMIN</div></div>
+            <div style="display:grid;grid-template-columns:1fr 90px 110px 90px;gap:8px;padding:13px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>ACTION</div><div style="text-align:center;">COACH</div><div style="text-align:center;">HEAD COACH</div><div style="text-align:center;">ADMIN</div></div>
             <sc-for list="{{ perms }}" as="p" hint-placeholder-count="10">
             <div style="display:grid;grid-template-columns:1fr 90px 110px 90px;gap:8px;padding:12px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
               <div>{{ p.act }}</div>
@@ -1031,18 +1031,18 @@
   </div>
   </sc-if>
 
-  <!-- ===== ABSEN MODAL ===== -->
+  <!-- ===== CHECK-IN MODAL ===== -->
   <sc-if value="{{ showAbsen }}" hint-placeholder-val="{{ false }}">
   <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeAbsen }}">
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:420px;width:100%;text-align:center;">
       <div style="width:60px;height:60px;border-radius:50%;background:var(--volt-dim);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;">⏱️</div>
-      <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 8px;">Mulai Kelas Sekarang?</h2>
+      <h2 style="font-family:'Archivo';font-weight:800;font-size:22px;margin:0 0 8px;">Start Class Now?</h2>
       <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 6px;">{{ absenLabel }}</p>
-      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Kehadiran tercatat · timestamp &amp; device</div>
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · waktu server</div>
+      <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(62,213,152,.1);color:var(--green);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:100px;margin-bottom:20px;">✓ Attendance recorded · timestamp &amp; device</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;font-size:12.5px;color:var(--muted);font-family:'JetBrains Mono';margin-bottom:22px;text-align:left;">30 Jun 2026, 06:52:14 WIB<br>Chrome · MacOS · server time</div>
       <div style="display:flex;gap:11px;">
-        <button onclick="{{ closeAbsen }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Batal</button>
-        <button onclick="{{ confirmAbsen }}" style="flex:1.4;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Mulai Kelas</button>
+        <button onclick="{{ closeAbsen }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>
+        <button onclick="{{ confirmAbsen }}" style="flex:1.4;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Start Class</button>
       </div>
     </div>
   </div>
@@ -1056,11 +1056,11 @@
         <h2 style="font-family:'Archivo';font-weight:800;font-size:20px;margin:0;">Reset Password</h2>
         <button onclick="{{ closeReset }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:9px;width:30px;height:30px;flex-shrink:0;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="border-color:var(--red);color:var(--red);">✕</button>
       </div>
-      <p style="color:var(--muted);font-size:13.5px;margin:0 0 20px;">untuk <span style="color:var(--text);font-weight:700;">{{ resetName }}</span> — password lama langsung tidak berlaku.</p>
-      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;">Password Baru (ketik sendiri)</label>
-      <input placeholder="ketik password baru…" value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
+      <p style="color:var(--muted);font-size:13.5px;margin:0 0 20px;">for <span style="color:var(--text);font-weight:700;">{{ resetName }}</span> — the old password stops working immediately.</p>
+      <label style="display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px;">New Password (type it yourself)</label>
+      <input placeholder="type new password…" value="{{ resetPwd }}" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'JetBrains Mono';font-size:15px;outline:0;margin-bottom:20px;letter-spacing:.04em;">
       <div style="display:flex;gap:11px;">
-        <button onclick="{{ closeReset }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;transition:border-color .15s,color .15s;" style-hover="border-color:var(--muted);color:var(--text);">Batal</button>
+        <button onclick="{{ closeReset }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:11px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;transition:border-color .15s,color .15s;" style-hover="border-color:var(--muted);color:var(--text);">Cancel</button>
         <button onclick="{{ confirmReset }}" style="flex:1.3;background:var(--cyan);border:0;color:#08090B;border-radius:11px;padding:12px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;">Set Password</button>
       </div>
     </div>
