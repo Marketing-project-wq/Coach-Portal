@@ -55,6 +55,7 @@ window.__I18N = (function () {
     'No participant booking data yet.': 'Belum ada data booking peserta.',
     // ---- reviews ----
     'Participant Reviews': 'Review Peserta', 'Average ★': 'Rata-rata ★', 'Total reviews': 'Total review',
+    'Filter by coach': 'Filter per coach', 'All coaches': 'Semua coach', 'Rating': 'Rating',
     'Copy Link': 'Salin Link',
     // ---- venue ----
     'Assign Venue': 'Kirim ke Coach',

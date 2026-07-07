@@ -17,6 +17,7 @@ class Component extends DCLogic {
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       menuModal: false, menuBuilder: null,
+      reviewCoach: '', boardSort: 'pax',
       toast: '',
       lang: (window.localStorage && localStorage.getItem('arena_lang')) || 'en',
       d: this.emptyData(),
@@ -168,7 +169,7 @@ class Component extends DCLogic {
     else if (screen === 'members') this.api('/api/coach/members').then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30 })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
-    else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories })).catch(fail);
+    else if (screen === 'reviews') this.api('/api/coach/reviews' + (this.state.reviewCoach ? '?coach=' + encodeURIComponent(this.state.reviewCoach) : '')).then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories, reviewCoaches: r.coaches || [] })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage })).catch(fail);
@@ -368,6 +369,8 @@ class Component extends DCLogic {
     this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, venues: r.venues || [] })).catch((e) => this.toastMsg(e.message));
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Review link copied')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
+  setReviewCoach(name) { this.setState({ reviewCoach: name || '' }); if (!this.MOCK) this.loadScreen('reviews'); }
+  setBoardSort(mode) { this.setState({ boardSort: mode === 'rating' ? 'rating' : 'pax' }); }
   decideRotation(id, action) {
     if (this.MOCK) { const inc = this.state.d.rotations.incoming.filter((p) => p.id !== id); this.setD({ rotations: Object.assign({}, this.state.d.rotations, { incoming: inc }) }); return this.toastMsg(action === 'approve' ? 'Coverage approved' : 'Coverage rejected'); }
     this.api('/api/coach/rotations/' + encodeURIComponent(id) + '/decide', { method: 'POST', body: JSON.stringify({ action }) })
@@ -531,13 +534,23 @@ class Component extends DCLogic {
     const reviews = (D.reviews || []).map((rv) => Object.assign({}, rv, { coachSuffix: (isHCView && rv.coach) ? ' · Coach ' + rv.coach : '', tags: Array.isArray(rv.tags) ? rv.tags : [], hasComment: !!(rv.comment && rv.comment.length) }));
     const noReviews = reviews.length === 0;
     const reviewLink = (typeof location !== 'undefined' ? location.origin : '') + '/review';
-    // coach leaderboard (ranked by number of participants who booked the coach's classes)
-    const leaderboard = (D.leaderboard || []).map((l) => {
-      const av = this.avatar(l.name);
-      return { name: l.name, initials: this.ini(l.name), peserta: l.peserta, classes: l.classes, rank: l.rank,
-        medal: l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : String(l.rank),
-        rankCol: l.rank <= 3 ? C.amber : C.muted2, avBg: av[0], avFg: av[1], photo: l.photo || '', hasPhoto: !!l.photo,
-        rowBg: l.isMe ? 'var(--volt-dim)' : 'transparent', meLabel: l.isMe ? ' · You' : '' };
+    // HC/Admin only: filter the review feed by coach (external coaches flagged)
+    const reviewCoachOpts = (D.reviewCoaches || []).map((c) => ({ name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · external' : ''), picked: c.name === st.reviewCoach }));
+    const reviewFilterOn = isHCView && reviewCoachOpts.length > 0;
+    // coach leaderboard — sortable by participants (pax) or by average participant review rating
+    const boardSort = st.boardSort === 'rating' ? 'rating' : 'pax';
+    const boardRaw = (D.leaderboard || []).slice().sort((a, b) => boardSort === 'rating'
+      ? ((b.rating || 0) - (a.rating || 0)) || ((b.reviewCount || 0) - (a.reviewCount || 0)) || ((b.peserta || 0) - (a.peserta || 0))
+      : ((b.peserta || 0) - (a.peserta || 0)) || ((b.classes || 0) - (a.classes || 0)));
+    const leaderboard = boardRaw.map((l, i) => {
+      const av = this.avatar(l.name); const rank = i + 1;
+      return { name: l.name, initials: this.ini(l.name), peserta: l.peserta, classes: l.classes, rank,
+        medal: rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank),
+        rankCol: rank <= 3 ? C.amber : C.muted2, avBg: av[0], avFg: av[1], photo: l.photo || '', hasPhoto: !!l.photo,
+        rowBg: l.isMe ? 'var(--volt-dim)' : 'transparent', meLabel: l.isMe ? ' · You' : '',
+        metricVal: boardSort === 'rating' ? (l.rating ? Number(l.rating).toFixed(1) : '–') : String(l.peserta),
+        metricLabel: boardSort === 'rating' ? '★ avg' : 'pax',
+        subLabel: boardSort === 'rating' ? ((l.reviewCount || 0) + ' reviews') : (l.classes + ' classes') };
     });
     const noBoard = leaderboard.length === 0;
     const recentClasses = D.recent || [];
@@ -678,6 +691,7 @@ class Component extends DCLogic {
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
+      boardSortPax: seg(boardSort === 'pax'), boardSortRating: seg(boardSort === 'rating'), sortByPax: () => this.setBoardSort('pax'), sortByRating: () => this.setBoardSort('rating'),
       showVenueNav: true, goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
       venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts,
       venueOwn, noVenueOwn, hasVenueOwn: !noVenueOwn,
@@ -694,6 +708,7 @@ class Component extends DCLogic {
       menuState: st.menuOpen ? 'open' : 'closed', toggleMenu: () => this.toggleMenu(), closeMenu: () => this.closeMenu(),
       goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
+      reviewFilterOn, reviewCoachOpts, setReviewCoach: (e) => this.setReviewCoach(e && e.target ? e.target.value : ''),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
       detailTime, detailType, detailDate, detailTimeRange, absenLabel,
       coachToday, week, recentClasses, participants, subOptions, emailLog,
@@ -740,15 +755,16 @@ class Component extends DCLogic {
     d.membersTotal = 42; d.membersActive = 28;
     d.reviewAvg = 4.6; d.reviewCount = 2;
     d.reviewCats = [{ label: 'Clear Instructions', avg: '4.8' }, { label: 'Technique Correction', avg: '4.5' }, { label: 'Member Support', avg: '4.9' }, { label: 'Professionalism', avg: '4.7' }, { label: 'Class Management', avg: '4.6' }];
-    d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'The coach is patient & clear, the class is fun!', tags: ['Clear instructions', 'Patient & supportive', 'Fun class'], date: '1 Jul' }, { coach: 'Rheza', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: '', tags: ['On time', 'Motivating'], date: '28 Jun' }];
+    d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'The coach is patient & clear, the class is fun!', tags: ['Clear instructions', 'Patient & supportive', 'Fun class'], date: '1 Jul' }, { coach: 'Brian', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: 'External coach, solid session.', tags: ['On time', 'Motivating'], date: '28 Jun' }];
+    d.reviewCoaches = [{ name: 'Rheza', role: 'Coach', external: false }, { name: 'Elsen', role: 'Coach', external: false }, { name: 'Calysta', role: 'Coach', external: false }, { name: 'Nando', role: 'Head Coach', external: false }, { name: 'Brian', role: 'Coach', external: true }, { name: 'Gilang', role: 'Coach', external: true }, { name: 'Mae', role: 'Coach', external: true }, { name: 'YoKae', role: 'Coach', external: true }];
     const LPH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
     d.leaderboard = [
-      { name: 'Elsen', peserta: 11, classes: 2, rank: 1, isMe: false },
-      { name: 'Brian', peserta: 7, classes: 2, rank: 2, isMe: false },
-      { name: 'Gilang', peserta: 6, classes: 2, rank: 3, isMe: false },
-      { name: 'Rheza', peserta: 4, classes: 2, rank: 4, isMe: true, photo: LPH + 'rheza-1778032238203.png' },
-      { name: 'Mae', peserta: 3, classes: 1, rank: 5, isMe: false },
-      { name: 'Calysta', peserta: 1, classes: 1, rank: 6, isMe: false, photo: LPH + 'calysta-1778032200529.png' },
+      { name: 'Elsen', peserta: 11, classes: 2, rank: 1, isMe: false, rating: 4.2, reviewCount: 5 },
+      { name: 'Brian', peserta: 7, classes: 2, rank: 2, isMe: false, rating: 4.9, reviewCount: 8 },
+      { name: 'Gilang', peserta: 6, classes: 2, rank: 3, isMe: false, rating: 3.8, reviewCount: 4 },
+      { name: 'Rheza', peserta: 4, classes: 2, rank: 4, isMe: true, photo: LPH + 'rheza-1778032238203.png', rating: 4.7, reviewCount: 6 },
+      { name: 'Mae', peserta: 3, classes: 1, rank: 5, isMe: false, rating: 5, reviewCount: 2 },
+      { name: 'Calysta', peserta: 1, classes: 1, rank: 6, isMe: false, photo: LPH + 'calysta-1778032200529.png', rating: 0, reviewCount: 0 },
     ];
     d.week = [['MON', '23', '2 cls', true], ['TUE', '24', '1 cls', false], ['WED', '25', '2 cls', false], ['THU', '26', '1 cls', false], ['FRI', '27', '2 cls', false], ['SAT', '28', '—', false], ['SUN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];

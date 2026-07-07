@@ -718,22 +718,26 @@ route('POST', '/api/public/review', async (req, res) => {
 });
 
 // Reviews for the portal (coach sees own; head coach/admin see all)
-route('GET', '/api/coach/reviews', async (req, res, s) => {
+route('GET', '/api/coach/reviews', async (req, res, s, query) => {
   // External coaches can be reviewed, but only Admin/HC may see those reviews.
   if (isExternalSession(s)) return send(res, 403, { error: 'Reviews can only be viewed by Admin & Head Coach.' });
   const isHC = s.r === 'hc' || s.r === 'admin';
+  // HC/Admin may filter the feed to one coach (e.g. an external coach); a coach only sees their own.
+  const coachFilter = isHC ? String((query && query.coach) || '').trim() : s.c;
   let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,ratings,created_at&order=created_at.desc&limit=100';
   // Match co-taught classes too (coach_name may be stored as "A & Coach").
-  if (!isHC) q += `&coach_name=ilike.*${enc(s.c)}*`;
+  if (coachFilter) q += `&coach_name=ilike.*${enc(coachFilter)}*`;
   let rows = (await sb(q)) || [];
-  if (!isHC) rows = rows.filter((x) => instructorHasCoach(x.coach_name, s.c));
+  if (coachFilter) rows = rows.filter((x) => instructorHasCoach(x.coach_name, coachFilter));
   const avg = rows.length ? rows.reduce((a, x) => a + x.rating, 0) / rows.length : 0;
   // per-category averages across all shown reviews
   const catSum = {}; const catCnt = {};
   for (const x of rows) { const r = x.ratings || {}; for (const c of REVIEW_CATS) { const v = parseInt(r[c.key], 10); if (v >= 1 && v <= 5) { catSum[c.key] = (catSum[c.key] || 0) + v; catCnt[c.key] = (catCnt[c.key] || 0) + 1; } } }
   const categories = REVIEW_CATS.filter((c) => catCnt[c.key]).map((c) => ({ label: c.label, avg: (Math.round((catSum[c.key] / catCnt[c.key]) * 10) / 10).toFixed(1) }));
   const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Class', name: x.reviewer_name || 'Anonymous', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', tags: [], date: fmtDMon(String(x.created_at).slice(0, 10)) }));
-  return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length, categories });
+  // HC/Admin get the coach list (external flagged) so they can filter the feed per coach.
+  const coaches = isHC ? await assignableCoaches() : [];
+  return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length, categories, coaches, coach: coachFilter });
 });
 
 // Exact row count via PostgREST Content-Range (no rows fetched) — avoids the 1000-row cap.
@@ -774,6 +778,18 @@ route('GET', '/api/coach/leaderboard', async (req, res, s) => {
     }
     results.push({ name: nm, peserta, classes: byCoach[nm].classes });
   }
+  // Average participant review rating per coach (all-time), so the board can be sorted by rating too.
+  const revRows = await sbAll('arena_class_reviews?select=coach_name,rating&order=created_at.desc');
+  const revByCoach = {};
+  for (const r of revRows) {
+    const rt = parseInt(r.rating, 10); if (!(rt >= 1 && rt <= 5)) continue;
+    for (const tok of instructorTokens(r.coach_name)) {
+      const nm = canon.get(tok.toLowerCase()); if (!nm) continue;
+      if (!revByCoach[nm]) revByCoach[nm] = { sum: 0, cnt: 0 };
+      revByCoach[nm].sum += rt; revByCoach[nm].cnt++;
+    }
+  }
+  for (const r of results) { const rv = revByCoach[r.name] || { sum: 0, cnt: 0 }; r.reviewCount = rv.cnt; r.rating = rv.cnt ? Math.round((rv.sum / rv.cnt) * 10) / 10 : 0; }
   const pm = await coachPhotoMap();
   const board = results.sort((a, b) => b.peserta - a.peserta || b.classes - a.classes)
     .map((x, i) => Object.assign({ rank: i + 1, isMe: x.name === s.c, photo: coachPhoto(pm, x.name) }, x));
