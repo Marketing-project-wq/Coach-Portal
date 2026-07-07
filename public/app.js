@@ -225,14 +225,14 @@ class Component extends DCLogic {
   // ---------- Class Menu builder (structured popup: note + blocks + exercises) ----------
   _emptyItem() { return { amount: '', unit: 'kali', name: '', weight: '' }; }
   _emptyBlock(label) { return { label: label || '', items: [this._emptyItem()] }; }
-  _defaultBuilder() { return { id: null, title: '', category: '', note: '', blocks: [this._emptyBlock('A')] }; }
+  _defaultBuilder() { return { id: null, title: '', category: '', note: '', noteBottom: '', blocks: [this._emptyBlock('A')] }; }
   openMenuModal() { this.setState({ menuModal: true, menuBuilder: this._defaultBuilder() }); }
   closeMenuModal() { this.setState({ menuModal: false, menuBuilder: null }); }
   // Read the modal's live input values back into menuBuilder before any re-render.
   _syncBuilder() {
     const mb = this.state.menuBuilder; if (!mb) return mb;
     const g = (sel) => { const el = document.querySelector(sel); return el ? el.value : ''; };
-    mb.title = g('[data-mb="title"]'); mb.category = g('[data-mb="category"]'); mb.note = g('[data-mb="note"]');
+    mb.title = g('[data-mb="title"]'); mb.category = g('[data-mb="category"]'); mb.note = g('[data-mb="note"]'); mb.noteBottom = g('[data-mb="noteBottom"]');
     mb.blocks.forEach((b, bi) => {
       b.label = g('[data-mb="b' + bi + 'label"]');
       b.items.forEach((it, ii) => {
@@ -250,7 +250,7 @@ class Component extends DCLogic {
   removeMenuItem(bi, ii) { const mb = this._syncBuilder(); mb.blocks[bi].items.splice(ii, 1); if (!mb.blocks[bi].items.length) mb.blocks[bi].items.push(this._emptyItem()); this.setState({ menuBuilder: mb }); }
   _builderToStored(mb) {
     return {
-      fmt: 'menu1', note: (mb.note || '').trim(),
+      fmt: 'menu1', note: (mb.note || '').trim(), noteBottom: (mb.noteBottom || '').trim(),
       blocks: mb.blocks.map((b) => ({
         label: (b.label || '').trim(),
         items: b.items.map((it) => ({ amount: (it.amount || '').trim(), unit: it.unit || 'kali', name: (it.name || '').trim(), weight: (it.weight || '').trim() })).filter((it) => it.name || it.amount),
@@ -261,7 +261,7 @@ class Component extends DCLogic {
     let obj = null; try { obj = JSON.parse(content); } catch (e) { obj = null; }
     if (!obj || obj.fmt !== 'menu1') return null;
     const blocks = (obj.blocks || []).map((b) => ({ label: b.label || '', items: (b.items && b.items.length ? b.items : [this._emptyItem()]).map((it) => ({ amount: it.amount || '', unit: it.unit || 'kali', name: it.name || '', weight: it.weight || '' })) }));
-    return { id: null, title: '', category: '', note: obj.note || '', blocks: blocks.length ? blocks : [this._emptyBlock('A')] };
+    return { id: null, title: '', category: '', note: obj.note || '', noteBottom: obj.noteBottom || '', blocks: blocks.length ? blocks : [this._emptyBlock('A')] };
   }
   // Turn a stored structured menu into readable lines for the card. Returns null for plain-text menus.
   _formatMenu(content) {
@@ -276,6 +276,7 @@ class Component extends DCLogic {
       if (blk.label) lines.push(blk.label);
       items.forEach((it) => { const w = it.weight ? (' ' + it.weight) : ''; lines.push((head(it.amount, it.unit) + (it.name || '') + w).trim()); });
     });
+    if (b.noteBottom) { if (lines.length) lines.push(''); lines.push(b.noteBottom); }
     return lines.join('\n');
   }
   saveMenuBuilder() {
@@ -283,7 +284,7 @@ class Component extends DCLogic {
     const title = (mb.title || '').trim();
     if (!title) return this.toastMsg('Menu name is required.');
     const stored = this._builderToStored(mb);
-    if (!stored.blocks.length) return this.toastMsg('Add at least one exercise.');
+    if (!stored.blocks.length && !stored.note && !stored.noteBottom) return this.toastMsg('Add at least one exercise or note.');
     const payload = { title, category: (mb.category || '').trim(), content: JSON.stringify(stored) };
     const editId = mb.id;
     if (this.MOCK) { this.setState({ menuModal: false, menuBuilder: null }); return this.toastMsg(editId ? 'Menu updated' : 'Class menu saved'); }
@@ -294,7 +295,7 @@ class Component extends DCLogic {
   }
   startEditMenu(m) {
     const parsed = this._parseStored(m.content);
-    const mb = parsed || { id: null, title: '', category: '', note: m.content || '', blocks: [this._emptyBlock('')] };
+    const mb = parsed || { id: null, title: '', category: '', note: m.content || '', noteBottom: '', blocks: [this._emptyBlock('')] };
     mb.id = m.id; mb.title = m.title || ''; mb.category = m.category || '';
     this.setState({ menuModal: true, menuBuilder: mb });
   }
@@ -683,7 +684,7 @@ class Component extends DCLogic {
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
       openMenuModal: () => this.openMenuModal(),
       showMenuModal: !!st.menuModal, menuModalTitle: (mb && mb.id) ? 'Edit Menu' : 'Add Menu',
-      mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbNote: mb ? mb.note : '', mbBlocks,
+      mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbNote: mb ? mb.note : '', mbNoteBottom: mb ? mb.noteBottom : '', mbBlocks,
       closeMenuModal: () => this.closeMenuModal(), saveMenuBuilder: () => this.saveMenuBuilder(), addMenuBlock: () => this.addMenuBlock(),
       arenaLocSet, arenaRadius, arenaLocStatus, arenaLocCol, captureArenaLoc: () => this.captureArenaLoc(), clearArenaLoc: () => this.clearArenaLoc(),
       pageKicker: tt[0], pageTitle: tt[1],
@@ -783,7 +784,7 @@ class Component extends DCLogic {
     d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: true, started: false, calDate: '2026-07-10', calStart: '16:00', calEnd: '20:00' }, { id: 'v3', time: '09:00', end: '– 11:00', customer: 'Corporate Group', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: false, started: true, calDate: '2026-07-10', calStart: '09:00', calEnd: '11:00' }];
     d.menuCanManage = true;
     d.classMenus = [
-      { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', by: 'Nando', content: JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [
+      { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', by: 'Nando', content: JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', noteBottom: 'Cooldown: 5 min mobility + stretching', blocks: [
         { label: 'Wu', items: [{ amount: '2', unit: 'lap', name: 'Run', weight: '' }] },
         { label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski', weight: '' }, { amount: '150', unit: 'meter', name: 'row', weight: '' }, { amount: '1', unit: 'lap', name: 'run', weight: '' }] },
         { label: 'B', items: [{ amount: '10', unit: 'kali', name: 'Wallballs', weight: '' }, { amount: '10', unit: 'kali', name: 'Box Jump', weight: '' }, { amount: '10', unit: 'kali', name: 'SB squat', weight: '10/20 kg' }] },

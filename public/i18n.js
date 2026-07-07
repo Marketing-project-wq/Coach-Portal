@@ -68,6 +68,8 @@ window.__I18N = (function () {
     'Save Menu': 'Simpan Menu', 'Update Menu': 'Update Menu', 'Add New Menu': 'Tambah Menu Baru',
     // structured menu builder
     'Add Menu': 'Tambah Menu', '+ Add Menu': '+ Tambah Menu', 'Menu Name': 'Nama Menu', 'Top Note': 'Catatan Atas',
+    'Notes / manual add-on — before blocks': 'Catatan / add-on manual — sebelum blok',
+    'Notes / manual add-on — after blocks': 'Catatan / add-on manual — setelah blok',
     '+ Add Exercise': '+ Tambah Exercise', '+ Add Block': '+ Tambah Blok', 'Block': 'Blok',
     'exercise (e.g. Wallballs)': 'exercise (mis. Wallballs)', 'kg (opt)': 'kg (ops)',
     // ---- reports ----
