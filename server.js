@@ -473,7 +473,7 @@ async function coachVenueCards(coach, from, to, today) {
   let q = `arena_bookings?select=id,full_name,booking_date,start_time,end_time&id=in.(${ids.map(enc).join(',')})&status=neq.cancelled&booking_date=gte.${from}`;
   if (to) q += `&booking_date=lte.${to}`;
   const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
-  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Arena booking', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date >= today && !started }; });
+  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Arena booking', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date >= today && !started, calDate: b.booking_date, calStart: hhmm(b.start_time), calEnd: hhmm(b.end_time) }; });
 }
 
 // List venue bookings — HC/admin see all upcoming from Admin Hub; a coach sees only bookings assigned to them.
