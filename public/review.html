@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id"><head>
+<html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rate Your Coach</title>
@@ -59,7 +59,7 @@
       <div class="field">
         <label for="code">Phone Number</label>
         <input id="code" placeholder="08xxxxxxxxxx" inputmode="tel" autocomplete="off">
-        <div style="font-size:11.5px;color:var(--muted2);margin-top:7px;">Punya kode booking? Bisa juga ketik kodenya di sini.</div>
+        <div style="font-size:11.5px;color:var(--muted2);margin-top:7px;">Have a booking code? You can also type it here.</div>
       </div>
       <button class="btn" id="findBtn">Search</button>
       <div class="msg" id="msg1"></div>
@@ -75,24 +75,24 @@
         </div>
       </div>
 
-      <div class="sechead">Nilai coach kamu</div>
+      <div class="sechead">Rate your coach</div>
       <div class="catlist" id="catlist"></div>
 
       <div class="field" style="margin-top:16px;">
-        <label for="comment">Other (opsional)</label>
-        <textarea id="comment" placeholder="Tulis masukan lain untuk coach…"></textarea>
+        <label for="comment">Other (optional)</label>
+        <textarea id="comment" placeholder="Write any other feedback for the coach…"></textarea>
       </div>
 
       <div class="divider"></div>
 
       <div class="field">
-        <label for="rname">Nama (opsional)</label>
-        <input id="rname" placeholder="Nama Anda">
+        <label for="rname">Name (optional)</label>
+        <input id="rname" placeholder="Your name">
       </div>
 
-      <button class="btn" id="submitBtn">Kirim Review</button>
+      <button class="btn" id="submitBtn">Send Review</button>
       <div class="msg" id="msg2"></div>
-      <button class="btn ghost" id="backBtn" style="margin-top:10px;">← Ganti kode booking</button>
+      <button class="btn ghost" id="backBtn" style="margin-top:10px;">← Change booking code</button>
     </div>
 
     <!-- STEP 3: done -->
@@ -135,17 +135,17 @@
     async function api(path, body){
       var r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       var d = await r.json().catch(function(){ return {}; });
-      if (!r.ok) throw new Error(d.error || 'Terjadi kesalahan.');
+      if (!r.ok) throw new Error(d.error || 'Something went wrong.');
       return d;
     }
 
     async function doLookup(val, btn){
       var m = $('msg1'); m.textContent=''; m.className='msg';
-      if (!val){ m.textContent='Masukkan nomor HP atau kode booking dulu.'; m.className='msg err'; return; }
-      if (btn){ btn.disabled=true; btn.textContent='Mencari…'; }
+      if (!val){ m.textContent='Enter your phone number or booking code first.'; m.className='msg err'; return; }
+      if (btn){ btn.disabled=true; btn.textContent='Searching…'; }
       try{
         var d = await api('/api/public/lookup', { q: val });
-        if (d.already){ m.textContent='Kelas ini sudah pernah diberi review. Terima kasih!'; m.className='msg err'; return; }
+        if (d.already){ m.textContent='This class has already been reviewed. Thank you!'; m.className='msg err'; return; }
         state.code = d.booking_code; resetCats();
         $('clsName').textContent = d.class_label + (d.coach ? ' · Coach ' + d.coach : '');
         $('clsMeta').textContent = (d.date ? d.date : '') + (d.booking_code ? ' · ' + d.booking_code : '');
@@ -162,12 +162,12 @@
     $('submitBtn').onclick = async function(){
       var m = $('msg2'); m.textContent=''; m.className='msg';
       var overall = overallFromCats();
-      if (!overall){ m.textContent='Beri minimal satu rating dulu.'; m.className='msg err'; return; }
-      this.disabled=true; this.textContent='Mengirim…';
+      if (!overall){ m.textContent='Give at least one rating first.'; m.className='msg err'; return; }
+      this.disabled=true; this.textContent='Sending…';
       try{
         await api('/api/public/review', { booking_code: state.code, rating: overall, ratings: state.ratings, name: $('rname').value.trim(), comment: $('comment').value.trim() });
         show('step3');
-      }catch(e){ m.textContent=e.message; m.className='msg err'; this.disabled=false; this.textContent='Kirim Review'; }
+      }catch(e){ m.textContent=e.message; m.className='msg err'; this.disabled=false; this.textContent='Send Review'; }
     };
 
     $('backBtn').onclick = function(){ show('step1'); };

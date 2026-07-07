@@ -69,10 +69,10 @@ async function sb(q, options = {}) {
 }
 function todayJakarta() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()); }
 function hhmm(t) { return t ? String(t).slice(0, 5) : ''; }
-const DOW = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
-const DOW_FULL = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-const MON_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MON_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function fmtDMon(d) { const dt = new Date(d + 'T00:00:00'); return dt.getDate() + ' ' + MON[dt.getMonth()]; }
 function dLabel(d) { const dt = new Date(d + 'T00:00:00'); return DOW[dt.getDay()].charAt(0) + DOW[dt.getDay()].slice(1).toLowerCase() + ' ' + dt.getDate() + ' ' + MON[dt.getMonth()]; }
 
@@ -83,7 +83,7 @@ async function classTypes() {
   const rows = await sb('arena_class_types?select=id,name,color');
   const m = {}; for (const r of rows || []) m[r.id] = r; _typeCache = m; return m;
 }
-function shortType(name) { return String(name || '').replace(/^20FIT Arena\s*/i, '').replace(/^HYROX\s*/i, 'HYROX ').trim() || 'Kelas'; }
+function shortType(name) { return String(name || '').replace(/^20FIT Arena\s*/i, '').replace(/^HYROX\s*/i, 'HYROX ').trim() || 'Class'; }
 
 // Coach photo + speciality live in the shared `arena_coaches` table
 // (public storage URLs), keyed by coach name. Cached — these change rarely.
@@ -215,7 +215,7 @@ function cardsFrom(sched, counts, started, types, today) {
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
       peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted,
       accent: isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C'),
-      status: isStarted ? 'Sedang Berlangsung' : (isToday ? 'Akan Datang' : 'Terjadwal'),
+      status: isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled'),
       // Show the start button for any upcoming class (today or later) that isn't started yet,
       // so a coach always finds it when they open the class — not only on the exact day.
       canAbsen: upcoming && !isStarted, dateLabel: dLabel(x.schedule_date) };
@@ -280,11 +280,11 @@ function match(pattern, url) {
 // ===== AUTH =====
 route('POST', '/api/auth/login', async (req, res) => {
   const body = await readBody(req);
-  if (!body || !body.username || !body.password) return send(res, 400, { error: 'Username & password wajib diisi.' });
+  if (!body || !body.username || !body.password) return send(res, 400, { error: 'Username & password are required.' });
   const uname = String(body.username).toLowerCase().trim();
   const rows = await sb(`arena_coach_users?select=*&username=eq.${enc(uname)}&limit=1`);
   const u = rows && rows[0];
-  if (!u || !u.is_active || !verifyPassword(body.password, u.password_hash)) return send(res, 401, { error: 'Username atau password salah.' });
+  if (!u || !u.is_active || !verifyPassword(body.password, u.password_hash)) return send(res, 401, { error: 'Incorrect username or password.' });
   sb(`arena_coach_users?id=eq.${enc(u.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ last_login: new Date().toISOString() }) }).catch(() => {});
   const token = signToken({ u: u.username, c: u.coach_name, d: u.display_name || u.coach_name, r: u.role || 'coach' });
   return send(res, 200, { token, coach: { coach_name: u.coach_name, display_name: u.display_name || u.coach_name, role: u.role || 'coach', external: (u.role || 'coach') === 'coach' && isExternalCoach(u.coach_name) } });
@@ -321,7 +321,7 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
   const upStarted = await startedSet(upIds);
   const todayList = cardsFrom(upcomingSched, upCounts, upStarted, types, today);
   const todayCount = upcomingSched.filter((x) => x.schedule_date === today).length;
-  const todayLabel = `${DOW_FULL[d0.getDay()]}, ${d0.getDate()} ${MON_FULL[d0.getMonth()]} ${d0.getFullYear()} · ` + (todayCount > 0 ? `${todayCount} kelas hari ini` : `${todayList.length} kelas mendatang`);
+  const todayLabel = `${DOW_FULL[d0.getDay()]}, ${d0.getDate()} ${MON_FULL[d0.getMonth()]} ${d0.getFullYear()} · ` + (todayCount > 0 ? `${todayCount} classes today` : `${todayList.length} upcoming classes`);
 
   // week strip (navigable)
   const wk = await coachWeek(s.c, iso(weekStart), today);
@@ -451,7 +451,7 @@ async function venueAssignments() {
 // Shape an arena_bookings row for the venue list.
 function venueBookingRow(b, assignMap, ptRates) {
   const a = assignMap[b.id];
-  return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(tanpa nama)',
+  return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(no name)',
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
     time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: a ? a.coach_name : '', status: b.status || '' };
 }
@@ -473,7 +473,7 @@ async function coachVenueCards(coach, from, to, today) {
   let q = `arena_bookings?select=id,full_name,booking_date,start_time,end_time&id=in.(${ids.map(enc).join(',')})&status=neq.cancelled&booking_date=gte.${from}`;
   if (to) q += `&booking_date=lte.${to}`;
   const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
-  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Booking arena', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date >= today && !started }; });
+  return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Arena booking', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date >= today && !started }; });
 }
 
 // List venue bookings — HC/admin see all upcoming from Admin Hub; a coach sees only bookings assigned to them.
@@ -492,15 +492,15 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
 });
 // Assign / reassign the responsible coach for an arena+coach booking (HC/admin only).
 route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const body = await readBody(req);
-  if (!body || !body.coach_name) return send(res, 400, { error: 'Coach wajib dipilih.' });
+  if (!body || !body.coach_name) return send(res, 400, { error: 'Please select a coach.' });
   await sb('arena_venue_assignments', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ booking_id: params.id, coach_name: String(body.coach_name).trim(), assigned_by: s.d || s.c, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
 // Remove the coach assignment (HC/admin only) — never touches the Admin Hub booking itself.
 route('POST', '/api/venue/bookings/:id/unassign', async (req, res, s, q, params) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   return send(res, 200, { ok: true });
 });
@@ -508,14 +508,14 @@ route('POST', '/api/venue/bookings/:id/unassign', async (req, res, s, q, params)
 route('POST', '/api/venue/bookings/:id/start', async (req, res, s, q, params) => {
   const asg = await sb(`arena_venue_assignments?select=coach_name&booking_id=eq.${enc(params.id)}&limit=1`);
   const a = asg && asg[0];
-  if (!a) return send(res, 404, { error: 'Booking belum di-assign ke coach.' });
-  if (a.coach_name !== s.c) return send(res, 403, { error: 'Bukan booking Anda.' });
+  if (!a) return send(res, 404, { error: 'This booking has not been assigned to a coach.' });
+  if (a.coach_name !== s.c) return send(res, 403, { error: 'This is not your booking.' });
   const body = (await readBody(req)) || {};
   const loc = await arenaLocation();
   if (loc) {
-    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Aktifkan izin lokasi di HP kamu untuk mulai kelas.', needLocation: true });
+    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Enable location access on your phone to start the class.', needLocation: true });
     const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
-    if (dist > loc.radius_m) return send(res, 403, { error: `Kamu harus berada di arena untuk mulai kelas (jarak kamu ~${Math.round(dist)} m dari arena).`, tooFar: true });
+    if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
   }
   await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ started_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true, started: true });
@@ -541,13 +541,13 @@ route('GET', '/api/settings/arena-location', async (req, res, s) => {
   return send(res, 200, { set: !!loc, lat: loc ? loc.lat : null, lng: loc ? loc.lng : null, radius_m: loc ? loc.radius_m : 150 });
 });
 route('POST', '/api/settings/arena-location', async (req, res, s) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = (await readBody(req)) || {};
   if (body.clear) {
     await sb('arena_settings?id=eq.1', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ arena_lat: null, arena_lng: null, updated_by: s.d || s.c, updated_at: new Date().toISOString() }) });
     return send(res, 200, { ok: true });
   }
-  if (body.lat == null || body.lng == null) return send(res, 400, { error: 'Lokasi wajib diisi.' });
+  if (body.lat == null || body.lng == null) return send(res, 400, { error: 'Location is required.' });
   const radius = Math.max(20, Math.min(2000, parseInt(body.radius_m, 10) || 150));
   await sb('arena_settings?id=eq.1', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ arena_lat: Number(body.lat), arena_lng: Number(body.lng), radius_m: radius, updated_by: s.d || s.c, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
@@ -561,7 +561,7 @@ route('GET', '/api/coach/menu', async (req, res, s) => {
 });
 route('POST', '/api/coach/menu', async (req, res, s) => {
   const body = await readBody(req);
-  if (!body || !body.title || !body.content) return send(res, 400, { error: 'Nama menu & isi menu wajib diisi.' });
+  if (!body || !body.title || !body.content) return send(res, 400, { error: 'Menu name & content are required.' });
   await sb('arena_class_menus', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ title: String(body.title).trim().slice(0, 160), category: body.category ? String(body.category).trim().slice(0, 80) : null, content: String(body.content).trim().slice(0, 4000), created_by: s.d || s.c }) });
   return send(res, 200, { ok: true });
 });
@@ -569,9 +569,9 @@ route('POST', '/api/coach/menu/:id/delete', async (req, res, s, q, params) => {
   // The author or a Head Coach / Admin may remove a menu entry.
   const rows = await sb(`arena_class_menus?select=created_by&id=eq.${enc(params.id)}&limit=1`);
   const m = rows && rows[0];
-  if (!m) return send(res, 404, { error: 'Menu tidak ditemukan.' });
+  if (!m) return send(res, 404, { error: 'Menu not found.' });
   const mine = m.created_by === s.d || m.created_by === s.c;
-  if (!mine && !requireHC(s)) return send(res, 403, { error: 'Hanya pembuat atau Head Coach yang bisa menghapus.' });
+  if (!mine && !requireHC(s)) return send(res, 403, { error: 'Only the author or a Head Coach can delete this.' });
   await sb(`arena_class_menus?id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   return send(res, 200, { ok: true });
 });
@@ -579,18 +579,18 @@ route('POST', '/api/coach/menu/:id/update', async (req, res, s, q, params) => {
   // The author or a Head Coach / Admin may edit a menu entry.
   const rows = await sb(`arena_class_menus?select=created_by&id=eq.${enc(params.id)}&limit=1`);
   const m = rows && rows[0];
-  if (!m) return send(res, 404, { error: 'Menu tidak ditemukan.' });
+  if (!m) return send(res, 404, { error: 'Menu not found.' });
   const mine = m.created_by === s.d || m.created_by === s.c;
-  if (!mine && !requireHC(s)) return send(res, 403, { error: 'Hanya pembuat atau Head Coach yang bisa mengedit.' });
+  if (!mine && !requireHC(s)) return send(res, 403, { error: 'Only the author or a Head Coach can edit this.' });
   const body = await readBody(req);
-  if (!body || !body.title || !body.content) return send(res, 400, { error: 'Nama menu & isi menu wajib diisi.' });
+  if (!body || !body.title || !body.content) return send(res, 400, { error: 'Menu name & content are required.' });
   await sb(`arena_class_menus?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ title: String(body.title).trim().slice(0, 160), category: body.category ? String(body.category).trim().slice(0, 80) : null, content: String(body.content).trim().slice(0, 4000) }) });
   return send(res, 200, { ok: true });
 });
 
 // ===== COACH: participants — how many times each attended + recency of last visit =====
 route('GET', '/api/coach/members', async (req, res, s) => {
-  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
+  if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
   const today = todayJakarta();
   const map = await coachAttendanceMap(s.c, today);
   const members = Object.keys(map).map((k) => {
@@ -620,11 +620,11 @@ async function reviewed(code) {
 // class they attended (already happened) that hasn't been reviewed yet.
 async function bookingByPhone(phone, today) {
   const norm = normPhone(phone);
-  if (norm.length < 8) return { error: 'Nomor HP tidak valid.' };
+  if (norm.length < 8) return { error: 'Invalid phone number.' };
   const last4 = norm.slice(-4);
   const cands = (await sb(`arena_class_bookings?select=booking_code,schedule_id,full_name,phone&status=eq.confirmed&phone=like.*${last4}*&limit=500`)) || [];
   const matches = cands.filter((x) => normPhone(x.phone) === norm);
-  if (!matches.length) return { error: 'Booking dengan nomor HP ini tidak ditemukan.' };
+  if (!matches.length) return { error: 'No booking found for this phone number.' };
   const sids = Array.from(new Set(matches.map((m) => m.schedule_id).filter(Boolean)));
   const scheds = sids.length ? (await sb(`arena_class_schedules?select=id,schedule_date,start_time&id=in.(${sids.map(enc).join(',')})`)) || [] : [];
   const metaById = {}; for (const s of scheds) metaById[s.id] = s;
@@ -635,19 +635,19 @@ async function bookingByPhone(phone, today) {
       if (a.s.schedule_date !== b.s.schedule_date) return a.s.schedule_date < b.s.schedule_date ? 1 : -1;
       return (a.s.start_time || '') < (b.s.start_time || '') ? 1 : -1;
     });
-  if (!occurred.length) return { error: 'Belum ada kelas yang selesai untuk nomor HP ini. Review bisa diberikan setelah kelas selesai.' };
+  if (!occurred.length) return { error: 'No completed classes for this phone number yet. Reviews can be submitted after a class is finished.' };
   for (const o of occurred) { if (!(await reviewed(o.m.booking_code))) return { booking: o.m }; }
   return { allReviewed: true, booking: occurred[0].m };
 }
 route('POST', '/api/public/lookup', async (req, res) => {
   const body = await readBody(req);
   const q = body && String(body.q || body.booking_code || '').trim();
-  if (!q) return send(res, 400, { error: 'Nomor HP atau kode booking wajib diisi.' });
+  if (!q) return send(res, 400, { error: 'Phone number or booking code is required.' });
   let b, code, forceAlready = false;
   if (/[A-Za-z]/.test(q)) { // looks like a booking code (e.g. CL-...)
     code = q.toUpperCase();
     b = await bookingByCode(code);
-    if (!b || !b.schedule_id) return send(res, 404, { error: 'Kode booking kelas tidak ditemukan.' });
+    if (!b || !b.schedule_id) return send(res, 404, { error: 'Class booking code not found.' });
   } else { // phone number
     const r = await bookingByPhone(q, todayJakarta());
     if (r.error) return send(res, 404, { error: r.error });
@@ -657,7 +657,7 @@ route('POST', '/api/public/lookup', async (req, res) => {
   const sc = scs && scs[0]; const types = await classTypes();
   const already = forceAlready || (await reviewed(code));
   const pm = await coachPhotoMap();
-  return send(res, 200, { found: true, booking_code: code, coach: sc ? sc.instructor : '', coach_photo: coachPhoto(pm, sc ? sc.instructor : ''), class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Kelas', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
+  return send(res, 200, { found: true, booking_code: code, coach: sc ? sc.instructor : '', coach_photo: coachPhoto(pm, sc ? sc.instructor : ''), class_label: sc ? shortType((types[sc.class_type_id] || {}).name) : 'Class', date: sc ? sc.schedule_date : '', name: b.full_name || '', already });
 });
 // Per-category star ratings a participant gives a coach (each 1-5). "Other" is free text.
 const REVIEW_CATS = [
@@ -672,11 +672,11 @@ route('POST', '/api/public/review', async (req, res) => {
   const body = await readBody(req);
   const code = body && String(body.booking_code || '').trim().toUpperCase();
   const rating = body && parseInt(body.rating, 10);
-  if (!code || !(rating >= 1 && rating <= 5)) return send(res, 400, { error: 'Kode booking & rating (1-5) wajib diisi.' });
+  if (!code || !(rating >= 1 && rating <= 5)) return send(res, 400, { error: 'Booking code & rating (1-5) are required.' });
   const b = await bookingByCode(code);
-  if (!b || !b.schedule_id) return send(res, 404, { error: 'Kode booking kelas tidak ditemukan.' });
+  if (!b || !b.schedule_id) return send(res, 404, { error: 'Class booking code not found.' });
   const dup = ((await sb(`arena_class_reviews?select=id&booking_code=eq.${enc(code)}&limit=1`)) || []).length > 0;
-  if (dup) return send(res, 409, { error: 'Kode booking ini sudah pernah memberi review.' });
+  if (dup) return send(res, 409, { error: 'This booking code has already submitted a review.' });
   const scs = await sb(`arena_class_schedules?select=instructor,class_type_id&id=eq.${enc(b.schedule_id)}&limit=1`);
   const sc = scs && scs[0]; const types = await classTypes();
   const ratings = {};
@@ -689,7 +689,7 @@ route('POST', '/api/public/review', async (req, res) => {
 // Reviews for the portal (coach sees own; head coach/admin see all)
 route('GET', '/api/coach/reviews', async (req, res, s) => {
   // External coaches can be reviewed, but only Admin/HC may see those reviews.
-  if (isExternalSession(s)) return send(res, 403, { error: 'Review hanya bisa dilihat Admin & Head Coach.' });
+  if (isExternalSession(s)) return send(res, 403, { error: 'Reviews can only be viewed by Admin & Head Coach.' });
   const isHC = s.r === 'hc' || s.r === 'admin';
   let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,ratings,created_at&order=created_at.desc&limit=100';
   // Match co-taught classes too (coach_name may be stored as "A & Coach").
@@ -701,7 +701,7 @@ route('GET', '/api/coach/reviews', async (req, res, s) => {
   const catSum = {}; const catCnt = {};
   for (const x of rows) { const r = x.ratings || {}; for (const c of REVIEW_CATS) { const v = parseInt(r[c.key], 10); if (v >= 1 && v <= 5) { catSum[c.key] = (catSum[c.key] || 0) + v; catCnt[c.key] = (catCnt[c.key] || 0) + 1; } } }
   const categories = REVIEW_CATS.filter((c) => catCnt[c.key]).map((c) => ({ label: c.label, avg: (Math.round((catSum[c.key] / catCnt[c.key]) * 10) / 10).toFixed(1) }));
-  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Kelas', name: x.reviewer_name || 'Anonim', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', tags: [], date: fmtDMon(String(x.created_at).slice(0, 10)) }));
+  const reviews = rows.map((x) => ({ coach: x.coach_name || '', cls: x.class_label || 'Class', name: x.reviewer_name || 'Anonymous', rating: x.rating, stars: '★★★★★'.slice(0, x.rating) + '☆☆☆☆☆'.slice(0, 5 - x.rating), comment: x.comment || '', tags: [], date: fmtDMon(String(x.created_at).slice(0, 10)) }));
   return send(res, 200, { reviews, avg: Math.round(avg * 10) / 10, count: rows.length, categories });
 });
 
@@ -718,7 +718,7 @@ async function sbCount(q) {
 // Counts only classes from this date onward (the leaderboard "starts" here).
 const LEADERBOARD_SINCE = '2026-07-01';
 route('GET', '/api/coach/leaderboard', async (req, res, s) => {
-  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
+  if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
   const scheds = (await sb(`arena_class_schedules?select=id,instructor&is_cancelled=eq.false&schedule_date=gte.${LEADERBOARD_SINCE}`)) || [];
   // Canonical coach names — used to keep the board to real coaches and to split
   // co-taught classes ("A & Coach") between the coaches actually on the roster.
@@ -751,11 +751,11 @@ route('GET', '/api/coach/leaderboard', async (req, res, s) => {
 
 // ===== COACH: class detail + participants =====
 route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
-  if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
+  if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
   const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&id=eq.${enc(params.id)}&limit=1`);
   const sc = rows && rows[0];
-  if (!sc) return send(res, 404, { error: 'Jadwal tidak ditemukan.' });
-  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  if (!sc) return send(res, 404, { error: 'Schedule not found.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'This is not your class.' });
   const types = await classTypes();
   const t = types[sc.class_type_id] || {};
   // Note: participant contact (phone/email) is intentionally NOT selected/returned —
@@ -771,7 +771,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const participants = (bookings || []).filter((b) => b.status !== 'cancelled').map((b) => {
     const h = attHist[String(b.full_name || '').trim().toLowerCase()] || null;
     return {
-      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(tanpa nama)',
+      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)',
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
@@ -785,16 +785,16 @@ route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   // GPS lock: if an arena location is configured, the coach must be within its radius.
   const loc = await arenaLocation();
   if (loc) {
-    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Aktifkan izin lokasi di HP kamu untuk mulai kelas.', needLocation: true });
+    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Enable location access on your phone to start the class.', needLocation: true });
     const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
-    if (dist > loc.radius_m) return send(res, 403, { error: `Kamu harus berada di arena untuk mulai kelas (jarak kamu ~${Math.round(dist)} m dari arena).`, tooFar: true });
+    if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
   }
   await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: s.c, status: 'ongoing' }) });
   return send(res, 200, { ok: true, started: true });
 });
 route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   const body = await readBody(req);
-  if (!body || !body.booking_id || !['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Data absensi tidak valid.' });
+  if (!body || !body.booking_id || !['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
   await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
   return send(res, 200, { ok: true });
 });
@@ -808,7 +808,7 @@ route('GET', '/api/coach/subs/options', async (req, res, s, q) => {
 });
 route('POST', '/api/coach/subs', async (req, res, s) => {
   const body = await readBody(req);
-  if (!body || !body.to_coach) return send(res, 400, { error: 'Coach rotation wajib dipilih.' });
+  if (!body || !body.to_coach) return send(res, 400, { error: 'Please select a rotation coach.' });
   await sb('arena_coach_substitutions', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: body.schedule_id || null, from_coach: s.c, to_coach: body.to_coach, class_label: body.class_label || null, time_label: body.time_label || null, reason: body.reason || null, status: 'pending' }) });
   return send(res, 200, { ok: true });
 });
@@ -816,8 +816,8 @@ route('POST', '/api/coach/subs', async (req, res, s) => {
 // Rotation requests directed at / raised by this coach; the ROTATION COACH (to_coach) decides.
 route('GET', '/api/coach/rotations', async (req, res, s) => {
   const rows = await sb(`arena_coach_substitutions?select=*&or=(from_coach.eq.${enc(s.c)},to_coach.eq.${enc(s.c)})&order=created_at.desc&limit=60`);
-  const incoming = (rows || []).filter((r) => r.to_coach === s.c && r.status === 'pending').map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || 'Kelas', time: r.time_label || '', reason: r.reason || '-' }));
-  const outgoing = (rows || []).filter((r) => r.from_coach === s.c).map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || 'Kelas', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status }));
+  const incoming = (rows || []).filter((r) => r.to_coach === s.c && r.status === 'pending').map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || 'Class', time: r.time_label || '', reason: r.reason || '-' }));
+  const outgoing = (rows || []).filter((r) => r.from_coach === s.c).map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || 'Class', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status }));
   return send(res, 200, { incoming, outgoing });
 });
 route('POST', '/api/coach/rotations/:id/decide', async (req, res, s, q, params) => {
@@ -825,8 +825,8 @@ route('POST', '/api/coach/rotations/:id/decide', async (req, res, s, q, params) 
   const status = body && body.action === 'approve' ? 'approved' : 'rejected';
   const rows = await sb(`arena_coach_substitutions?select=to_coach,schedule_id&id=eq.${enc(params.id)}&limit=1`);
   const r = rows && rows[0];
-  if (!r) return send(res, 404, { error: 'Permintaan rotation tidak ditemukan.' });
-  if (r.to_coach !== s.c) return send(res, 403, { error: 'Hanya coach rotation yang dapat menyetujui/menolak.' });
+  if (!r) return send(res, 404, { error: 'Rotation request not found.' });
+  if (r.to_coach !== s.c) return send(res, 403, { error: 'Only the rotation coach can approve/reject this.' });
   await sb(`arena_coach_substitutions?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status, decided_by: s.c, decided_at: new Date().toISOString() }) });
   // On approval, transfer the class to the new coach — the schedule's instructor is
   // what every dashboard (and the shared Admin Hub) reads, so this is the real handover.
@@ -839,7 +839,7 @@ route('POST', '/api/coach/rotations/:id/decide', async (req, res, s, q, params) 
 // ===== COACH: appreciation emails =====
 route('GET', '/api/coach/emails', async (req, res, s) => {
   const rows = await sb(`arena_appreciation_emails?select=class_label,recipients,status,sent_at&sent_by=eq.${enc(s.c)}&order=sent_at.desc&limit=30`);
-  const log = (rows || []).map((e) => ({ class: e.class_label || 'Kelas', date: fmtDMon(String(e.sent_at).slice(0, 10)), recipients: e.recipients, status: e.status === 'failed' ? 'Gagal' : 'Terkirim' }));
+  const log = (rows || []).map((e) => ({ class: e.class_label || 'Class', date: fmtDMon(String(e.sent_at).slice(0, 10)), recipients: e.recipients, status: e.status === 'failed' ? 'Failed' : 'Sent' }));
   return send(res, 200, { log });
 });
 
@@ -859,11 +859,11 @@ route('GET', '/api/coach/feedback/participants', async (req, res, s, q) => {
   const id = q.id || '';
   const rows = await sb(`arena_class_schedules?select=id,class_type_id,instructor&id=eq.${enc(id)}&limit=1`);
   const sc = rows && rows[0];
-  if (!sc) return send(res, 404, { error: 'Kelas tidak ditemukan.' });
-  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  if (!sc) return send(res, 404, { error: 'Class not found.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'This is not your class.' });
   const types = await classTypes();
   const bookings = await sb(`arena_class_bookings?select=id,full_name,status&schedule_id=eq.${enc(id)}&status=eq.confirmed&order=full_name.asc`);
-  const participants = (bookings || []).map((b) => ({ booking_id: b.id, name: b.full_name || 'Peserta' }));
+  const participants = (bookings || []).map((b) => ({ booking_id: b.id, name: b.full_name || 'Participant' }));
   return send(res, 200, { classLabel: shortType((types[sc.class_type_id] || {}).name), participants });
 });
 // Save feedback the coach wrote for each participant (status 'pending' → Admin Hub emails it).
@@ -871,15 +871,15 @@ route('POST', '/api/coach/feedback', async (req, res, s) => {
   const body = await readBody(req);
   const schedule_id = body && body.schedule_id;
   const items = (body && Array.isArray(body.items)) ? body.items : [];
-  if (!schedule_id || !items.length) return send(res, 400, { error: 'Pilih kelas & isi minimal satu feedback.' });
+  if (!schedule_id || !items.length) return send(res, 400, { error: 'Select a class & write at least one feedback.' });
   const rows = await sb(`arena_class_schedules?select=instructor&id=eq.${enc(schedule_id)}&limit=1`);
   const sc = rows && rows[0];
-  if (!sc) return send(res, 404, { error: 'Kelas tidak ditemukan.' });
-  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  if (!sc) return send(res, 404, { error: 'Class not found.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'This is not your class.' });
   const payload = items
     .filter((it) => it && it.booking_id && String(it.message || '').trim())
     .map((it) => ({ schedule_id, booking_id: it.booking_id, coach: s.c, participant_name: String(it.name || '').slice(0, 120) || null, message: String(it.message).trim().slice(0, 1000), status: 'pending' }));
-  if (!payload.length) return send(res, 400, { error: 'Isi minimal satu feedback.' });
+  if (!payload.length) return send(res, 400, { error: 'Write at least one feedback.' });
   await sb('arena_coach_feedback', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(payload) });
   return send(res, 200, { saved: payload.length });
 });
@@ -891,7 +891,7 @@ route('GET', '/api/templates', async (req, res) => {
 // ===== HEAD COACH ===== (role hc or admin)
 function requireHC(s) { return s.r === 'hc' || s.r === 'admin'; }
 route('GET', '/api/hc/today', async (req, res, s, q) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const today = q.date || todayJakarta();
   const types = await classTypes();
   const rows = await sb(`arena_class_schedules?select=id,start_time,instructor,class_type_id&schedule_date=eq.${today}&is_cancelled=eq.false&order=start_time.asc`);
@@ -900,12 +900,12 @@ route('GET', '/api/hc/today', async (req, res, s, q) => {
   const list = (rows || []).map((r) => {
     const t = types[r.class_type_id] || {};
     const on = started.has(r.id);
-    return { time: hhmm(r.start_time), coach: r.instructor, type: shortType(t.name), status: on ? 'Mengajar' : 'Akan Datang', kind: on ? 'live' : 'idle' };
+    return { time: hhmm(r.start_time), coach: r.instructor, type: shortType(t.name), status: on ? 'Teaching' : 'Upcoming', kind: on ? 'live' : 'idle' };
   });
   return send(res, 200, { today: list, date: today });
 });
 route('GET', '/api/hc/schedule', async (req, res, s, q) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const day = q.date || todayJakarta();
   const types = await classTypes();
   const rows = await sb(`arena_class_schedules?select=id,start_time,instructor,class_type_id,quota&schedule_date=eq.${day}&is_cancelled=eq.false`);
@@ -930,7 +930,7 @@ route('GET', '/api/hc/schedule', async (req, res, s, q) => {
   return send(res, 200, { coaches: coachNames, times, grid, list, date: day, dateLabel, dateLabelEn });
 });
 route('GET', '/api/hc/subs', async (req, res, s) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const rows = await sb('arena_coach_substitutions?select=*&order=created_at.desc&limit=50');
   const pending = (rows || []).filter((r) => r.status === 'pending').map((r) => ({ id: r.id, from: r.from_coach, to: r.to_coach, cls: r.class_label || '', time: r.time_label || '', reason: r.reason || '' }));
   const history = (rows || []).filter((r) => r.status !== 'pending').slice(0, 10).map((r) => ({ from: r.from_coach, to: r.to_coach, cls: r.class_label || '', time: r.time_label || fmtDMon(String(r.created_at).slice(0, 10)), status: r.status === 'approved' ? 'Approved' : (r.status === 'rejected' ? 'Ditolak' : 'Cancelled') }));
@@ -938,7 +938,7 @@ route('GET', '/api/hc/subs', async (req, res, s) => {
 });
 // Head Coach only VIEWS rotation activity (notification) — approving is done by the rotation coach.
 route('GET', '/api/hc/coaches', async (req, res, s, q) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const today = todayJakarta();
   const d0 = new Date(today + 'T00:00:00');
   const monthStart = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
@@ -960,7 +960,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const list = (users || []).filter((u) => u.role !== 'admin').map((u) => {
     const b = byCoach[u.coach_name] || { classes: 0, ids: [] };
     const peserta = b.ids.reduce((a, id) => a + ((counts[id] || {}).confirmed || 0), 0);
-    // Kehadiran = kelas yang benar-benar di-absen (Mulai Kelas) / total kelas terjadwal bulan ini.
+    // Attendance = classes actually checked-in (Start Class) / total scheduled classes this month.
     const attended = b.ids.filter((id) => started.has(id)).length;
     const punctual = b.classes ? Math.round((attended / b.classes) * 100) : 0;
     return { id: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', classes: b.classes, peserta, attended, punctual, subs: subCount[u.coach_name] || 0, status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) };
@@ -968,7 +968,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   return send(res, 200, { coaches: list });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Butuh akses Head Coach.' });
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const today = todayJakarta();
   const d0 = new Date(today + 'T00:00:00');
   const monthStart = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
@@ -984,45 +984,45 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
 // ===== ADMIN =====
 function requireAdmin(s) { return s.r === 'admin'; }
 route('GET', '/api/admin/coaches', async (req, res, s) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const rows = await sb('arena_coach_users?select=id,username,coach_name,display_name,role,email,phone,is_active,password_plain&order=role.desc,coach_name.asc');
   const pm = await coachPhotoMap();
   return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : u.role === 'admin' ? 'Admin' : 'Coach', email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name), password: u.password_plain || '' })) });
 });
 route('POST', '/api/admin/coaches', async (req, res, s) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);
-  if (!body || !body.name) return send(res, 400, { error: 'Nama wajib diisi.' });
+  if (!body || !body.name) return send(res, 400, { error: 'Name is required.' });
   const username = (body.username || String(body.name).replace(/^coach\s*/i, '').trim().split(/\s+/)[0]).toLowerCase();
   const pw = body.password || genPw();
   await sb('arena_coach_users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username, password_hash: hashPassword(pw), password_plain: pw, coach_name: body.name.replace(/^coach\s*/i, '').trim(), display_name: body.name.trim(), role: body.role || 'coach', email: body.email || (username + '@20fit.id'), phone: body.phone || null }) });
   return send(res, 200, { ok: true, username, password: pw });
 });
 route('POST', '/api/admin/coaches/:id/reset', async (req, res, s, q, params) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);
   const pw = (body && body.password) || genPw();
   await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ password_hash: hashPassword(pw), password_plain: pw, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true, password: pw });
 });
 route('POST', '/api/admin/coaches/:id/toggle', async (req, res, s, q, params) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const rows = await sb(`arena_coach_users?select=is_active&id=eq.${enc(params.id)}&limit=1`);
   const cur = rows && rows[0] ? rows[0].is_active : true;
   await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ is_active: !cur, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true, is_active: !cur });
 });
 route('POST', '/api/admin/coaches/:id/role', async (req, res, s, q, params) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);
-  if (!body || !['coach', 'hc', 'admin'].includes(body.role)) return send(res, 400, { error: 'Role tidak valid.' });
+  if (!body || !['coach', 'hc', 'admin'].includes(body.role)) return send(res, 400, { error: 'Invalid role.' });
   await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ role: body.role, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
 route('POST', '/api/admin/templates', async (req, res, s) => {
-  if (!requireAdmin(s)) return send(res, 403, { error: 'Butuh akses Admin.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);
-  if (!body || !body.body) return send(res, 400, { error: 'Teks template wajib diisi.' });
+  if (!body || !body.body) return send(res, 400, { error: 'Template text is required.' });
   await sb('arena_email_templates', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ body: body.body }) });
   return send(res, 200, { ok: true });
 });
@@ -1030,11 +1030,11 @@ route('POST', '/api/admin/templates', async (req, res, s) => {
 // ===== change password (any logged-in) =====
 route('POST', '/api/coach/change-password', async (req, res, s) => {
   const body = await readBody(req);
-  if (!body || !body.current_password || !body.new_password) return send(res, 400, { error: 'Password lama & baru wajib diisi.' });
-  if (String(body.new_password).length < 6) return send(res, 400, { error: 'Password baru minimal 6 karakter.' });
+  if (!body || !body.current_password || !body.new_password) return send(res, 400, { error: 'Current & new password are required.' });
+  if (String(body.new_password).length < 6) return send(res, 400, { error: 'New password must be at least 6 characters.' });
   const rows = await sb(`arena_coach_users?select=*&username=eq.${enc(s.u)}&limit=1`);
   const u = rows && rows[0];
-  if (!u || !verifyPassword(body.current_password, u.password_hash)) return send(res, 401, { error: 'Password lama salah.' });
+  if (!u || !verifyPassword(body.current_password, u.password_hash)) return send(res, 401, { error: 'Current password is incorrect.' });
   await sb(`arena_coach_users?id=eq.${enc(u.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ password_hash: hashPassword(body.new_password), updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
@@ -1057,16 +1057,16 @@ const server = http.createServer(async (req, res) => {
         let session = null;
         if (!PUBLIC_ROUTES.has(key)) {
           session = auth(req);
-          if (!session) return send(res, 401, { error: 'Sesi tidak valid. Silakan login ulang.' });
+          if (!session) return send(res, 401, { error: 'Invalid session. Please log in again.' });
         }
         return await r.handler(req, res, session, query, params);
       }
-      return send(res, 404, { error: 'Endpoint tidak ditemukan.' });
+      return send(res, 404, { error: 'Endpoint not found.' });
     }
     return serveStatic(req, res);
   } catch (err) {
     console.error('[ERROR]', err && err.message ? err.message : err);
-    return send(res, 500, { error: 'Terjadi kesalahan di server.' });
+    return send(res, 500, { error: 'A server error occurred.' });
   }
 });
 server.listen(PORT, () => console.log(`Coach Portal server on :${PORT}`));
