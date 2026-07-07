@@ -159,7 +159,7 @@ template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/butto
 const vInput = 'width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;';
 const vLabel = 'display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;';
 // One booking card. `showAssign`/`showCoachInfo` are per-item so the same card renders
-// the HC dispatch dropdown OR the coach's own view (assigned coach + Google Calendar).
+// the HC dispatch dropdown OR the coach's own view (assigned coach).
 const venueCard = '<div style="' + cardBox + 'padding:16px 18px;">'
   + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
     + '<div style="min-width:0;"><div style="font-weight:800;font-size:15.5px;">{{ b.customer }}</div>'
@@ -175,8 +175,7 @@ const venueCard = '<div style="' + cardBox + 'padding:16px 18px;">'
         + '<sc-if value="{{ b.assigned }}"><button onclick="{{ b.unassign }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:10px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Remove</button></sc-if>'
       + '</div>'
     + '</div></sc-if>'
-    + '<sc-if value="{{ b.showCoachInfo }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div>'
-      + '<button onclick="{{ b.gcal }}" style="margin-top:12px;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--volt);">📅 Add to Google Calendar</button></sc-if>'
+    + '<sc-if value="{{ b.showCoachInfo }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div></sc-if>'
   + '</sc-if>'
 + '</div>';
 const venueSubhead = (label) => '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--muted);letter-spacing:.02em;margin:0 0 12px;">' + label + '</div>';
