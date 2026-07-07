@@ -57,6 +57,7 @@ window.__I18N = (function () {
     'Participant Reviews': 'Review Peserta', 'Average ★': 'Rata-rata ★', 'Total reviews': 'Total review',
     'Copy Link': 'Salin Link',
     // ---- venue ----
+    'My Arena Sessions': 'Sesi Arena Saya', 'Assign a Coach': 'Tetapkan Coach',
     'No coach yet': 'Belum ada coach', 'Time not set': 'Jam belum diatur', 'Remove': 'Hapus',
     'No upcoming arena bookings.': 'Belum ada booking arena mendatang.', 'Flexible time': 'Jam fleksibel',
     'Add to Google Calendar': 'Tambah ke Google Calendar',

@@ -170,7 +170,7 @@ class Component extends DCLogic {
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
-    else if (screen === 'venue') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'venue') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
@@ -511,7 +511,8 @@ class Component extends DCLogic {
     // venue booking — sourced from Admin Hub; HC assigns a coach to the "arena + coach" ones
     const venueIsHC = !!D.venueIsHC;
     const venueCoachOpts = (D.venueCoaches || []).map((c) => ({ name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · external' : '') }));
-    const venueBookings = (D.venueBookings || []).map((b) => {
+    // mode 'assign' → HC dispatch card (coach dropdown); mode 'coach' → coach card (assigned coach + GCal)
+    const mapVenueBooking = (b, mode) => {
       const assigned = !!b.coach;
       return {
         id: b.id, code: b.code || '', customer: b.customer || '(no name)', dayLabel: b.dayLabel || '',
@@ -523,8 +524,13 @@ class Component extends DCLogic {
         coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
         gcal: () => this.addToCalendar({ id: b.id, date: b.date, start: b.time, end: b.end, title: b.customer }),
+        showAssign: mode === 'assign', showCoachInfo: mode === 'coach',
       };
-    });
+    };
+    const venueBookings = (D.venueBookings || []).map((b) => mapVenueBooking(b, venueIsHC ? 'assign' : 'coach'));
+    // HC only: the bookings assigned to the head coach themselves (shown coach-style, above the dispatch list)
+    const venueMine = (D.venueMine || []).map((b) => mapVenueBooking(b, 'coach'));
+    const hasVenueMine = venueMine.length > 0;
     const noVenueBookings = venueBookings.length === 0;
     const venueUnassignedCount = venueBookings.filter((b) => b.needsCoach && !b.assigned).length;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
@@ -624,6 +630,7 @@ class Component extends DCLogic {
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       showVenueNav: true, goVenue: () => this.go('venue'), venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts, venueBookings, noVenueBookings, hasVenueBookings: !noVenueBookings,
+      venueMine, hasVenueMine, dispatchHeader: hasVenueMine && !noVenueBookings,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus, submitMenu: () => this.submitMenu(),
       isEditingMenu: !!st.editMenuId, editMenuTitle: st.editMenu.title, editMenuCategory: st.editMenu.category, editMenuContent: st.editMenu.content,
@@ -718,6 +725,10 @@ class Component extends DCLogic {
       { id: 'v1', code: 'BK-20260706-0002', customer: 'Grace Liu', date: '2026-07-08', dateLabel: '8 Jul', dayLabel: 'Wed 8 Jul', time: '16:00', end: '18:00', needsCoach: true, coach: '', status: 'confirmed' },
       { id: 'v2', code: 'BK-20260701-0006', customer: 'Satrio', date: '2026-07-10', dateLabel: '10 Jul', dayLabel: 'Fri 10 Jul', time: '16:00', end: '20:00', needsCoach: true, coach: 'Rheza', status: 'confirmed' },
       { id: 'v3', code: 'BK-20260705-0001', customer: 'Yoshi', date: '2026-07-12', dateLabel: '12 Jul', dayLabel: 'Sun 12 Jul', time: '13:00', end: '15:00', needsCoach: false, coach: '', status: 'pending_payment' },
+    ];
+    // arena+coach bookings assigned to the head coach themselves (shown in "My Arena Sessions")
+    d.venueMine = [
+      { id: 'v4', code: 'BK-20260703-0004', customer: 'Damar', date: '2026-07-09', dateLabel: '9 Jul', dayLabel: 'Thu 9 Jul', time: '18:00', end: '20:00', needsCoach: true, coach: 'Nando', status: 'confirmed' },
     ];
     d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: true, started: false, calDate: '2026-07-10', calStart: '16:00', calEnd: '20:00' }, { id: 'v3', time: '09:00', end: '– 11:00', customer: 'Corporate Group', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: false, started: true, calDate: '2026-07-10', calStart: '09:00', calEnd: '11:00' }];
     d.menuCanManage = true;

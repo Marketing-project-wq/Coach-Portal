@@ -158,28 +158,38 @@ template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/butto
 // Venue screen
 const vInput = 'width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;';
 const vLabel = 'display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;';
+// One booking card. `showAssign`/`showCoachInfo` are per-item so the same card renders
+// the HC dispatch dropdown OR the coach's own view (assigned coach + Google Calendar).
+const venueCard = '<div style="' + cardBox + 'padding:16px 18px;">'
+  + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+    + '<div style="min-width:0;"><div style="font-weight:800;font-size:15.5px;">{{ b.customer }}</div>'
+    + '<div style="font-size:12.5px;color:var(--muted);margin-top:3px;">{{ b.dayLabel }} &#183; {{ b.timeLabel }}</div>'
+    + '<div style="font-size:11px;color:var(--muted2);margin-top:3px;font-family:\'JetBrains Mono\';">{{ b.code }}</div></div>'
+    + '<span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ b.typeBg }};color:{{ b.typeCol }};white-space:nowrap;flex-shrink:0;">{{ b.typeLabel }}</span>'
+  + '</div>'
+  + '<sc-if value="{{ b.needsCoach }}">'
+    + '<sc-if value="{{ b.showAssign }}"><div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
+      + '<div style="font-size:12.5px;font-weight:700;color:{{ b.assignCol }};margin-bottom:9px;">{{ b.assignLabel }}</div>'
+      + '<div style="display:flex;gap:10px;align-items:center;">'
+        + '<select onchange="{{ b.reassign }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;cursor:pointer;"><option value="">— select the responsible coach —</option><sc-for list="{{ b.coachOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
+        + '<sc-if value="{{ b.assigned }}"><button onclick="{{ b.unassign }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:10px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Remove</button></sc-if>'
+      + '</div>'
+    + '</div></sc-if>'
+    + '<sc-if value="{{ b.showCoachInfo }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div>'
+      + '<button onclick="{{ b.gcal }}" style="margin-top:12px;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--volt);">📅 Add to Google Calendar</button></sc-if>'
+  + '</sc-if>'
++ '</div>';
+const venueSubhead = (label) => '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--muted);letter-spacing:.02em;margin:0 0 12px;">' + label + '</div>';
 const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;margin:0 auto;">'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Venue Booking</div>'
+  // HC only: sessions the head coach personally runs (assigned to themselves)
+  + '<sc-if value="{{ hasVenueMine }}"><div style="margin-bottom:26px;">' + venueSubhead('My Arena Sessions')
+    + '<div style="display:flex;flex-direction:column;gap:12px;"><sc-for list="{{ venueMine }}" as="b">' + venueCard + '</sc-for></div>'
+  + '</div></sc-if>'
+  // Dispatch list (HC: all upcoming to assign · coach: their own bookings)
+  + '<sc-if value="{{ dispatchHeader }}">' + venueSubhead('Assign a Coach') + '</sc-if>'
   + '<sc-if value="{{ hasVenueBookings }}"><div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<sc-for list="{{ venueBookings }}" as="b"><div style="' + cardBox + 'padding:16px 18px;">'
-      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
-        + '<div style="min-width:0;"><div style="font-weight:800;font-size:15.5px;">{{ b.customer }}</div>'
-        + '<div style="font-size:12.5px;color:var(--muted);margin-top:3px;">{{ b.dayLabel }} &#183; {{ b.timeLabel }}</div>'
-        + '<div style="font-size:11px;color:var(--muted2);margin-top:3px;font-family:\'JetBrains Mono\';">{{ b.code }}</div></div>'
-        + '<span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ b.typeBg }};color:{{ b.typeCol }};white-space:nowrap;flex-shrink:0;">{{ b.typeLabel }}</span>'
-      + '</div>'
-      + '<sc-if value="{{ b.needsCoach }}">'
-        + '<sc-if value="{{ venueIsHC }}"><div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">'
-          + '<div style="font-size:12.5px;font-weight:700;color:{{ b.assignCol }};margin-bottom:9px;">{{ b.assignLabel }}</div>'
-          + '<div style="display:flex;gap:10px;align-items:center;">'
-            + '<select onchange="{{ b.reassign }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;cursor:pointer;"><option value="">— select the responsible coach —</option><sc-for list="{{ b.coachOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
-            + '<sc-if value="{{ b.assigned }}"><button onclick="{{ b.unassign }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:10px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Remove</button></sc-if>'
-          + '</div>'
-        + '</div></sc-if>'
-        + '<sc-if value="{{ venueIsCoach }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div>'
-          + '<button onclick="{{ b.gcal }}" style="margin-top:12px;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--volt);">📅 Add to Google Calendar</button></sc-if>'
-      + '</sc-if>'
-    + '</div></sc-for>'
+    + '<sc-for list="{{ venueBookings }}" as="b">' + venueCard + '</sc-for>'
   + '</div></sc-if>'
   + '<sc-if value="{{ noVenueBookings }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No upcoming arena bookings.</div></sc-if>'
   + '</div></sc-if>';

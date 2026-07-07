@@ -476,19 +476,30 @@ async function coachVenueCards(coach, from, to, today) {
   return rows.map((b) => { const started = !!startedMap[b.id]; return { id: b.id, time: hhmm(b.start_time), end: b.end_time ? '– ' + hhmm(b.end_time) : '', customer: b.full_name || 'Arena booking', arena: 'Arena 20FIT', phone: '', notes: '', dateLabel: dLabel(b.booking_date), isToday: b.booking_date === today, started, canAbsen: b.booking_date >= today && !started, calDate: b.booking_date, calStart: hhmm(b.start_time), calEnd: hhmm(b.end_time) }; });
 }
 
-// List venue bookings — HC/admin see all upcoming from Admin Hub; a coach sees only bookings assigned to them.
+// Bookings assigned to `coach` (upcoming only), shaped for the venue list.
+async function myVenueBookings(coach, assignMap, ptRates, from) {
+  const ids = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === coach);
+  if (!ids.length) return [];
+  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&id=in.(${ids.map(enc).join(',')})&status=neq.cancelled`;
+  if (from) q += `&booking_date=gte.${from}`;
+  const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
+  return rows.map((b) => venueBookingRow(b, assignMap, ptRates));
+}
+// List venue bookings — HC/admin see all upcoming from Admin Hub (to dispatch) PLUS the
+// bookings assigned to themselves; a coach sees only bookings assigned to them.
 route('GET', '/api/venue/bookings', async (req, res, s) => {
   const isHC = requireHC(s);
   const today = todayJakarta();
   const [assignMap, ptRates] = await Promise.all([venueAssignments(), ptPackageRates()]);
   if (isHC) {
-    const rows = (await sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&status=neq.cancelled&booking_date=gte.${today}&order=booking_date.asc,start_time.asc&limit=200`)) || [];
-    return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap, ptRates)), coaches: await assignableCoaches(), isHC: true });
+    const [rows, mine] = await Promise.all([
+      sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&status=neq.cancelled&booking_date=gte.${today}&order=booking_date.asc,start_time.asc&limit=200`),
+      myVenueBookings(s.c, assignMap, ptRates, today),
+    ]);
+    return send(res, 200, { bookings: (rows || []).map((b) => venueBookingRow(b, assignMap, ptRates)), mine, coaches: await assignableCoaches(), isHC: true });
   }
-  const mine = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === s.c);
-  if (!mine.length) return send(res, 200, { bookings: [], coaches: [], isHC: false });
-  const rows = (await sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&id=in.(${mine.map(enc).join(',')})&status=neq.cancelled&order=booking_date.asc,start_time.asc`)) || [];
-  return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap, ptRates)), coaches: [], isHC: false });
+  const bookings = await myVenueBookings(s.c, assignMap, ptRates, null);
+  return send(res, 200, { bookings, coaches: [], isHC: false });
 });
 // Assign / reassign the responsible coach for an arena+coach booking (HC/admin only).
 route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) => {
