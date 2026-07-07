@@ -131,10 +131,30 @@ async function startedSet(ids) {
   return s;
 }
 
+// Admin Hub sometimes stores co-taught classes as combined names,
+// e.g. "Cindy Lauw & Rheza" or "Elsen & Ade Midhun". Split into individual
+// instructor tokens so such a class shows up for each real coach involved.
+function instructorTokens(instructor) {
+  return String(instructor || '')
+    .split(/\s*(?:&|\+|,|\/)\s*/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+// True when `coach` is (one of) the instructor(s) of a class. Exact per-token
+// match (case-insensitive) so "Mae" never matches e.g. an unrelated longer name.
+function instructorHasCoach(instructor, coach) {
+  const c = String(coach || '').trim().toLowerCase();
+  if (!c) return false;
+  return instructorTokens(instructor).some((t) => t.toLowerCase() === c);
+}
+
 async function coachSchedules(coach, from, to) {
-  let q = `arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id&instructor=eq.${enc(coach)}&is_cancelled=eq.false&schedule_date=gte.${from}`;
+  // Broaden at the DB with ilike (so "A & Coach" is fetched too), then tighten
+  // with an exact per-token match in Node to drop any substring false positives.
+  let q = `arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&instructor=ilike.*${enc(coach)}*&is_cancelled=eq.false&schedule_date=gte.${from}`;
   if (to) q += `&schedule_date=lte.${to}`;
-  return (await sb(q + '&order=schedule_date.asc,start_time.asc')) || [];
+  const rows = (await sb(q + '&order=schedule_date.asc,start_time.asc')) || [];
+  return rows.filter((x) => instructorHasCoach(x.instructor, coach));
 }
 
 // normalized participant name -> { name, visits, last } across a coach's past classes (confirmed bookings)
@@ -645,8 +665,10 @@ route('GET', '/api/coach/reviews', async (req, res, s) => {
   if (isExternalSession(s)) return send(res, 403, { error: 'Review hanya bisa dilihat Admin & Head Coach.' });
   const isHC = s.r === 'hc' || s.r === 'admin';
   let q = 'arena_class_reviews?select=coach_name,class_label,reviewer_name,rating,comment,ratings,created_at&order=created_at.desc&limit=100';
-  if (!isHC) q += `&coach_name=eq.${enc(s.c)}`;
-  const rows = (await sb(q)) || [];
+  // Match co-taught classes too (coach_name may be stored as "A & Coach").
+  if (!isHC) q += `&coach_name=ilike.*${enc(s.c)}*`;
+  let rows = (await sb(q)) || [];
+  if (!isHC) rows = rows.filter((x) => instructorHasCoach(x.coach_name, s.c));
   const avg = rows.length ? rows.reduce((a, x) => a + x.rating, 0) / rows.length : 0;
   // per-category averages across all shown reviews
   const catSum = {}; const catCnt = {};
@@ -671,8 +693,19 @@ const LEADERBOARD_SINCE = '2026-07-01';
 route('GET', '/api/coach/leaderboard', async (req, res, s) => {
   if (isExternalSession(s)) return send(res, 403, { error: 'Tidak tersedia untuk coach eksternal.' });
   const scheds = (await sb(`arena_class_schedules?select=id,instructor&is_cancelled=eq.false&schedule_date=gte.${LEADERBOARD_SINCE}`)) || [];
+  // Canonical coach names — used to keep the board to real coaches and to split
+  // co-taught classes ("A & Coach") between the coaches actually on the roster.
+  const roster = (await sb('arena_coach_users?select=coach_name&role=neq.admin')) || [];
+  const canon = new Map(roster.map((u) => [String(u.coach_name).toLowerCase(), u.coach_name]));
   const byCoach = {};
-  for (const sc of scheds) { const nm = sc.instructor; if (!nm) continue; if (!byCoach[nm]) byCoach[nm] = { ids: [], classes: 0 }; byCoach[nm].ids.push(sc.id); byCoach[nm].classes++; }
+  for (const sc of scheds) {
+    for (const tok of instructorTokens(sc.instructor)) {
+      const nm = canon.get(tok.toLowerCase());
+      if (!nm) continue; // skip non-roster co-instructors (e.g. guest trainers)
+      if (!byCoach[nm]) byCoach[nm] = { ids: [], classes: 0 };
+      byCoach[nm].ids.push(sc.id); byCoach[nm].classes++;
+    }
+  }
   const results = [];
   for (const nm of Object.keys(byCoach)) {
     const ids = byCoach[nm].ids;
@@ -695,7 +728,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&id=eq.${enc(params.id)}&limit=1`);
   const sc = rows && rows[0];
   if (!sc) return send(res, 404, { error: 'Jadwal tidak ditemukan.' });
-  if (s.r === 'coach' && sc.instructor !== s.c) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
   const types = await classTypes();
   const t = types[sc.class_type_id] || {};
   // Note: participant contact (phone/email) is intentionally NOT selected/returned —
@@ -705,7 +738,9 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const attMap = {}; for (const a of att || []) attMap[a.booking_id] = a.status;
   const started = (await sb(`arena_class_sessions?select=schedule_id&schedule_id=eq.${enc(params.id)}&limit=1`) || []).length > 0;
   const today = todayJakarta();
-  const attHist = await coachAttendanceMap(sc.instructor, today); // visit history for this class's coach
+  // For co-taught classes use the logged-in coach's own history; HC/admin keep the class instructor.
+  const histCoach = s.r === 'coach' ? s.c : sc.instructor;
+  const attHist = await coachAttendanceMap(histCoach, today); // visit history for this class's coach
   const participants = (bookings || []).filter((b) => b.status !== 'cancelled').map((b) => {
     const h = attHist[String(b.full_name || '').trim().toLowerCase()] || null;
     return {
@@ -798,7 +833,7 @@ route('GET', '/api/coach/feedback/participants', async (req, res, s, q) => {
   const rows = await sb(`arena_class_schedules?select=id,class_type_id,instructor&id=eq.${enc(id)}&limit=1`);
   const sc = rows && rows[0];
   if (!sc) return send(res, 404, { error: 'Kelas tidak ditemukan.' });
-  if (s.r === 'coach' && sc.instructor !== s.c) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
   const types = await classTypes();
   const bookings = await sb(`arena_class_bookings?select=id,full_name,status&schedule_id=eq.${enc(id)}&status=eq.confirmed&order=full_name.asc`);
   const participants = (bookings || []).map((b) => ({ booking_id: b.id, name: b.full_name || 'Peserta' }));
@@ -813,7 +848,7 @@ route('POST', '/api/coach/feedback', async (req, res, s) => {
   const rows = await sb(`arena_class_schedules?select=instructor&id=eq.${enc(schedule_id)}&limit=1`);
   const sc = rows && rows[0];
   if (!sc) return send(res, 404, { error: 'Kelas tidak ditemukan.' });
-  if (s.r === 'coach' && sc.instructor !== s.c) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
   const payload = items
     .filter((it) => it && it.booking_id && String(it.message || '').trim())
     .map((it) => ({ schedule_id, booking_id: it.booking_id, coach: s.c, participant_name: String(it.name || '').slice(0, 120) || null, message: String(it.message).trim().slice(0, 1000), status: 'pending' }));
@@ -883,7 +918,13 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const users = await sb('arena_coach_users?select=username,coach_name,role,is_active&order=coach_name.asc');
   const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${today}`);
   const byCoach = {};
-  for (const sc of scheds || []) { byCoach[sc.instructor] = byCoach[sc.instructor] || { classes: 0, ids: [] }; byCoach[sc.instructor].classes++; byCoach[sc.instructor].ids.push(sc.id); }
+  for (const sc of scheds || []) {
+    // Co-taught classes ("A & Coach") count for each named coach.
+    for (const nm of instructorTokens(sc.instructor)) {
+      byCoach[nm] = byCoach[nm] || { classes: 0, ids: [] };
+      byCoach[nm].classes++; byCoach[nm].ids.push(sc.id);
+    }
+  }
   const allIds = (scheds || []).map((x) => x.id);
   const [counts, started] = await Promise.all([bookingCounts(allIds), startedSet(allIds)]);
   const subs = await sb('arena_coach_substitutions?select=from_coach,status');
@@ -905,7 +946,8 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   const d0 = new Date(today + 'T00:00:00');
   const monthStart = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
   const types = await classTypes();
-  const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id&instructor=eq.${enc(params.name)}&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${today}&order=schedule_date.asc`);
+  const rows0 = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&instructor=ilike.*${enc(params.name)}*&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${today}&order=schedule_date.asc`);
+  const rows = (rows0 || []).filter((r) => instructorHasCoach(r.instructor, params.name));
   const counts = await bookingCounts((rows || []).map((r) => r.id));
   const stats = (rows || []).map((r) => ({ date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
   const monthLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
