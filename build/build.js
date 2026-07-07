@@ -256,7 +256,7 @@ const menuModal = '<sc-if value="{{ showMenuModal }}" hint-placeholder-val="{{ f
         + '<button onclick="{{ it.remove }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;width:32px;height:34px;flex-shrink:0;cursor:pointer;font-size:13px;line-height:1;">✕</button>'
       + '</div></sc-for>'
       + '<div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap;">'
-        + '<button onclick="{{ blk.addItem }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-weight:700;font-size:12px;cursor:pointer;">+ Add Exercise</button>'
+        + '<button onclick="{{ blk.addItem }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-weight:700;font-size:12px;cursor:pointer;">+ Add Menu</button>'
         + '<button onclick="{{ blk.addBlockAfter }}" style="background:var(--volt-dim);border:1px solid var(--volt);color:var(--volt);border-radius:8px;padding:7px 13px;font-weight:700;font-size:12px;cursor:pointer;">+ Add Block</button>'
       + '</div>'
     + '</div></sc-for>'
