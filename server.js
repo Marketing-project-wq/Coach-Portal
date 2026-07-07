@@ -240,7 +240,7 @@ function cardsFrom(sched, counts, sessionMap, types, today) {
     const checkedOut = st === 'completed';
     const upcoming = x.schedule_date >= today; // today or later
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
-      peserta: c.confirmed + c.pending, cap: x.quota || 0, started: isStarted, checkedOut,
+      peserta: c.confirmed, cap: x.quota || 0, started: isStarted, checkedOut,
       accent: checkedOut ? '#3ED598' : (isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C')),
       status: checkedOut ? 'Finished' : (isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled')),
       // Check In shows for an upcoming class not yet started; Check Out shows while it's ongoing.
@@ -837,7 +837,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // For co-taught classes use the logged-in coach's own history; HC/admin keep the class instructor.
   const histCoach = s.r === 'coach' ? s.c : sc.instructor;
   const attHist = await coachAttendanceMap(histCoach, today); // visit history for this class's coach
-  const participants = (bookings || []).filter((b) => b.status !== 'cancelled').map((b) => {
+  // Class bookings that are still pending payment are excluded (only confirmed count as participants).
+  const participants = (bookings || []).filter((b) => b.status !== 'cancelled' && b.status !== 'pending_payment').map((b) => {
     const h = attHist[String(b.full_name || '').trim().toLowerCase()] || null;
     return {
       booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)',
@@ -1004,7 +1005,7 @@ route('GET', '/api/hc/schedule', async (req, res, s, q) => {
   for (const tm of times) { grid[tm] = coachNames.map(() => null); }
   for (const r of rows || []) {
     const tm = hhmm(r.start_time); const ci = coachNames.indexOf(r.instructor);
-    if (ci >= 0 && grid[tm]) { const t = types[r.class_type_id] || {}; grid[tm][ci] = { type: shortType(t.name), peserta: (counts[r.id] || {}).confirmed + (counts[r.id] || {}).pending || 0 }; }
+    if (ci >= 0 && grid[tm]) { const t = types[r.class_type_id] || {}; grid[tm][ci] = { type: shortType(t.name), peserta: (counts[r.id] || {}).confirmed || 0 }; }
   }
   const dl = new Date(day + 'T00:00:00');
   const dateLabel = `${DOW_FULL[dl.getDay()]} ${dl.getDate()} ${MON[dl.getMonth()]}`;
@@ -1013,7 +1014,7 @@ route('GET', '/api/hc/schedule', async (req, res, s, q) => {
   const pm = await coachPhotoMap();
   const list = (rows || []).slice()
     .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')) || String(a.instructor || '').localeCompare(String(b.instructor || '')))
-    .map((r) => { const t = types[r.class_type_id] || {}; const cc = counts[r.id] || {}; return { time: hhmm(r.start_time), coach: r.instructor || '—', type: shortType(t.name), pax: (cc.confirmed || 0) + (cc.pending || 0), photo: coachPhoto(pm, r.instructor) }; });
+    .map((r) => { const t = types[r.class_type_id] || {}; const cc = counts[r.id] || {}; return { time: hhmm(r.start_time), coach: r.instructor || '—', type: shortType(t.name), pax: (cc.confirmed || 0), photo: coachPhoto(pm, r.instructor) }; });
   return send(res, 200, { coaches: coachNames, times, grid, list, date: day, dateLabel, dateLabelEn });
 });
 route('GET', '/api/hc/subs', async (req, res, s) => {
