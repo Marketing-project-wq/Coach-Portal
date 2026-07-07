@@ -88,6 +88,7 @@
         mountEl.innerHTML = '';
         for (var i = 0; i < out.length; i++) mountEl.appendChild(out[i]);
         if (same && prevTop) { var next = mountEl.querySelector('[data-scroll]'); if (next) next.scrollTop = prevTop; }
+        if (logic.__afterRender) logic.__afterRender(mountEl);
       };
       logic.__render();
     },
