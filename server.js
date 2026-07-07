@@ -414,19 +414,46 @@ async function assignableCoaches() {
   const users = await sb('arena_coach_users?select=coach_name,role,is_active&role=neq.admin&is_active=eq.true&order=role.desc,coach_name.asc');
   return (users || []).map((u) => ({ name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', external: isExternalCoach(u.coach_name) }));
 }
+// Per-hour list price(s) of venue packages that bundle a Personal Trainer.
+// arena_bookings has no package_id, so a "with PT" booking is recognised either
+// by its package tag in notes OR — for manually-entered/corporate bookings that
+// lack that tag — by its list price matching a PT package's per-hour rate.
+let _ptRatesCache = null;
+async function ptPackageRates() {
+  if (_ptRatesCache) return _ptRatesCache;
+  const rows = (await sb('arena_booking_packages?select=price_per_hour,includes_pt&includes_pt=eq.true')) || [];
+  const set = new Set();
+  for (const r of rows) { const v = Math.round(Number(r.price_per_hour) || 0); if (v > 0) set.add(v); }
+  _ptRatesCache = set; return set;
+}
+// Booking duration in hours from "HH:MM(:SS)" start/end times.
+function venueHours(b) {
+  const t = (v) => { const p = String(v || '').split(':'); return p.length >= 2 ? (Number(p[0]) || 0) + (Number(p[1]) || 0) / 60 : 0; };
+  const d = t(b.end_time) - t(b.start_time);
+  return d > 0 ? d : 0;
+}
 // A booking is "arena + coach" when its package includes a Personal Trainer (PT).
-function venueNeedsCoach(notes) { const n = String(notes || ''); return /PACKAGE:[^\]]*\bPT\b/i.test(n) || /with personal trainer/i.test(n); }
+function venueNeedsCoach(b, ptRates) {
+  const n = String(b.notes || '');
+  if (/PACKAGE:[^\]]*\bPT\b/i.test(n) || /with personal trainer/i.test(n)) return true;
+  const hrs = venueHours(b);
+  if (hrs > 0 && ptRates && ptRates.size) {
+    const list = Number(b.price_before_disc) || Number(b.price) || 0;
+    if (list > 0 && ptRates.has(Math.round(list / hrs))) return true;
+  }
+  return false;
+}
 // booking_id -> assignment row.
 async function venueAssignments() {
   const rows = (await sb('arena_venue_assignments?select=booking_id,coach_name,assigned_by')) || [];
   const map = {}; for (const r of rows) map[r.booking_id] = r; return map;
 }
 // Shape an arena_bookings row for the venue list.
-function venueBookingRow(b, assignMap) {
+function venueBookingRow(b, assignMap, ptRates) {
   const a = assignMap[b.id];
   return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(tanpa nama)',
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
-    time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b.notes), coach: a ? a.coach_name : '', status: b.status || '' };
+    time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: a ? a.coach_name : '', status: b.status || '' };
 }
 // arena_bookings ids assigned to a coach (upcoming range) — used by the schedule + calendar.
 async function coachAssignedBookings(coach, from, to, cols) {
@@ -453,15 +480,15 @@ async function coachVenueCards(coach, from, to, today) {
 route('GET', '/api/venue/bookings', async (req, res, s) => {
   const isHC = requireHC(s);
   const today = todayJakarta();
-  const assignMap = await venueAssignments();
+  const [assignMap, ptRates] = await Promise.all([venueAssignments(), ptPackageRates()]);
   if (isHC) {
-    const rows = (await sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes&status=neq.cancelled&booking_date=gte.${today}&order=booking_date.asc,start_time.asc&limit=200`)) || [];
-    return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap)), coaches: await assignableCoaches(), isHC: true });
+    const rows = (await sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&status=neq.cancelled&booking_date=gte.${today}&order=booking_date.asc,start_time.asc&limit=200`)) || [];
+    return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap, ptRates)), coaches: await assignableCoaches(), isHC: true });
   }
   const mine = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === s.c);
   if (!mine.length) return send(res, 200, { bookings: [], coaches: [], isHC: false });
-  const rows = (await sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes&id=in.(${mine.map(enc).join(',')})&status=neq.cancelled&order=booking_date.asc,start_time.asc`)) || [];
-  return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap)), coaches: [], isHC: false });
+  const rows = (await sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&id=in.(${mine.map(enc).join(',')})&status=neq.cancelled&order=booking_date.asc,start_time.asc`)) || [];
+  return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap, ptRates)), coaches: [], isHC: false });
 });
 // Assign / reassign the responsible coach for an arena+coach booking (HC/admin only).
 route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) => {
