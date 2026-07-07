@@ -170,7 +170,7 @@ class Component extends DCLogic {
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews').then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
-    else if (screen === 'venue') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
@@ -413,7 +413,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -429,10 +429,11 @@ class Component extends DCLogic {
     titles.members = ['Coach', 'Participants'];
     titles.leaderboard = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Leaderboard'];
     titles.venue = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Venue Booking'];
+    titles.venueassign = ['Head Coach', 'Assign Venue'];
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -482,7 +483,7 @@ class Component extends DCLogic {
     // venue booking — sourced from Admin Hub; HC assigns a coach to the "arena + coach" ones
     const venueIsHC = !!D.venueIsHC;
     const venueCoachOpts = (D.venueCoaches || []).map((c) => ({ name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · external' : '') }));
-    // mode 'assign' → HC dispatch card (coach dropdown); mode 'coach' → coach card (assigned coach + GCal)
+    // mode 'assign' → HC dispatch card (coach dropdown); mode 'coach' → coach card (own booking)
     const mapVenueBooking = (b, mode) => {
       const assigned = !!b.coach;
       return {
@@ -497,12 +498,14 @@ class Component extends DCLogic {
         showAssign: mode === 'assign', showCoachInfo: mode === 'coach',
       };
     };
-    const venueBookings = (D.venueBookings || []).map((b) => mapVenueBooking(b, venueIsHC ? 'assign' : 'coach'));
-    // HC only: the bookings assigned to the head coach themselves (shown coach-style, above the dispatch list)
-    const venueMine = (D.venueMine || []).map((b) => mapVenueBooking(b, 'coach'));
-    const hasVenueMine = venueMine.length > 0;
-    const noVenueBookings = venueBookings.length === 0;
-    const venueUnassignedCount = venueBookings.filter((b) => b.needsCoach && !b.assigned).length;
+    // Two separate screens:
+    //  • "Venue Booking" (own) → bookings assigned to me. HC gets D.venueMine; a coach's whole list IS their own.
+    //  • "Assign Venue" (dispatch, HC/admin only) → all upcoming bookings with the coach dropdown.
+    const venueOwn = (venueIsHC ? (D.venueMine || []) : (D.venueBookings || [])).map((b) => mapVenueBooking(b, 'coach'));
+    const noVenueOwn = venueOwn.length === 0;
+    const venueDispatch = venueIsHC ? (D.venueBookings || []).map((b) => mapVenueBooking(b, 'assign')) : [];
+    const noVenueDispatch = venueDispatch.length === 0;
+    const venueUnassignedCount = venueDispatch.filter((b) => b.needsCoach && !b.assigned).length;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
     const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Arena booking', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Flexible time', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v) }));
     const hasScheduleVenues = scheduleVenues.length > 0;
@@ -599,8 +602,10 @@ class Component extends DCLogic {
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
-      showVenueNav: true, goVenue: () => this.go('venue'), venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts, venueBookings, noVenueBookings, hasVenueBookings: !noVenueBookings,
-      venueMine, hasVenueMine, dispatchHeader: hasVenueMine && !noVenueBookings,
+      showVenueNav: true, goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
+      venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts,
+      venueOwn, noVenueOwn, hasVenueOwn: !noVenueOwn,
+      venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus, submitMenu: () => this.submitMenu(),
       isEditingMenu: !!st.editMenuId, editMenuTitle: st.editMenu.title, editMenuCategory: st.editMenu.category, editMenuContent: st.editMenu.content,
@@ -689,7 +694,7 @@ class Component extends DCLogic {
     d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, attended: 15, peserta: 198, punctual: 94, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', password: 'nando456', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, attended: 13, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', password: 'rheza123', photo: PH + 'rheza-1778032238203.png' }];
     d.statMonth = 'July 2026';
     // venue booking (arena + coach)
-    d.venueIsHC = true;
+    d.venueIsHC = this.accountRole !== 'coach';
     d.venueCoaches = [{ name: 'Rheza', role: 'Coach', external: false }, { name: 'Elsen', role: 'Coach', external: false }, { name: 'Calysta', role: 'Coach', external: false }, { name: 'Nando', role: 'Head Coach', external: false }, { name: 'Brian', role: 'Coach', external: true }, { name: 'Gilang', role: 'Coach', external: true }, { name: 'Mae', role: 'Coach', external: true }, { name: 'YoKae', role: 'Coach', external: true }];
     d.venueBookings = [
       { id: 'v1', code: 'BK-20260706-0002', customer: 'Grace Liu', date: '2026-07-08', dateLabel: '8 Jul', dayLabel: 'Wed 8 Jul', time: '16:00', end: '18:00', needsCoach: true, coach: '', status: 'confirmed' },

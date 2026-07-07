@@ -155,6 +155,9 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', boardScreen + '
 // Nav item visible to ALL roles (coach / head coach / admin).
 const venueNav = '<sc-if value="{{ showVenueNav }}"><button onclick="{{ goVenue }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.venue.bg }};color:{{ nav.venue.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.venue.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Venue Booking</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/button>)/, '$1' + venueNav);
+// Head-coach-only "Assign Venue" nav (dispatch bookings to other coaches) — added inside the HEAD COACH section.
+const venueAssignNav = '<button onclick="{{ goVenueAssign }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.venueassign.bg }};color:{{ nav.venueassign.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.venueassign.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Assign Venue</button>';
+template = template.replace(/(<button onclick="\{\{ goSchedule \}\}"[\s\S]*?<\/button>)/, '$1' + venueAssignNav);
 // Venue screen
 const vInput = 'width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;';
 const vLabel = 'display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;';
@@ -178,21 +181,24 @@ const venueCard = '<div style="' + cardBox + 'padding:16px 18px;">'
     + '<sc-if value="{{ b.showCoachInfo }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div></sc-if>'
   + '</sc-if>'
 + '</div>';
-const venueSubhead = (label) => '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--muted);letter-spacing:.02em;margin:0 0 12px;">' + label + '</div>';
+// Screen 1 — "Venue Booking": the coach's / head coach's OWN assigned arena sessions.
 const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;margin:0 auto;">'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:18px;">Venue Booking</div>'
-  // HC only: sessions the head coach personally runs (assigned to themselves)
-  + '<sc-if value="{{ hasVenueMine }}"><div style="margin-bottom:26px;">' + venueSubhead('My Arena Sessions')
-    + '<div style="display:flex;flex-direction:column;gap:12px;"><sc-for list="{{ venueMine }}" as="b">' + venueCard + '</sc-for></div>'
+  + '<sc-if value="{{ hasVenueOwn }}"><div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<sc-for list="{{ venueOwn }}" as="b">' + venueCard + '</sc-for>'
   + '</div></sc-if>'
-  // Dispatch list (HC: all upcoming to assign · coach: their own bookings)
-  + '<sc-if value="{{ dispatchHeader }}">' + venueSubhead('Assign a Coach') + '</sc-if>'
-  + '<sc-if value="{{ hasVenueBookings }}"><div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<sc-for list="{{ venueBookings }}" as="b">' + venueCard + '</sc-for>'
-  + '</div></sc-if>'
-  + '<sc-if value="{{ noVenueBookings }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No upcoming arena bookings.</div></sc-if>'
+  + '<sc-if value="{{ noVenueOwn }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No arena sessions assigned to you yet.</div></sc-if>'
   + '</div></sc-if>';
-template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+// Screen 2 — "Assign Venue" (head coach / admin only): dispatch every upcoming booking to a coach.
+const venueAssignScreen = '<sc-if value="{{ s.venueassign }}"><div style="max-width:900px;margin:0 auto;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Assign Venue</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Assign a responsible coach to each Arena + Coach booking.</div>'
+  + '<sc-if value="{{ hasVenueDispatch }}"><div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<sc-for list="{{ venueDispatch }}" as="b">' + venueCard + '</sc-for>'
+  + '</div></sc-if>'
+  + '<sc-if value="{{ noVenueDispatch }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No upcoming arena bookings.</div></sc-if>'
+  + '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        ' + venueAssignScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
 // ---- Menu Kelas — shared class-program reference (patokan) for every coach ----
 const menuNav = '<sc-if value="{{ showMenuNav }}"><button onclick="{{ goMenu }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.menu.bg }};color:{{ nav.menu.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.menu.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Class Menu</button></sc-if>';

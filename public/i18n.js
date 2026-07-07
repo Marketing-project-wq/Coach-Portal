@@ -57,7 +57,9 @@ window.__I18N = (function () {
     'Participant Reviews': 'Review Peserta', 'Average ★': 'Rata-rata ★', 'Total reviews': 'Total review',
     'Copy Link': 'Salin Link',
     // ---- venue ----
-    'My Arena Sessions': 'Sesi Arena Saya', 'Assign a Coach': 'Tetapkan Coach',
+    'Assign Venue': 'Kirim ke Coach',
+    'No arena sessions assigned to you yet.': 'Belum ada sesi arena yang ditugaskan ke Anda.',
+    'Assign a responsible coach to each Arena + Coach booking.': 'Tetapkan coach penanggung jawab untuk tiap booking Arena + Coach.',
     'No coach yet': 'Belum ada coach', 'Time not set': 'Jam belum diatur', 'Remove': 'Hapus',
     'No upcoming arena bookings.': 'Belum ada booking arena mendatang.', 'Flexible time': 'Jam fleksibel',
     // ---- menu ----
