@@ -181,6 +181,7 @@ const venueCard = '<div style="' + cardBox + 'padding:16px 18px;">'
         + '<select onchange="{{ b.reassign }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;cursor:pointer;"><option value="">— select the responsible coach —</option><sc-for list="{{ b.coachOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
         + '<sc-if value="{{ b.assigned }}"><button onclick="{{ b.unassign }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:10px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">Remove</button></sc-if>'
       + '</div>'
+      + '<button onclick="{{ b.dismiss }}" style="margin-top:11px;background:transparent;border:0;color:var(--muted);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">No coach needed &#183; hide this booking</button>'
     + '</div></sc-if>'
     + '<sc-if value="{{ b.showCoachInfo }}"><div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Assigned coach: <span style="color:var(--text);font-weight:700;">{{ b.coach }}</span></div></sc-if>'
   + '</sc-if>'
@@ -201,6 +202,14 @@ const venueAssignScreen = '<sc-if value="{{ s.venueassign }}"><div style="max-wi
     + '<sc-for list="{{ venueDispatch }}" as="b">' + venueCard + '</sc-for>'
   + '</div></sc-if>'
   + '<sc-if value="{{ noVenueDispatch }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No upcoming arena bookings.</div></sc-if>'
+  // Bookings marked "no coach needed" (hidden from the list above) — with a Restore action.
+  + '<sc-if value="{{ hasVenueHidden }}"><div style="margin-top:26px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--muted);letter-spacing:.02em;margin:0 0 10px;">Hidden &#183; no coach needed</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;"><sc-for list="{{ venueHidden }}" as="b"><div style="' + cardBox + 'padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;opacity:.75;">'
+      + '<div style="min-width:0;"><div style="font-weight:700;font-size:14px;">{{ b.customer }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ b.dayLabel }} &#183; {{ b.timeLabel }}</div></div>'
+      + '<button onclick="{{ b.restore }}" style="background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:8px 14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Restore</button>'
+    + '</div></sc-for></div>'
+  + '</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        ' + venueAssignScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 

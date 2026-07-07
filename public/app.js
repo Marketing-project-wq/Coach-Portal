@@ -436,7 +436,13 @@ class Component extends DCLogic {
   unassignVenue(id) {
     if (this.MOCK) return this.toastMsg('Coach assignment removed');
     this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/unassign', { method: 'POST' })
-      .then(() => { this.toastMsg('Coach assignment removed'); this.loadScreen('venue'); })
+      .then(() => { this.toastMsg('Coach assignment removed'); this.loadScreen(this.state.screen); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  dismissVenue(id) {
+    if (this.MOCK) return this.toastMsg('Hidden · no coach needed');
+    this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/no-coach', { method: 'POST' })
+      .then(() => { this.toastMsg('Hidden · no coach needed'); this.loadScreen(this.state.screen); })
       .catch((e) => this.toastMsg(e.message));
   }
   randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
@@ -569,6 +575,7 @@ class Component extends DCLogic {
         assignLabel: assigned ? ('✓ ' + b.coach) : 'No coach yet', assignCol: assigned ? C.green : C.amber,
         coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
+        dismiss: () => this.dismissVenue(b.id), restore: () => this.unassignVenue(b.id),
         showAssign: mode === 'assign', showCoachInfo: mode === 'coach',
       };
     };
@@ -577,8 +584,12 @@ class Component extends DCLogic {
     //  • "Assign Venue" (dispatch, HC/admin only) → all upcoming bookings with the coach dropdown.
     const venueOwn = (venueIsHC ? (D.venueMine || []) : (D.venueBookings || [])).map((b) => mapVenueBooking(b, 'coach'));
     const noVenueOwn = venueOwn.length === 0;
-    const venueDispatch = venueIsHC ? (D.venueBookings || []).map((b) => mapVenueBooking(b, 'assign')) : [];
+    const venueAllHC = venueIsHC ? (D.venueBookings || []) : [];
+    // Bookings marked "no coach needed" (e.g. clubs with their own trainer) are hidden from dispatch.
+    const venueDispatch = venueAllHC.filter((b) => !b.dismissed).map((b) => mapVenueBooking(b, 'assign'));
+    const venueHidden = venueAllHC.filter((b) => b.dismissed).map((b) => mapVenueBooking(b, 'hidden'));
     const noVenueDispatch = venueDispatch.length === 0;
+    const hasVenueHidden = venueHidden.length > 0;
     const venueUnassignedCount = venueDispatch.filter((b) => b.needsCoach && !b.assigned).length;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
     const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Arena booking', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Flexible time', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v) }));
@@ -696,6 +707,7 @@ class Component extends DCLogic {
       venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts,
       venueOwn, noVenueOwn, hasVenueOwn: !noVenueOwn,
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
+      venueHidden, hasVenueHidden,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
       openMenuModal: () => this.openMenuModal(),
@@ -794,6 +806,7 @@ class Component extends DCLogic {
       { id: 'v1', code: 'BK-20260706-0002', customer: 'Grace Liu', date: '2026-07-08', dateLabel: '8 Jul', dayLabel: 'Wed 8 Jul', time: '16:00', end: '18:00', needsCoach: true, coach: '', status: 'confirmed' },
       { id: 'v2', code: 'BK-20260701-0006', customer: 'Satrio', date: '2026-07-10', dateLabel: '10 Jul', dayLabel: 'Fri 10 Jul', time: '16:00', end: '20:00', needsCoach: true, coach: 'Rheza', status: 'confirmed' },
       { id: 'v3', code: 'BK-20260705-0001', customer: 'Yoshi', date: '2026-07-12', dateLabel: '12 Jul', dayLabel: 'Sun 12 Jul', time: '13:00', end: '15:00', needsCoach: false, coach: '', status: 'pending_payment' },
+      { id: 'v5', code: 'BK-20260704-0001', customer: 'Kenny x R Club', date: '2026-07-28', dateLabel: '28 Jul', dayLabel: 'Tue 28 Jul', time: '15:00', end: '18:00', needsCoach: true, coach: '', dismissed: true, status: 'confirmed' },
     ];
     // arena+coach bookings assigned to the head coach themselves (shown in "My Arena Sessions")
     d.venueMine = [

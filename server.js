@@ -460,6 +460,9 @@ function venueNeedsCoach(b, ptRates) {
   }
   return false;
 }
+// Sentinel coach_name meaning "this booking doesn't use a 20FIT coach" — hides it from the
+// dispatch list (e.g. a club that brings its own trainer). Stored in arena_venue_assignments.
+const NO_COACH = '__no_coach__';
 // booking_id -> assignment row.
 async function venueAssignments() {
   const rows = (await sb('arena_venue_assignments?select=booking_id,coach_name,assigned_by')) || [];
@@ -468,9 +471,10 @@ async function venueAssignments() {
 // Shape an arena_bookings row for the venue list.
 function venueBookingRow(b, assignMap, ptRates) {
   const a = assignMap[b.id];
+  const dismissed = !!(a && a.coach_name === NO_COACH);
   return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(no name)',
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
-    time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: a ? a.coach_name : '', status: b.status || '' };
+    time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: (a && !dismissed) ? a.coach_name : '', dismissed, status: b.status || '' };
 }
 // arena_bookings ids assigned to a coach (upcoming range) — used by the schedule + calendar.
 async function coachAssignedBookings(coach, from, to, cols) {
@@ -530,9 +534,17 @@ route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) =
   return send(res, 200, { ok: true });
 });
 // Remove the coach assignment (HC/admin only) — never touches the Admin Hub booking itself.
+// Also used to restore a booking that was hidden via "no coach needed".
 route('POST', '/api/venue/bookings/:id/unassign', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  return send(res, 200, { ok: true });
+});
+// Mark a booking as "no coach needed" (HC/admin only) — hides it from the dispatch list
+// (e.g. a club that brings its own trainer). Never touches the Admin Hub booking itself.
+route('POST', '/api/venue/bookings/:id/no-coach', async (req, res, s, q, params) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
+  await sb('arena_venue_assignments', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ booking_id: params.id, coach_name: NO_COACH, assigned_by: s.d || s.c, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
 // The assigned coach starts (absen) their Arena + Coach session — GPS-checked like a class.
