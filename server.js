@@ -67,6 +67,21 @@ async function sb(q, options = {}) {
   const t = await res.text();
   return t ? JSON.parse(t) : null;
 }
+// Fetch EVERY row for a query, paging past PostgREST's per-request row cap so nothing
+// is silently truncated. `q` must NOT already contain a limit/offset. Pass a stable order.
+// Advances by the actual returned count and stops on an empty page, so it stays correct
+// even when the server enforces a max-rows smaller than the requested page size.
+async function sbAll(q, pageSize = 1000) {
+  const out = [];
+  let offset = 0;
+  for (let guard = 0; guard < 1000; guard++) {
+    const rows = (await sb(`${q}&limit=${pageSize}&offset=${offset}`)) || [];
+    if (!rows.length) break;
+    out.push(...rows);
+    offset += rows.length;
+  }
+  return out;
+}
 function todayJakarta() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()); }
 function hhmm(t) { return t ? String(t).slice(0, 5) : ''; }
 const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -480,9 +495,9 @@ async function coachVenueCards(coach, from, to, today) {
 async function myVenueBookings(coach, assignMap, ptRates, from) {
   const ids = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === coach);
   if (!ids.length) return [];
-  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&id=in.(${ids.map(enc).join(',')})&status=neq.cancelled`;
+  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&id=in.(${ids.map(enc).join(',')})`;
   if (from) q += `&booking_date=gte.${from}`;
-  const rows = (await sb(q + '&order=booking_date.asc,start_time.asc')) || [];
+  const rows = ((await sb(q + '&order=booking_date.asc,start_time.asc')) || []).filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
   return rows.map((b) => venueBookingRow(b, assignMap, ptRates));
 }
 // List venue bookings — HC/admin see all upcoming from Admin Hub (to dispatch) PLUS the
@@ -492,11 +507,14 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
   const today = todayJakarta();
   const [assignMap, ptRates] = await Promise.all([venueAssignments(), ptPackageRates()]);
   if (isHC) {
-    const [rows, mine] = await Promise.all([
-      sb(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&status=neq.cancelled&booking_date=gte.${today}&order=booking_date.asc,start_time.asc&limit=200`),
+    // Fetch ALL upcoming bookings (paged, no 200 cap). Exclude cancelled in JS rather than
+    // via `status=neq.cancelled` so rows with a NULL status are NOT dropped by PostgREST.
+    const [rawRows, mine] = await Promise.all([
+      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
       myVenueBookings(s.c, assignMap, ptRates, today),
     ]);
-    return send(res, 200, { bookings: (rows || []).map((b) => venueBookingRow(b, assignMap, ptRates)), mine, coaches: await assignableCoaches(), isHC: true });
+    const rows = rawRows.filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
+    return send(res, 200, { bookings: rows.map((b) => venueBookingRow(b, assignMap, ptRates)), mine, coaches: await assignableCoaches(), isHC: true });
   }
   const bookings = await myVenueBookings(s.c, assignMap, ptRates, null);
   return send(res, 200, { bookings, coaches: [], isHC: false });
