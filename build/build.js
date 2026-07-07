@@ -9,7 +9,7 @@ const design = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf8');
 // Cache-busting version derived from the JS content — changes whenever app.js /
 // sc-runtime.js change, so browsers/CDNs always fetch the newest script.
 const assetVer = crypto.createHash('md5')
-  .update(fs.readFileSync(path.join(ROOT, 'public', 'app.js')) + fs.readFileSync(path.join(ROOT, 'public', 'sc-runtime.js')))
+  .update(fs.readFileSync(path.join(ROOT, 'public', 'app.js')) + fs.readFileSync(path.join(ROOT, 'public', 'sc-runtime.js')) + fs.readFileSync(path.join(ROOT, 'public', 'i18n.js')))
   .digest('hex').slice(0, 8);
 
 const xdcStart = design.indexOf('<x-dc>');
@@ -26,7 +26,7 @@ template = template.replace('value="rheza456" type="password"', 'id="loginPasswo
 // Reset-modal input flagged so confirmReset can read it
 template = template.replace('value="{{ resetPwd }}"', 'data-reset value="{{ resetPwd }}"');
 // Login card copy: neutral heading + rename the first field label (Email -> Name)
-template = template.replace('Masuk sebagai Coach', 'Sign in to your account');
+template = template.replace('Sign in as Coach', 'Sign in to your account');
 template = template.replace('>Email</label>', '>Name</label>');
 // Remove the promo hero panel; center the login form as a single column
 template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');
@@ -40,11 +40,12 @@ const arenaLogo = '<div style="display:flex;align-items:center;gap:6px;font-fami
   + '<span style="color:var(--muted2);font-weight:400;">|</span>'
   + '<span style="color:#E4002B;">ARENA</span></div>';
 // Primary: the uploaded brand PNG. If it isn't present yet, fall back to the CSS wordmark above.
-const arenaLogoImg = '<img src="/logo-20fit-arena.png" alt="20FIT Arena" style="height:22px;width:auto;object-fit:contain;display:block;margin:0 auto 7px;filter:brightness(0) invert(1);" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
-  + '<div style="display:none;justify-content:center;">' + arenaLogo + '</div>';
+// On the dark sidebar we render the brand wordmark (white "20FIT" + red "ARENA")
+// so the red brand accent stays visible — a plain PNG would be black-on-dark.
+const arenaLogoDark = '<div style="display:flex;justify-content:center;">' + arenaLogo + '</div>';
 template = template.replace(
   '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1;">20FIT<span style="color:var(--volt);"> ARENA</span><div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.14em;margin-top:3px;">COACH PORTAL</div></div>',
-  '<div style="flex:1;text-align:center;min-width:0;">' + arenaLogoImg + '<div style="font-family:\'Archivo\';font-weight:800;font-size:14px;letter-spacing:.02em;line-height:1.05;color:var(--muted);text-align:center;">Coach Workspace</div></div>');
+  '<div style="flex:1;text-align:center;min-width:0;">' + arenaLogoDark + '<div style="font-family:\'Archivo\';font-weight:800;font-size:14px;letter-spacing:.02em;line-height:1.05;color:var(--muted);text-align:center;">Coach Workspace</div></div>');
 template = template.replace('Submit to Head Coach', 'Send Coverage Request');
 // Mobile drawer: mark the app shell with the menu state + inject a tap-to-close backdrop
 template = template.replace(
@@ -363,6 +364,7 @@ ${responsiveCss}
 <body>
 <div id="app"></div>
 <template id="tpl">${template}</template>
+<script src="i18n.js?v=${assetVer}"></script>
 <script src="sc-runtime.js?v=${assetVer}"></script>
 <script src="app.js?v=${assetVer}"></script>
 <script>

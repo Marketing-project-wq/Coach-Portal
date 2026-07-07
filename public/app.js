@@ -18,10 +18,28 @@ class Component extends DCLogic {
       absen: false, absenClass: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       editMenuId: null, editMenu: { title: '', category: '', content: '' },
       toast: '',
+      lang: (window.localStorage && localStorage.getItem('arena_lang')) || 'en',
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
     this.boot();
+    // Auto-refresh: pick up classes/bookings newly added in Admin Hub without a manual reload.
+    this._pollTimer = setInterval(() => this.autoRefresh(), 60000);
+  }
+  // Re-fetch the current screen's data on a timer. Skipped while a modal is open or
+  // the user is typing/selecting, so the background refresh never disrupts an action.
+  autoRefresh() {
+    if (this.MOCK || !this.state.loggedIn) return;
+    if (this.state.absen || this.state.reset || this.state.editMenuId) return;
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
+    const scr = this.state.screen;
+    if (scr === 'dash') {
+      this.loadCalendar(this.state.d.calYm || undefined);
+      this.showDay(this.state.d.selDate || this.todayISO());
+    } else {
+      this.loadScreen(scr);
+    }
   }
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 } };
@@ -90,7 +108,40 @@ class Component extends DCLogic {
   }
   setD(patch) { this.setState({ d: Object.assign({}, this.state.d, patch) }); }
   loadCalendar(ym) { if (this.MOCK) return; this.api('/api/coach/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
-  toastMsg(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
+  toastMsg(msg) { this.setState({ toast: this.trToast(msg) }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
+  // ---------- i18n (English base; localize the rendered DOM + toasts when lang='id') ----------
+  setLang(l) { if (window.localStorage) localStorage.setItem('arena_lang', l); this.setState({ lang: l }); }
+  trToast(m) {
+    if (this.state.lang !== 'id' || !m) return m;
+    const I = window.__I18N || {}; const d = I.dict || {};
+    if (d[m] != null) return d[m];
+    let out = m; const rep = I.toastRepl || [];
+    for (let i = 0; i < rep.length; i++) out = out.split(rep[i][0]).join(rep[i][1]);
+    return out;
+  }
+  __afterRender(root) { if (this.state.lang === 'id') this.localizeDOM(root); }
+  localizeDOM(root) {
+    const I = window.__I18N || {}; const d = I.dict || {}; const dr = I.dateRepl || [];
+    const EMO = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}️‍]/gu;
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const nodes = []; let n; while ((n = walk.nextNode())) nodes.push(n);
+    for (let i = 0; i < nodes.length; i++) {
+      const t = nodes[i]; const raw = t.nodeValue; const key = raw.trim();
+      if (!key) continue;
+      if (d[key] != null) { t.nodeValue = raw.replace(key, d[key]); continue; }
+      const bare = key.replace(EMO, '').trim();
+      if (bare && bare !== key && d[bare] != null) { t.nodeValue = raw.replace(bare, d[bare]); continue; }
+      if (/\d/.test(raw)) {
+        let v = raw; for (let j = 0; j < dr.length; j++) v = v.replace(dr[j][0], dr[j][1]);
+        if (v !== raw) t.nodeValue = v;
+      }
+    }
+    const els = root.querySelectorAll('[placeholder],[title]');
+    for (let k = 0; k < els.length; k++) {
+      const el = els[k];
+      ['placeholder', 'title'].forEach((a) => { const val = el.getAttribute(a); if (val && d[val.trim()] != null) el.setAttribute(a, d[val.trim()]); });
+    }
+  }
   go(screen) { if (window.localStorage) localStorage.setItem('arena_screen', screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
@@ -526,6 +577,9 @@ class Component extends DCLogic {
     return {
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
       login: () => this.login(), logout: () => this.logout(),
+      setLangEN: () => this.setLang('en'), setLangID: () => this.setLang('id'),
+      langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',
+      langIdBg: st.lang === 'id' ? 'var(--volt)' : 'transparent', langIdFg: st.lang === 'id' ? '#ffffff' : 'var(--muted)',
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       isExternal: this.isExternal, showReview: !this.isExternal, showLeaderboard: !this.isExternal,
