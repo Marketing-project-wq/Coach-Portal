@@ -246,25 +246,16 @@ class Component extends DCLogic {
   // Build an .ics for a coaching class and download it — the device's calendar app opens it.
   addToCalendar(o) {
     if (!o || !o.date) return this.toastMsg('Class date not available.');
-    const pad = (n) => String(n).padStart(2, '0');
-    const clean = (t) => String(t || '').replace(/[^0-9:]/g, ''); // "– 08:00" -> "08:00"
-    const dt = (d, t) => { const p = clean(t).split(':'); return String(d).replace(/-/g, '') + 'T' + (p[0] || '00').padStart(2, '0') + (p[1] || '00').padStart(2, '0') + '00'; };
-    const now = new Date();
-    const stamp = now.getUTCFullYear() + pad(now.getUTCMonth() + 1) + pad(now.getUTCDate()) + 'T' + pad(now.getUTCHours()) + pad(now.getUTCMinutes()) + pad(now.getUTCSeconds()) + 'Z';
-    const title = (o.title || 'Class') + ' — Coaching';
-    const ics = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//20FIT Arena//Coach Portal//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-      'BEGIN:VEVENT', 'UID:class-' + (o.id || o.date) + '@20fit.id', 'DTSTAMP:' + stamp,
-      'DTSTART:' + dt(o.date, o.start), 'DTEND:' + dt(o.date, o.end || o.start),
-      'SUMMARY:' + title, 'DESCRIPTION:Coaching session at 20FIT Arena.', 'LOCATION:20FIT Arena, Menteng',
-      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Class in 1 hour', 'TRIGGER:-PT1H', 'END:VALARM',
-      'END:VEVENT', 'END:VCALENDAR',
-    ].join('\r\n');
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = url; a.download = 'class-' + (o.date || '') + '.ics'; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-    this.toastMsg('Added to your calendar');
+    // Navigate to a real /cal.ics URL served with text/calendar headers. This is the
+    // only thing that reliably works on phones — iOS Safari and in-app browsers cannot
+    // save a Blob/`<a download>` .ics, but they DO open a text/calendar response into
+    // the calendar app. Desktop browsers download it as before.
+    const qs = new URLSearchParams({
+      date: o.date || '', start: o.start || '', end: o.end || o.start || '',
+      title: o.title || 'Class', id: o.id || o.date || '',
+    }).toString();
+    window.location.href = '/cal.ics?' + qs;
+    this.toastMsg('Opening your calendar…');
   }
   // Attach / change the menu for a class straight from its card (Option B), next to Check In.
   pickClassMenu(scheduleId, menuId) {

@@ -261,6 +261,34 @@ function send(res, status, body, headers = {}) {
   });
   res.end(payload);
 }
+// Build & serve an .ics from query params (date, start, end, title, id). Served with
+// text/calendar so mobile OSes open it into the calendar app instead of failing to
+// save a Blob download.
+function sendIcs(res, q) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const clean = (t) => String(t || '').replace(/[^0-9:]/g, '');
+  const dt = (d, t) => { const p = clean(t).split(':'); return String(d).replace(/-/g, '') + 'T' + (p[0] || '00').padStart(2, '0') + (p[1] || '00').padStart(2, '0') + '00'; };
+  const esc = (s) => String(s || '').replace(/[\\;,]/g, (m) => '\\' + m).replace(/\r?\n/g, '\\n');
+  const date = String(q.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return send(res, 400, 'Invalid date');
+  const now = new Date();
+  const stamp = now.getUTCFullYear() + pad(now.getUTCMonth() + 1) + pad(now.getUTCDate()) + 'T' + pad(now.getUTCHours()) + pad(now.getUTCMinutes()) + pad(now.getUTCSeconds()) + 'Z';
+  const title = esc((q.title || 'Class') + ' — Coaching');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//20FIT Arena//Coach Portal//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT', 'UID:class-' + esc(q.id || date) + '@20fit.id', 'DTSTAMP:' + stamp,
+    'DTSTART:' + dt(date, q.start), 'DTEND:' + dt(date, q.end || q.start),
+    'SUMMARY:' + title, 'DESCRIPTION:Coaching session at 20FIT Arena.', 'LOCATION:20FIT Arena, Menteng',
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Class in 1 hour', 'TRIGGER:-PT1H', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  res.writeHead(200, {
+    'Content-Type': 'text/calendar; charset=utf-8',
+    'Content-Disposition': 'attachment; filename="class-' + date + '.ics"',
+    'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+  });
+  res.end(ics);
+}
 function readBody(req, limit = 1e6) {
   return new Promise((resolve) => {
     let d = '', big = false;
@@ -1179,6 +1207,10 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, '');
     if (url === '/healthz') return send(res, 200, { ok: true });
+    // Public calendar file. Delivered from a real URL with text/calendar headers so
+    // phones (iOS Safari / in-app browsers) recognise it and offer "Add to Calendar" —
+    // a Blob download does not work there. Contains only class type + time (no PII).
+    if (url === '/cal.ics') return sendIcs(res, query);
 
     if (url.startsWith('/api/')) {
       for (const r of routes) {
