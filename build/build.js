@@ -250,7 +250,7 @@ const menuModal = '<sc-if value="{{ showMenuModal }}" hint-placeholder-val="{{ f
     + '<label style="' + vLabel + '">Menu Name</label>'
     + '<input data-mb="title" value="{{ mbTitle }}" placeholder="e.g. HYROX Complete — Full Simulation" style="' + mi + 'width:100%;margin-bottom:12px;">'
     + '<label style="' + vLabel + '">Class Type <span style="color:var(--muted2);font-weight:400;">(optional)</span></label>'
-    + '<input data-mb="category" value="{{ mbCategory }}" placeholder="e.g. HYROX Complete" style="' + mi + 'width:100%;margin-bottom:12px;">'
+    + '<select data-mb="category" style="' + mi + 'width:100%;margin-bottom:12px;cursor:pointer;"><option value="">— select class type —</option><sc-for list="{{ mbCategoryOpts }}" as="o"><option value="{{ o.name }}" selected="{{ o.picked }}">{{ o.name }}</option></sc-for></select>'
     + '<label style="' + vLabel + '">Notes / manual add-on — before blocks <span style="color:var(--muted2);font-weight:400;">(optional)</span></label>'
     + '<textarea data-mb="note" rows="2" placeholder="e.g. 10 min amrap / 2 min rest — or type extra exercises by hand" style="' + mi + 'width:100%;resize:vertical;line-height:1.5;">{{ mbNote }}</textarea>'
     + '<div style="border-top:1px solid var(--border);margin:16px 0 4px;"></div>'

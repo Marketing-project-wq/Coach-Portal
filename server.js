@@ -609,7 +609,10 @@ route('POST', '/api/settings/arena-location', async (req, res, s) => {
 route('GET', '/api/coach/menu', async (req, res, s) => {
   const rows = (await sb('arena_class_menus?select=*&order=created_at.desc&limit=200')) || [];
   const canManage = requireHC(s);
-  return send(res, 200, { menus: rows.map((m) => ({ id: m.id, title: m.title, category: m.category || '', content: m.content || '', by: m.created_by || '', mine: m.created_by === s.d || m.created_by === s.c })), canManage });
+  // Class types from Admin Hub — used to fill the "Class Type" dropdown in the menu builder.
+  const types = await classTypes();
+  const classTypeNames = [...new Set(Object.values(types).map((t) => shortType(t.name)).filter((n) => n && n !== 'Class'))].sort();
+  return send(res, 200, { menus: rows.map((m) => ({ id: m.id, title: m.title, category: m.category || '', content: m.content || '', by: m.created_by || '', mine: m.created_by === s.d || m.created_by === s.c })), canManage, classTypes: classTypeNames });
 });
 route('POST', '/api/coach/menu', async (req, res, s) => {
   const body = await readBody(req);

@@ -172,7 +172,7 @@ class Component extends DCLogic {
     else if (screen === 'reviews') this.api('/api/coach/reviews' + (this.state.reviewCoach ? '?coach=' + encodeURIComponent(this.state.reviewCoach) : '')).then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories, reviewCoaches: r.coaches || [] })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
-    else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage })).catch(fail);
+    else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
@@ -629,6 +629,11 @@ class Component extends DCLogic {
         remove: () => this.removeMenuItem(bi, ii),
       })),
     })) : [];
+    // "Class Type" dropdown options — class names from Admin Hub (+ the menu's current value if custom).
+    const mbCatCur = mb ? (mb.category || '') : '';
+    const mbCatList = (D.menuClassTypes || []).slice();
+    if (mbCatCur && mbCatList.indexOf(mbCatCur) < 0) mbCatList.unshift(mbCatCur);
+    const mbCategoryOpts = mbCatList.map((n) => ({ name: n, picked: n === mbCatCur }));
     const noClassMenus = classMenus.length === 0;
     // arena GPS lock (settings)
     const aloc = D.arenaLoc || { set: false, radius_m: 150 };
@@ -739,7 +744,7 @@ class Component extends DCLogic {
       showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
       openMenuModal: () => this.openMenuModal(),
       showMenuModal: !!st.menuModal, menuModalTitle: (mb && mb.id) ? 'Edit Menu' : 'Add Menu',
-      mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbNote: mb ? mb.note : '', mbNoteBottom: mb ? mb.noteBottom : '', mbBlocks,
+      mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbCategoryOpts, mbNote: mb ? mb.note : '', mbNoteBottom: mb ? mb.noteBottom : '', mbBlocks,
       closeMenuModal: () => this.closeMenuModal(), saveMenuBuilder: () => this.saveMenuBuilder(), addMenuBlock: () => this.addMenuBlock(),
       arenaLocSet, arenaRadius, arenaLocStatus, arenaLocCol, captureArenaLoc: () => this.captureArenaLoc(), clearArenaLoc: () => this.clearArenaLoc(),
       pageKicker: tt[0], pageTitle: tt[1],
@@ -844,6 +849,7 @@ class Component extends DCLogic {
     ];
     d.venues = [{ id: 'v2', time: '16:00', end: '– 20:00', customer: 'Satrio', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: true, started: false, calDate: '2026-07-10', calStart: '16:00', calEnd: '20:00' }, { id: 'v3', time: '09:00', end: '– 11:00', customer: 'Corporate Group', phone: '', arena: 'Arena 20FIT', notes: '', dateLabel: 'Fri 10 Jul', isToday: true, canAbsen: false, started: true, calDate: '2026-07-10', calStart: '09:00', calEnd: '11:00' }];
     d.menuCanManage = true;
+    d.menuClassTypes = ['HYROX Complete', 'HYROX Foundation', 'Engine Class', 'Strength Class'];
     d.classMenus = [
       { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', by: 'Nando', content: JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', noteBottom: 'Cooldown: 5 min mobility + stretching', blocks: [
         { label: 'Wu', items: [{ amount: '2', unit: 'lap', name: 'Run', weight: '' }] },
