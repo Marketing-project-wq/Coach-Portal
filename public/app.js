@@ -3,7 +3,7 @@
  * Sources every screen from the backend API; falls back to sample data with ?mock=1. */
 /* External coaches: participants may review them, but they cannot see participant
  * data/names. They only get Schedule, Monitoring and Rotation. */
-const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'yokae'];
+const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'yokae', 'sakha'];
 function isExternalName(name) { return EXTERNAL_COACHES.indexOf(String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase()) >= 0; }
 class Component extends DCLogic {
   constructor() {
