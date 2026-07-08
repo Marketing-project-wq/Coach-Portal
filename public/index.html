@@ -376,6 +376,7 @@
               <sc-if value="{{ detailCheckedOut }}"><span style="background:rgba(28,138,75,.12);color:var(--green);border-radius:11px;padding:12px 20px;font-weight:800;font-size:13px;">✓ Finished</span></sc-if>
             </div>
           </div>
+          <sc-if value="{{ showParticipantList }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;">
               <div style="font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Participant List</div>
@@ -393,6 +394,7 @@
             </div>
             </sc-for>
           </div>
+          </sc-if>
         </div>
         </sc-if>
 
@@ -795,9 +797,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=8ca7d768"></script>
-<script src="sc-runtime.js?v=8ca7d768"></script>
-<script src="app.js?v=8ca7d768"></script>
+<script src="i18n.js?v=cdac7bf2"></script>
+<script src="sc-runtime.js?v=cdac7bf2"></script>
+<script src="app.js?v=cdac7bf2"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

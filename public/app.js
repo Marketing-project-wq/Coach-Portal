@@ -645,8 +645,10 @@ class Component extends DCLogic {
     const detailTimeRange = (cd.time || '') + (cd.end ? '–' + cd.end : '');
     const ac = st.absenClass || {};
     const absenLabel = ac.type ? (ac.type + (ac.time ? ' · ' + ac.time : '')) : '';
-    // check-out modal + class-detail check-in/out states
-    const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut, detailCanCheckout = !!cd.canCheckout, detailCanCheckin = !detailStarted;
+    // check-out modal + class-detail check-in/out states.
+    // External coaches never see participant data or check-in on the detail — only Coverage + Back.
+    const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut && !this.isExternal, detailCanCheckout = !!cd.canCheckout && !this.isExternal, detailCanCheckin = !detailStarted && !this.isExternal;
+    const showParticipantList = !this.isExternal;
     const co = st.checkoutData; const coCls = st.checkoutClass || {};
     const checkoutLabel = coCls.type ? (coCls.type + (coCls.time ? ' · ' + coCls.time : '')) : 'this class';
     const checkoutHasRecap = !!co;
@@ -754,7 +756,7 @@ class Component extends DCLogic {
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
-      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(),
+      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants,
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),

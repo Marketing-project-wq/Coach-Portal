@@ -698,6 +698,7 @@
               <sc-if value="{{ detailCheckedOut }}"><span style="background:rgba(28,138,75,.12);color:var(--green);border-radius:11px;padding:12px 20px;font-weight:800;font-size:13px;">✓ Finished</span></sc-if>
             </div>
           </div>
+          <sc-if value="{{ showParticipantList }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;">
               <div style="font-weight:800;font-family:'Archivo';font-size:16px;">Participant List</div>
@@ -715,6 +716,7 @@
             </div>
             </sc-for>
           </div>
+          </sc-if>
         </div>
         </sc-if>
 
