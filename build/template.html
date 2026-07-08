@@ -698,6 +698,15 @@
               <sc-if value="{{ detailCheckedOut }}"><span style="background:rgba(28,138,75,.12);color:var(--green);border-radius:11px;padding:12px 20px;font-weight:800;font-size:13px;">✓ Finished</span></sc-if>
             </div>
           </div>
+          <sc-if value="{{ cdShowMenu }}">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+              <div style="font-weight:800;font-family:'Archivo';font-size:16px;">Class Menu</div>
+              <select onchange="{{ setClassMenu }}" style="min-width:260px;flex:1;max-width:420px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px;color:var(--text);font-family:'Hanken Grotesk';font-size:13.5px;cursor:pointer;"><option value="">— no menu —</option><sc-for list="{{ cdMenuOptions }}" as="o"><option value="{{ o.id }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
+            </div>
+            <sc-if value="{{ cdHasLinkedMenu }}"><div style="border-top:1px solid var(--border);padding-top:12px;"><div style="font-weight:800;font-size:14.5px;">{{ cdLinkedMenuTitle }}</div><div style="font-size:12.5px;color:var(--text);margin-top:6px;line-height:1.5;white-space:pre-wrap;">{{ cdLinkedMenuContent }}</div></div></sc-if>
+          </div>
+          </sc-if>
           <sc-if value="{{ showParticipantList }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;">

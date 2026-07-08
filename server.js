@@ -821,6 +821,12 @@ route('GET', '/api/coach/leaderboard', async (req, res, s) => {
 });
 
 // ===== COACH: class detail + participants =====
+// The menu a coach has attached to a class (Option B). Returns null and stays inert until
+// the arena_class_menu_links table exists in Supabase (see docs/ADMIN_HUB_CLASS_MENU_LINK.md).
+async function classMenuLink(scheduleId) {
+  try { const rows = await sb(`arena_class_menu_links?select=menu_id&schedule_id=eq.${enc(scheduleId)}&limit=1`); return rows && rows[0] ? rows[0].menu_id : null; }
+  catch (e) { return null; }
+}
 route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
   const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&id=eq.${enc(params.id)}&limit=1`);
@@ -851,7 +857,28 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
       classesLabel: classesLabelFor(h),
     };
   });
-  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, started, checkedOut, canCheckout }, started, participants });
+  // Class Menu (Option B) — the menu attached to this class + all menus to choose from.
+  const linkedMenuId = await classMenuLink(params.id);
+  const menuRows = (await sb('arena_class_menus?select=id,title,category,content&order=created_at.desc&limit=200')) || [];
+  const menuOptions = menuRows.map((m) => ({ id: m.id, title: m.title, category: m.category || '' }));
+  const lm = linkedMenuId ? menuRows.find((m) => m.id === linkedMenuId) : null;
+  const linkedMenu = lm ? { id: lm.id, title: lm.title, category: lm.category || '', content: lm.content || '' } : null;
+  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, started, checkedOut, canCheckout }, started, participants, menuOptions, linkedMenu });
+});
+// Attach / change / clear the menu for a class (Option B). No-op-safe if the link table is missing.
+route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
+  const body = await readBody(req);
+  const menuId = body && body.menu_id ? String(body.menu_id).trim() : '';
+  try {
+    if (!menuId) {
+      await sb(`arena_class_menu_links?schedule_id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    } else {
+      await sb('arena_class_menu_links', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, menu_id: menuId, set_by: s.d || s.c, updated_at: new Date().toISOString() }) });
+    }
+    return send(res, 200, { ok: true });
+  } catch (e) {
+    return send(res, 500, { error: 'Class-menu linking is not set up yet — ask Admin to create the arena_class_menu_links table.' });
+  }
 });
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   const body = (await readBody(req)) || {};

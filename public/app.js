@@ -240,6 +240,21 @@ class Component extends DCLogic {
       .then((r) => { this.setState({ checkoutData: r.recap || {} }); if (this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
       .catch((e) => { this.toastMsg(e.message); });
   }
+  // Attach / change the menu for the open class (Option B).
+  setClassMenu(menuId) {
+    const cd = this.state.d.classDetail && this.state.d.classDetail.schedule;
+    const id = cd && cd.schedule_id; if (!id) return;
+    if (this.MOCK) {
+      const opts = (this.state.d.classDetail.menuOptions) || [];
+      const m = opts.find((o) => o.id === menuId);
+      const linkedMenu = m ? { id: m.id, title: m.title, category: m.category, content: m.content || '' } : null;
+      this.setD({ classDetail: Object.assign({}, this.state.d.classDetail, { linkedMenu }) });
+      return this.toastMsg(menuId ? 'Menu set for this class' : 'Menu removed');
+    }
+    this.api('/api/coach/class/' + encodeURIComponent(id) + '/menu', { method: 'POST', body: JSON.stringify({ menu_id: menuId }) })
+      .then(() => { this.toastMsg(menuId ? 'Menu set for this class' : 'Menu removed'); this.openClass(id); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   // ---------- Class Menu builder (structured popup: note + blocks + exercises) ----------
   _emptyItem() { return { amount: '', unit: 'kali', name: '', weight: '' }; }
   _emptyBlock(label) { return { label: label || '', items: [this._emptyItem()] }; }
@@ -654,6 +669,13 @@ class Component extends DCLogic {
     // External coaches never see participant data or check-in on the detail — only Coverage + Back.
     const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut && !this.isExternal, detailCanCheckout = !!cd.canCheckout && !this.isExternal, detailCanCheckin = !detailStarted && !this.isExternal;
     const showParticipantList = !this.isExternal;
+    // Class Menu attached to this class (Option B) — internal/HC only (external don't see the detail)
+    const cdLinkedMenu = (D.classDetail && D.classDetail.linkedMenu) || null;
+    const cdMenuOptions = ((D.classDetail && D.classDetail.menuOptions) || []).map((m) => ({ id: m.id, label: m.title + (m.category ? ' · ' + m.category : ''), picked: !!(cdLinkedMenu && cdLinkedMenu.id === m.id) }));
+    const cdHasLinkedMenu = !!cdLinkedMenu;
+    const cdLinkedMenuTitle = cdLinkedMenu ? cdLinkedMenu.title : '';
+    const cdLinkedMenuContent = cdLinkedMenu ? (this._formatMenu(cdLinkedMenu.content) || cdLinkedMenu.content) : '';
+    const cdShowMenu = !this.isExternal;
     const co = st.checkoutData; const coCls = st.checkoutClass || {};
     const checkoutLabel = coCls.type ? (coCls.type + (coCls.time ? ' · ' + coCls.time : '')) : 'this class';
     const checkoutHasRecap = !!co;
@@ -762,6 +784,7 @@ class Component extends DCLogic {
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
+      cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants,
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
@@ -816,7 +839,10 @@ class Component extends DCLogic {
     d.week = [['MON', '23', '2 cls', true], ['TUE', '24', '1 cls', false], ['WED', '25', '2 cls', false], ['THU', '26', '1 cls', false], ['FRI', '27', '2 cls', false], ['SAT', '28', '—', false], ['SUN', '29', '—', false]].map((w) => ({ dow: w[0], day: w[1], label: w[2], isToday: w[3] }));
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '' }] };
+    const amrapContent = JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [{ label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski' }, { amount: '150', unit: 'meter', name: 'row' }, { amount: '1', unit: 'lap', name: 'run' }] }] });
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '' }],
+      menuOptions: [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation', content: 'Warm up + technique drills' }],
+      linkedMenu: { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent } };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];
     d.emailLog = [{ class: 'HYROX Complete · 07:00', date: '01 Jun', recipients: 12, status: 'Sent' }];
     d.fbClasses = [{ id: 'x1', label: 'HYROX Complete · 07:00 · 1 Jul' }, { id: 'x2', label: 'HYROX Foundation · 17:00 · 30 Jun' }];
