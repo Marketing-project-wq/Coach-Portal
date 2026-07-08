@@ -244,7 +244,7 @@ function cardsFrom(sched, counts, sessionMap, types, today, linkMap) {
       accent: checkedOut ? '#3ED598' : (isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C')),
       status: checkedOut ? 'Finished' : (isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled')),
       // Check In shows for an upcoming class not yet started; Check Out shows while it's ongoing.
-      canAbsen: upcoming && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date), menuId: (linkMap && linkMap[x.id]) || '' };
+      canAbsen: upcoming && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date), date: x.schedule_date, menuId: (linkMap && linkMap[x.id]) || '' };
   });
 }
 

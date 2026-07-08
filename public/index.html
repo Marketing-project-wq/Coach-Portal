@@ -317,6 +317,7 @@
                 <sc-if value="{{ c.hasMenuPick }}"><select onchange="{{ c.setMenu }}" style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px;color:var(--text);font-family:'Manrope';font-size:12.5px;cursor:pointer;"><option value="">Class Menu — pick one</option><sc-for list="{{ c.menuOpts }}" as="o"><option value="{{ o.id }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>
                 <sc-if value="{{ isExternal }}"><button onclick="{{ c.changeCoach }}" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:10px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Coverage</button></sc-if>
               </div>
+              <button onclick="{{ c.addCal }}" style="width:100%;margin-top:8px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:10px;padding:9px;font-weight:700;font-size:12px;cursor:pointer;" style-hover="border-color:var(--muted);color:var(--text);">📅 Add to Calendar</button>
             </div>
             </sc-for>
           </div>
@@ -806,9 +807,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=2e20625f"></script>
-<script src="sc-runtime.js?v=2e20625f"></script>
-<script src="app.js?v=2e20625f"></script>
+<script src="i18n.js?v=ce1640bd"></script>
+<script src="sc-runtime.js?v=ce1640bd"></script>
+<script src="app.js?v=ce1640bd"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

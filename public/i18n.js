@@ -65,6 +65,7 @@ window.__I18N = (function () {
     'Assign Venue': 'Kirim ke Coach',
     'No arena sessions assigned to you yet.': 'Belum ada sesi arena yang ditugaskan ke Anda.',
     'Assign a responsible coach to each Arena + Coach booking.': 'Tetapkan coach penanggung jawab untuk tiap booking Arena + Coach.',
+    'Add to Calendar': 'Tambah ke Kalender', 'Added to your calendar': 'Ditambahkan ke kalender', 'Class date not available.': 'Tanggal kelas tidak tersedia.',
     'No coach yet': 'Belum ada coach', 'Time not set': 'Jam belum diatur', 'Remove': 'Hapus',
     'No upcoming arena bookings.': 'Belum ada booking arena mendatang.', 'Flexible time': 'Jam fleksibel',
     // ---- menu ----

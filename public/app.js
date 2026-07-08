@@ -240,6 +240,29 @@ class Component extends DCLogic {
       .then((r) => { this.setState({ checkoutData: r.recap || {} }); if (this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
       .catch((e) => { this.toastMsg(e.message); });
   }
+  // Build an .ics for a coaching class and download it — the device's calendar app opens it.
+  addToCalendar(o) {
+    if (!o || !o.date) return this.toastMsg('Class date not available.');
+    const pad = (n) => String(n).padStart(2, '0');
+    const clean = (t) => String(t || '').replace(/[^0-9:]/g, ''); // "– 08:00" -> "08:00"
+    const dt = (d, t) => { const p = clean(t).split(':'); return String(d).replace(/-/g, '') + 'T' + (p[0] || '00').padStart(2, '0') + (p[1] || '00').padStart(2, '0') + '00'; };
+    const now = new Date();
+    const stamp = now.getUTCFullYear() + pad(now.getUTCMonth() + 1) + pad(now.getUTCDate()) + 'T' + pad(now.getUTCHours()) + pad(now.getUTCMinutes()) + pad(now.getUTCSeconds()) + 'Z';
+    const title = (o.title || 'Class') + ' — Coaching';
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//20FIT Arena//Coach Portal//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+      'BEGIN:VEVENT', 'UID:class-' + (o.id || o.date) + '@20fit.id', 'DTSTAMP:' + stamp,
+      'DTSTART:' + dt(o.date, o.start), 'DTEND:' + dt(o.date, o.end || o.start),
+      'SUMMARY:' + title, 'DESCRIPTION:Coaching session at 20FIT Arena.', 'LOCATION:20FIT Arena, Menteng',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Class in 1 hour', 'TRIGGER:-PT1H', 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = 'class-' + (o.date || '') + '.ics'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    this.toastMsg('Added to your calendar');
+  }
   // Attach / change the menu for a class straight from its card (Option B), next to Check In.
   pickClassMenu(scheduleId, menuId) {
     if (!scheduleId) return;
@@ -548,7 +571,7 @@ class Component extends DCLogic {
     const coachToday = (D.today || []).map((c) => {
       const p = this.statusPill(c.status);
       const menuOpts = (D.menuOptions || []).map((m) => ({ id: m.id, label: m.title + (m.category ? ' · ' + m.category : ''), picked: c.menuId === m.id }));
-      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : '') });
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : ''), addCal: () => this.addToCalendar({ id: c.schedule_id, date: c.date, start: c.time, end: c.end, title: c.type }) });
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(228,0,43,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
