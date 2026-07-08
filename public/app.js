@@ -4,7 +4,10 @@
 /* External coaches: participants may review them, but they cannot see participant
  * data/names. They only get Schedule, Monitoring and Rotation. */
 const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'yokae', 'sakha'];
-function isExternalName(name) { return EXTERNAL_COACHES.indexOf(String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase()) >= 0; }
+function isExternalName(name) {
+  const words = String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return words.some((w) => EXTERNAL_COACHES.indexOf(w) >= 0);
+}
 class Component extends DCLogic {
   constructor() {
     super();
@@ -714,7 +717,7 @@ class Component extends DCLogic {
     const coType = co ? (co.type || 'Class') : '', coDate = co ? (co.dateLabel || '') : '';
     const coCheckin = co ? (co.checkin || '') : '', coCheckout = co ? (co.checkout || '') : '';
     const coDuration = co && co.durationMin != null ? (co.durationMin + ' min') : '', coParticipants = co && co.participants != null ? String(co.participants) : '0';
-    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => { const m = this.statusPill(p.status); const r = this.recencyLabel(p.daysSince); const v = p.visits || 0; return { n: i + 1, name: p.name, booking: p.booking, status: p.status, bg: m.bg, col: m.col, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, classesLabel: p.classesLabel || '', hasClasses: !!p.classesLabel }; });
+    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => ({ n: i + 1, name: p.name }));
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log

@@ -392,15 +392,13 @@
               <div style="font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Participant List</div>
               <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Search participants…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Manrope';font-size:13.5px;"></div>
             </div>
-            <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
-              <div>#</div><div>NAME</div><div>BOOKING</div><div>STATUS</div>
+            <div style="display:grid;grid-template-columns:40px 1fr;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
+              <div>#</div><div>NAME</div>
             </div>
             <sc-for list="{{ participants }}" as="p" hint-placeholder-count="8">
-            <div style="display:grid;grid-template-columns:40px 1fr 130px 120px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
+            <div style="display:grid;grid-template-columns:40px 1fr;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
               <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;">{{ p.n }}</div>
-              <div><div style="font-weight:600;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ p.attendInfo }}<span style="color:{{ p.lastCol }};font-weight:600;">{{ p.lastLabel }}</span></div><sc-if value="{{ p.hasClasses }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">Classes: {{ p.classesLabel }}</div></sc-if></div>
-              <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ p.booking }}</div>
-              <div><span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:{{ p.bg }};color:{{ p.col }};">{{ p.status }}</span></div>
+              <div style="font-weight:600;">{{ p.name }}</div>
             </div>
             </sc-for>
           </div>
@@ -807,9 +805,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=ce1640bd"></script>
-<script src="sc-runtime.js?v=ce1640bd"></script>
-<script src="app.js?v=ce1640bd"></script>
+<script src="i18n.js?v=d6a37d17"></script>
+<script src="sc-runtime.js?v=d6a37d17"></script>
+<script src="app.js?v=d6a37d17"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
