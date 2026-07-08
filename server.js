@@ -230,7 +230,7 @@ async function coachWeek(coach, weekStartISO, today) {
 }
 
 // Build class-card objects (used by the dashboard list and the date-range filter).
-function cardsFrom(sched, counts, sessionMap, types, today) {
+function cardsFrom(sched, counts, sessionMap, types, today, linkMap) {
   return sched.map((x) => {
     const c = counts[x.id] || { confirmed: 0, pending: 0 };
     const t = types[x.class_type_id] || {};
@@ -244,7 +244,7 @@ function cardsFrom(sched, counts, sessionMap, types, today) {
       accent: checkedOut ? '#3ED598' : (isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C')),
       status: checkedOut ? 'Finished' : (isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled')),
       // Check In shows for an upcoming class not yet started; Check Out shows while it's ongoing.
-      canAbsen: upcoming && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date) };
+      canAbsen: upcoming && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date), menuId: (linkMap && linkMap[x.id]) || '' };
   });
 }
 
@@ -374,6 +374,17 @@ route('GET', '/api/coach/week', async (req, res, s, q) => {
 });
 
 // Classes within a chosen date range (the "dari–sampai" filter on the schedule list).
+// schedule_id -> attached menu_id (Option B). Graceful/empty until the link table exists.
+async function classMenuLinks(ids) {
+  const m = {};
+  if (!ids.length) return m;
+  try { const rows = await sb(`arena_class_menu_links?select=schedule_id,menu_id&schedule_id=in.(${ids.map(enc).join(',')})`); for (const r of rows || []) m[r.schedule_id] = r.menu_id; } catch (e) { /* table not created yet */ }
+  return m;
+}
+async function menuOptionsList() {
+  const rows = (await sb('arena_class_menus?select=id,title,category&order=created_at.desc&limit=200')) || [];
+  return rows.map((m) => ({ id: m.id, title: m.title, category: m.category || '' }));
+}
 route('GET', '/api/coach/classes', async (req, res, s, q) => {
   const today = todayJakarta();
   const from = q.from || today;
@@ -381,8 +392,8 @@ route('GET', '/api/coach/classes', async (req, res, s, q) => {
   const types = await classTypes();
   const sched = (await coachSchedules(s.c, from, to)).slice(0, 80);
   const ids = sched.map((x) => x.id);
-  const [counts, started, venues] = await Promise.all([bookingCounts(ids), sessionStatusMap(ids), coachVenueCards(s.c, from, to, today)]);
-  return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today), venues, from, to });
+  const [counts, started, venues, linkMap, menuOptions] = await Promise.all([bookingCounts(ids), sessionStatusMap(ids), coachVenueCards(s.c, from, to, today), classMenuLinks(ids), menuOptionsList()]);
+  return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today, linkMap), venues, menuOptions, from, to });
 });
 
 // Per-month class count for the coach across the current year (monitoring bar chart).

@@ -240,6 +240,14 @@ class Component extends DCLogic {
       .then((r) => { this.setState({ checkoutData: r.recap || {} }); if (this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
       .catch((e) => { this.toastMsg(e.message); });
   }
+  // Attach / change the menu for a class straight from its card (Option B), next to Check In.
+  pickClassMenu(scheduleId, menuId) {
+    if (!scheduleId) return;
+    if (this.MOCK) { const today = (this.state.d.today || []).map((c) => c.schedule_id === scheduleId ? Object.assign({}, c, { menuId }) : c); this.setD({ today }); return this.toastMsg(menuId ? 'Menu set for this class' : 'Menu removed'); }
+    this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/menu', { method: 'POST', body: JSON.stringify({ menu_id: menuId }) })
+      .then(() => { this.toastMsg(menuId ? 'Menu set for this class' : 'Menu removed'); this.showDay(this.state.d.selDate || this.todayISO()); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   // Attach / change the menu for the open class (Option B).
   setClassMenu(menuId) {
     const cd = this.state.d.classDetail && this.state.d.classDetail.schedule;
@@ -388,7 +396,7 @@ class Component extends DCLogic {
     if (from > to) return this.toastMsg('The "from" date must be before the "to" date.');
     const label = (this.fmtD(from) + ' – ' + this.fmtD(to)).toUpperCase();
     if (this.MOCK) return this.setD({ jadwalLabel: label });
-    this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, venues: r.venues || [], jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
+    this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, venues: r.venues || [], menuOptions: r.menuOptions || [], jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
   }
   resetRange() { if (this.MOCK) return this.setD({ jadwalLabel: 'UPCOMING' }); this.loadScreen('dash'); }
   todayISO() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
@@ -398,7 +406,7 @@ class Component extends DCLogic {
     // Optimistic: move the highlight + header instantly, then load that day's cards.
     this.setD({ jadwalLabel: label, selDate: date });
     if (this.MOCK) return;
-    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, venues: r.venues || [] })).catch((e) => this.toastMsg(e.message));
+    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, venues: r.venues || [], menuOptions: r.menuOptions || [] })).catch((e) => this.toastMsg(e.message));
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Review link copied')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
   setReviewCoach(name) { this.setState({ reviewCoach: name || '' }); if (!this.MOCK) this.loadScreen('reviews'); }
@@ -539,7 +547,8 @@ class Component extends DCLogic {
     // coach today
     const coachToday = (D.today || []).map((c) => {
       const p = this.statusPill(c.status);
-      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c) });
+      const menuOpts = (D.menuOptions || []).map((m) => ({ id: m.id, label: m.title + (m.category ? ' · ' + m.category : ''), picked: c.menuId === m.id }));
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : '') });
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(228,0,43,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
@@ -799,6 +808,8 @@ class Component extends DCLogic {
   mockData() {
     const d = this.emptyData();
     d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, canCheckout: false, checkedOut: false, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: true, accent: '#D6FF3D', status: 'In Progress', canAbsen: false, canCheckout: true, checkedOut: false, dateLabel: 'Thu 2 Jul' }, { schedule_id: 'x3', time: '19:00', end: '– 20:00', type: 'HYROX Complete', peserta: 10, cap: 14, started: true, accent: '#3ED598', status: 'Finished', canAbsen: false, canCheckout: false, checkedOut: true, dateLabel: 'Thu 2 Jul' }];
+    d.today[0].menuId = 'm0';
+    d.menuOptions = [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete' }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation' }];
     d.todayLabel = 'Wednesday, 1 July 2026 · 1 class today';
     d.weekStart = '2026-06-29'; d.weekRange = '29 Jun – 5 Jul';
     d.monthlyYear = '2026';
