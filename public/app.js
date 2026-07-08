@@ -198,6 +198,12 @@ class Component extends DCLogic {
       }).catch((e) => this.toastMsg(e.message || 'Login failed.'));
   }
   logout() { if (window.localStorage) localStorage.removeItem('arena_token'); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
+  // Coverage/"Change Coach" straight from a class card — sets the class context then opens Coverage.
+  // Lets external coaches (who can't open the participant-detail screen) still request a substitute.
+  changeCoach(c) {
+    this.setState({ currentClass: { schedule: { schedule_id: c.schedule_id, type: c.type, time: c.time } } });
+    this.go('subreq');
+  }
   openClass(id) {
     if (this.MOCK) return this.go('detail');
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => { this.setState({ currentClass: d, screen: 'detail' }); this.setD({ classDetail: d }); }).catch((e) => this.toastMsg(e.message));
@@ -518,7 +524,7 @@ class Component extends DCLogic {
     // coach today
     const coachToday = (D.today || []).map((c) => {
       const p = this.statusPill(c.status);
-      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c) });
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c) });
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(228,0,43,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
