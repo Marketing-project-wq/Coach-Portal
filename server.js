@@ -1116,7 +1116,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
     periodLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
   }
   const users = await sb('arena_coach_users?select=username,coach_name,role,is_active&order=coach_name.asc');
-  const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
+  const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
   const byCoach = {};
   for (const sc of scheds || []) {
     // Co-taught classes ("A & Coach") count for each named coach.
@@ -1141,7 +1141,22 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   });
   const totalClasses = (scheds || []).length;
   const totalPax = list.reduce((a, c) => a + c.peserta, 0);
-  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal });
+  // "Busiest" insights — which class type and which weekday drew the most participants.
+  const types = await classTypes();
+  const byType = {}, byDay = {};
+  for (const sc of scheds || []) {
+    const pax = (counts[sc.id] || {}).confirmed || 0;
+    const tname = shortType((types[sc.class_type_id] || {}).name) || 'Other';
+    (byType[tname] = byType[tname] || { name: tname, classes: 0, pax: 0 });
+    byType[tname].classes++; byType[tname].pax += pax;
+    const dow = new Date(sc.schedule_date + 'T00:00:00').getDay();
+    const dname = DOW_FULL[dow];
+    (byDay[dname] = byDay[dname] || { day: dname, dow, classes: 0, pax: 0 });
+    byDay[dname].classes++; byDay[dname].pax += pax;
+  }
+  const topClasses = Object.values(byType).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
+  const topDays = Object.values(byDay).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
+  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal, insights: { classes: topClasses, days: topDays } });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });

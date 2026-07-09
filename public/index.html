@@ -626,9 +626,37 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Participants Served</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:30px;">{{ reportTotalPax }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">{{ reportCoverageLabel }}</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:30px;">{{ reportCoverage }}</div></div>
           </div>
+          <sc-if value="{{ hasInsights }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+              <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Barlow Condensed';font-size:14px;">🔥 Busiest Class</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestClass }}</span></div>
+              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>CLASS</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
+              <sc-for list="{{ topClasses }}" as="c" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
+                <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ c.rankNo }}</div>
+                <div style="font-weight:600;"><sc-if value="{{ c.top }}"><span style="color:var(--volt);">●</span> </sc-if>{{ c.name }}</div>
+                <div style="text-align:right;color:var(--muted);">{{ c.classes }}</div>
+                <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ c.pax }}</div>
+              </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
+              <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Barlow Condensed';font-size:14px;">📅 Busiest Day</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestDay }}</span></div>
+              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>DAY</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
+              <sc-for list="{{ topDays }}" as="d" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
+                <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ d.rankNo }}</div>
+                <div style="font-weight:600;"><sc-if value="{{ d.top }}"><span style="color:var(--volt);">●</span> </sc-if>{{ d.day }}</div>
+                <div style="text-align:right;color:var(--muted);">{{ d.classes }}</div>
+                <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ d.pax }}</div>
+              </div>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:16px;">{{ reportTitle }}</div>
-            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div><div style="text-align:right;">COVERED</div><div style="text-align:right;"></div></div>
+            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div onclick="{{ sortReportName }}" style="cursor:pointer;user-select:none;">{{ rsCoach }}</div><div onclick="{{ sortReportClasses }}" style="text-align:right;cursor:pointer;user-select:none;">{{ rsClasses }}</div><div onclick="{{ sortReportPax }}" style="text-align:right;cursor:pointer;user-select:none;">{{ rsPax }}</div><div onclick="{{ sortReportCovered }}" style="text-align:right;cursor:pointer;user-select:none;">{{ rsCovered }}</div><div style="text-align:right;"></div></div>
             <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
               <div style="display:flex;align-items:center;gap:11px;"><div style="width:32px;height:32px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:800;font-size:12px;color:{{ r.avFg }};">{{ r.initials }}</div><div><span style="font-weight:700;">{{ r.name }}</span> <span style="font-size:11px;color:var(--muted);">{{ r.role }}</span></div></div>
@@ -804,9 +832,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=b3c70303"></script>
-<script src="sc-runtime.js?v=b3c70303"></script>
-<script src="app.js?v=b3c70303"></script>
+<script src="i18n.js?v=fb36bc50"></script>
+<script src="sc-runtime.js?v=fb36bc50"></script>
+<script src="app.js?v=fb36bc50"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
