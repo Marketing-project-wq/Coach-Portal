@@ -938,18 +938,18 @@
         <div style="max-width:1000px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
             <div style="display:flex;gap:8px;">
-              <div style="font-size:13px;font-weight:700;color:#08090B;background:var(--volt);padding:8px 14px;border-radius:9px;">This Month</div>
-              <div style="font-size:13px;color:var(--muted);border:1px solid var(--border2);padding:8px 14px;border-radius:9px;">This Week</div>
+              <button onclick="{{ setReportMonth }}" style="font-size:13px;font-weight:700;color:{{ rrMonth.fg }};background:{{ rrMonth.bg }};border:1px solid {{ rrMonth.border }};padding:8px 14px;border-radius:9px;cursor:pointer;">This Month</button>
+              <button onclick="{{ setReportWeek }}" style="font-size:13px;font-weight:700;color:{{ rrWeek.fg }};background:{{ rrWeek.bg }};border:1px solid {{ rrWeek.border }};padding:8px 14px;border-radius:9px;cursor:pointer;">This Week</button>
                           </div>
             <button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 20px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Export Excel / PDF</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">100</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Participants Served</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">1.177</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Coverage This Month</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">5</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">{{ reportTotalClasses }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Participants Served</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">{{ reportTotalPax }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">{{ reportCoverageLabel }}</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">{{ reportCoverage }}</div></div>
           </div>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">All-Coach Report — June 2026</div>
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">{{ reportTitle }}</div>
             <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div><div style="text-align:right;">COVERED</div><div style="text-align:right;"></div></div>
             <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">

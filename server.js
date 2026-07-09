@@ -1101,9 +1101,22 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const today = todayJakarta();
   const d0 = new Date(today + 'T00:00:00');
-  const monthStart = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
+  const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  // Range: "week" = Mon..today of the current week; otherwise the whole month to date.
+  const range = q.range === 'week' ? 'week' : 'month';
+  let startDate, periodLabel;
+  if (range === 'week') {
+    const dow = (d0.getDay() + 6) % 7; // 0=Mon
+    const ws = new Date(d0); ws.setDate(d0.getDate() - dow);
+    const we = new Date(ws); we.setDate(ws.getDate() + 6);
+    startDate = iso(ws);
+    periodLabel = `${ws.getDate()}–${we.getDate()} ${MON[we.getMonth()]}`;
+  } else {
+    startDate = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
+    periodLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
+  }
   const users = await sb('arena_coach_users?select=username,coach_name,role,is_active&order=coach_name.asc');
-  const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${today}`);
+  const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
   const byCoach = {};
   for (const sc of scheds || []) {
     // Co-taught classes ("A & Coach") count for each named coach.
@@ -1114,18 +1127,21 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   }
   const allIds = (scheds || []).map((x) => x.id);
   const [counts, started] = await Promise.all([bookingCounts(allIds), startedSet(allIds)]);
-  const subs = await sb('arena_coach_substitutions?select=from_coach,status');
-  const subCount = {}; for (const su of subs || []) subCount[su.from_coach] = (subCount[su.from_coach] || 0) + 1;
+  const subs = await sb(`arena_coach_substitutions?select=from_coach,status,created_at&created_at=gte.${startDate}T00:00:00`);
+  const subCount = {}; let coverageTotal = 0;
+  for (const su of subs || []) { subCount[su.from_coach] = (subCount[su.from_coach] || 0) + 1; coverageTotal++; }
   const pm = await coachPhotoMap();
   const list = (users || []).filter((u) => u.role !== 'admin').map((u) => {
     const b = byCoach[u.coach_name] || { classes: 0, ids: [] };
     const peserta = b.ids.reduce((a, id) => a + ((counts[id] || {}).confirmed || 0), 0);
-    // Attendance = classes actually checked-in (Start Class) / total scheduled classes this month.
+    // Attendance = classes actually checked-in (Start Class) / total scheduled classes in range.
     const attended = b.ids.filter((id) => started.has(id)).length;
     const punctual = b.classes ? Math.round((attended / b.classes) * 100) : 0;
     return { id: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', classes: b.classes, peserta, attended, punctual, subs: subCount[u.coach_name] || 0, status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name) };
   });
-  return send(res, 200, { coaches: list });
+  const totalClasses = (scheds || []).length;
+  const totalPax = list.reduce((a, c) => a + c.peserta, 0);
+  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });

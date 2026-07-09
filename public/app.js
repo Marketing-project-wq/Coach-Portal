@@ -72,6 +72,7 @@ class Component extends DCLogic {
 
   // ---------- helpers ----------
   ini(name) { const p = String(name || '').replace('Coach ', '').trim().split(' '); return ((p[0] && p[0][0] || 'C') + (p[1] ? p[1][0] : (p[0] && p[0][1]) || '')).toUpperCase(); }
+  fmtNum(n) { return String(n == null ? 0 : n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   avatar(id) {
     const map = { nando: ['#E4002B', '#ffffff'], rheza: ['rgba(0,104,201,.18)', '#0068C9'], elsen: ['rgba(28,138,75,.18)', '#1C8A4B'], calysta: ['rgba(199,122,0,.18)', '#C77A00'], yokae: ['rgba(228,0,43,.16)', '#E4002B'], gilang: ['rgba(0,104,201,.16)', '#0068C9'], brian: ['rgba(28,138,75,.16)', '#1C8A4B'], mae: ['rgba(228,0,43,.16)', '#E4002B'] };
     return map[String(id || '').toLowerCase()] || ['rgba(17,17,20,.06)', '#888F9C'];
@@ -180,7 +181,7 @@ class Component extends DCLogic {
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
-    else if (screen === 'reports') this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
+    else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage })).catch(fail);
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel })).catch(fail); }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
@@ -511,6 +512,16 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg('Template added'); this.loadScreen('templates'); })
       .catch((e) => this.toastMsg(e.message));
   }
+  setReportRange(range) {
+    if ((this.state.reportRange || 'month') === range) return;
+    this.state.reportRange = range;
+    if (this.MOCK) {
+      const wk = range === 'week';
+      return this.setD({ reportPeriod: wk ? '6–12 Jul' : 'July 2026', reportTotalClasses: wk ? 24 : 100, reportTotalPax: wk ? 286 : 1177, reportCoverage: wk ? 1 : 5 });
+    }
+    this.setState({ reportRange: range });
+    this.loadScreen('reports');
+  }
   exportCSV() {
     const st = this.state, scr = st.screen, D = st.d;
     let rows, fname;
@@ -753,6 +764,16 @@ class Component extends DCLogic {
       return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), attended: att, attPct: cls ? (c.punctual + '%') : '—', attCol: !cls ? C.muted2 : (c.punctual >= 90 ? C.green : (c.punctual >= 50 ? C.amber : C.red)), toggleLabel: c.status === 'Active' ? 'Deactivate' : 'Activate', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
     });
     const reportRows = coaches.slice(0, 12);
+    // report range toggle (This Month / This Week)
+    const reportRange = st.reportRange || 'month';
+    const rrTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
+    const rrMonth = rrTab(reportRange === 'month'), rrWeek = rrTab(reportRange === 'week');
+    const reportPeriod = D.reportPeriod || '';
+    const reportTitle = 'All-Coach Report' + (reportPeriod ? ' — ' + reportPeriod : '');
+    const reportTotalClasses = D.reportTotalClasses != null ? this.fmtNum(D.reportTotalClasses) : '—';
+    const reportTotalPax = D.reportTotalPax != null ? this.fmtNum(D.reportTotalPax) : '—';
+    const reportCoverage = D.reportCoverage != null ? String(D.reportCoverage) : '—';
+    const reportCoverageLabel = reportRange === 'week' ? 'Coverage This Week' : 'Coverage This Month';
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 0, attended: 0, attPct: '—', attCol: C.muted2, subs: 0, photo: '', hasPhoto: false };
     const statRows = D.stats || [];
     const statMonth = D.statMonth || '';
@@ -808,6 +829,8 @@ class Component extends DCLogic {
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
+      reportTitle, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
+      setReportMonth: () => this.setReportRange('month'), setReportWeek: () => this.setReportRange('week'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
@@ -888,6 +911,10 @@ class Component extends DCLogic {
     const PH = 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/';
     d.coaches = [{ id: 'nando', name: 'Nando', role: 'Head Coach', classes: 16, attended: 15, peserta: 198, punctual: 94, subs: 1, status: 'Active', email: 'nando@20fit.id', phone: '-', password: 'nando456', photo: PH + 'nando-1778032225349.png' }, { id: 'rheza', name: 'Rheza', role: 'Coach', classes: 14, attended: 13, peserta: 162, punctual: 93, subs: 2, status: 'Active', email: 'rheza@20fit.id', phone: '-', password: 'rheza123', photo: PH + 'rheza-1778032238203.png' }];
     d.statMonth = 'July 2026';
+    d.reportPeriod = (this.state.reportRange === 'week') ? '6–12 Jul' : 'July 2026';
+    d.reportTotalClasses = (this.state.reportRange === 'week') ? 24 : 100;
+    d.reportTotalPax = (this.state.reportRange === 'week') ? 286 : 1177;
+    d.reportCoverage = (this.state.reportRange === 'week') ? 1 : 5;
     // venue booking (arena + coach)
     d.venueIsHC = this.accountRole !== 'coach';
     d.venueCoaches = [{ name: 'Rheza', role: 'Coach', external: false }, { name: 'Elsen', role: 'Coach', external: false }, { name: 'Calysta', role: 'Coach', external: false }, { name: 'Nando', role: 'Head Coach', external: false }, { name: 'Brian', role: 'Coach', external: true }, { name: 'Gilang', role: 'Coach', external: true }, { name: 'Mae', role: 'Coach', external: true }, { name: 'YoKae', role: 'Coach', external: true }];
