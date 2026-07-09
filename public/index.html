@@ -273,7 +273,6 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;">
-          <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);padding:8px 13px;border:1px solid var(--border);border-radius:100px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulseDot 1.8s infinite;"></span>Synced with Admin Hub</div>
           <div style="display:flex;background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:3px;">
             <button onclick="{{ setRoleCoach }}" style="border:0;cursor:pointer;font-family:'Manrope';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.coach.bg }};color:{{ rseg.coach.fg }};transition:background-color .15s,color .15s;">Coach</button>
             <sc-if value="{{ canHC }}"><button onclick="{{ setRoleHC }}" style="border:0;cursor:pointer;font-family:'Manrope';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.hc.bg }};color:{{ rseg.hc.fg }};transition:background-color .15s,color .15s;">Head Coach</button></sc-if>
