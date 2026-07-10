@@ -607,7 +607,8 @@ class Component extends DCLogic {
       const r = this.recencyLabel(m.daysSince);
       const av = this.avatar(m.name);
       const classes = (m.classes || []).map((c) => ({ label: c.count > 1 ? (c.name + ' ×' + c.count) : c.name }));
-      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classes, hasClasses: classes.length > 0 };
+      const menus = (m.menus || []).map((c) => ({ label: c.count > 1 ? (c.name + ' ×' + c.count) : c.name }));
+      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classes, hasClasses: classes.length > 0, menus, hasMenus: menus.length > 0 };
     });
     const noMembers = members.length === 0;
     // participant reviews
@@ -725,7 +726,11 @@ class Component extends DCLogic {
     const coType = co ? (co.type || 'Class') : '', coDate = co ? (co.dateLabel || '') : '';
     const coCheckin = co ? (co.checkin || '') : '', coCheckout = co ? (co.checkout || '') : '';
     const coDuration = co && co.durationMin != null ? (co.durationMin + ' min') : '', coParticipants = co && co.participants != null ? String(co.participants) : '0';
-    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => ({ n: i + 1, name: p.name }));
+    const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => {
+      const r = this.recencyLabel(p.daysSince); const v = p.visits || 0;
+      const menus = String(p.menusLabel || '').split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name }));
+      return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0 };
+    });
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
@@ -818,7 +823,7 @@ class Component extends DCLogic {
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       isExternal: this.isExternal, showReview: !this.isExternal, showLeaderboard: !this.isExternal,
-      showMembers: (isCoachView || isAdmin) && !this.isExternal, canOpenClass: !this.isExternal,
+      showMembers: isHC, canOpenClass: !this.isExternal,
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'UPCOMING', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
@@ -894,8 +899,8 @@ class Component extends DCLogic {
     d.monthly = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((mn, i) => ({ month: mn, count: mCount[i], peserta: mPes[i], isCurrent: i === 0 }));
     d.mPesertaBulan = mPes[6]; d.mKelasBulan = mCount[6]; d.mPesertaTahun = mPes.reduce((a, b) => a + b, 0);
     d.members = [
-      { name: 'Jordan', visits: 8, lastVisit: '5 May', daysSince: 58, classes: [{ name: 'HYROX Complete', count: 8 }] },
-      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9, classes: [{ name: 'HYROX Complete', count: 4 }, { name: 'HYROX Foundation', count: 2 }] },
+      { name: 'Jordan', visits: 8, lastVisit: '5 May', daysSince: 58, classes: [{ name: 'HYROX Complete', count: 8 }], menus: [{ name: 'AMRAP Circuit', count: 5 }, { name: 'Strength Ladder', count: 3 }] },
+      { name: 'Timothy Soetedjo', visits: 6, lastVisit: '23 Jun', daysSince: 9, classes: [{ name: 'HYROX Complete', count: 4 }, { name: 'HYROX Foundation', count: 2 }], menus: [{ name: 'HYROX Simulation', count: 4 }] },
       { name: 'Woro Liana', visits: 5, lastVisit: '30 Jun', daysSince: 2, classes: [{ name: 'HYROX Foundation', count: 5 }] },
       { name: 'Fathan', visits: 5, lastVisit: '14 Jun', daysSince: 18, classes: [{ name: 'HYROX Complete', count: 5 }] },
       { name: 'Ayu Fitri', visits: 5, lastVisit: '11 May', daysSince: 52, classes: [{ name: 'HYROX Foundation', count: 5 }] },
@@ -919,7 +924,7 @@ class Component extends DCLogic {
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
     const amrapContent = JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [{ label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski' }, { amount: '150', unit: 'meter', name: 'row' }, { amount: '1', unit: 'lap', name: 'run' }] }] });
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '' }],
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
       menuOptions: [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation', content: 'Warm up + technique drills' }],
       linkedMenu: { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent } };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];

@@ -191,15 +191,25 @@ async function coachAttendanceMap(coach, today) {
   for (const x of scheds) { metaById[x.id] = { date: x.schedule_date, type: shortType((types[x.class_type_id] || {}).name) }; ids.push(x.id); }
   const map = {};
   if (!ids.length) return map;
+  // Menu attached to each past class (Option B) → build each participant's menu history.
+  const linkMap = await classMenuLinks(ids);
+  const menuTitleById = {};
+  const linkedMenuIds = Array.from(new Set(Object.values(linkMap)));
+  if (linkedMenuIds.length) {
+    const mrows = await sb(`arena_class_menus?select=id,title&id=in.(${linkedMenuIds.map(enc).join(',')})`);
+    for (const mr of mrows || []) menuTitleById[mr.id] = mr.title;
+  }
+  for (const id of ids) { const mid = linkMap[id]; if (mid && menuTitleById[mid]) metaById[id].menu = menuTitleById[mid]; }
   const rows = await sb(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${ids.map(enc).join(',')})`);
   for (const b of rows || []) {
     const nm = String(b.full_name || '').trim();
     if (!nm) continue;
     const key = nm.toLowerCase();
     const meta = metaById[b.schedule_id] || { date: '', type: '' };
-    if (!map[key]) map[key] = { name: nm, visits: 0, last: '', types: {} };
+    if (!map[key]) map[key] = { name: nm, visits: 0, last: '', types: {}, menus: {} };
     map[key].visits++;
     if (meta.type) map[key].types[meta.type] = (map[key].types[meta.type] || 0) + 1;
+    if (meta.menu) map[key].menus[meta.menu] = (map[key].menus[meta.menu] || 0) + 1;
     if (meta.date > map[key].last) { map[key].last = meta.date; map[key].name = nm; }
   }
   return map;
@@ -208,6 +218,9 @@ async function coachAttendanceMap(coach, today) {
 function classesLabelFor(h) { return (h && h.types) ? Object.keys(h.types).sort((a, b) => h.types[b] - h.types[a]).join(', ') : ''; }
 // Distinct menus/classes a participant attended, as {name, count} chips (most-frequent first).
 function classChipsFor(h) { return (h && h.types) ? Object.keys(h.types).sort((a, b) => h.types[b] - h.types[a]).map((name) => ({ name, count: h.types[name] })) : []; }
+// Distinct menus a participant has already done (most-frequent first) — so a covering coach avoids repeats.
+function menusLabelFor(h) { return (h && h.menus) ? Object.keys(h.menus).sort((a, b) => h.menus[b] - h.menus[a]).join(', ') : ''; }
+function menuChipsFor(h) { return (h && h.menus) ? Object.keys(h.menus).sort((a, b) => h.menus[b] - h.menus[a]).map((name) => ({ name, count: h.menus[name] })) : []; }
 function daysSinceISO(dateISO, today) {
   if (!dateISO) return null;
   return Math.round((new Date(today + 'T00:00:00') - new Date(dateISO + 'T00:00:00')) / 86400000);
@@ -692,7 +705,7 @@ route('GET', '/api/coach/members', async (req, res, s) => {
   const map = await coachAttendanceMap(s.c, today);
   const members = Object.keys(map).map((k) => {
     const m = map[k];
-    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today), classesLabel: classesLabelFor(m), classes: classChipsFor(m) };
+    return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today), classesLabel: classesLabelFor(m), classes: classChipsFor(m), menus: menuChipsFor(m), menusLabel: menusLabelFor(m) };
   }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
   const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
   return send(res, 200, { members, total: members.length, active30 });
@@ -896,7 +909,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
-      classesLabel: classesLabelFor(h),
+      classesLabel: classesLabelFor(h), menusLabel: menusLabelFor(h),
     };
   });
   // Class Menu (Option B) — the menu attached to this class + all menus to choose from.

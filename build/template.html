@@ -717,9 +717,9 @@
               <div>#</div><div>NAME</div>
             </div>
             <sc-for list="{{ participants }}" as="p" hint-placeholder-count="8">
-            <div style="display:grid;grid-template-columns:40px 1fr;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
-              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;">{{ p.n }}</div>
-              <div style="font-weight:600;">{{ p.name }}</div>
+            <div style="display:grid;grid-template-columns:40px 1fr;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:start;font-size:14px;">
+              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;padding-top:1px;">{{ p.n }}</div>
+              <div><div style="font-weight:600;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ p.attendInfo }}<span style="color:{{ p.lastCol }};font-weight:600;">{{ p.lastLabel }}</span></div><sc-if value="{{ p.hasMenus }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center;"><span style="font-size:10.5px;color:var(--muted2);font-weight:700;">Menu:</span><sc-for list="{{ p.menus }}" as="mn"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;">{{ mn.name }}</span></sc-for></div></sc-if></div>
             </div>
             </sc-for>
           </div>
