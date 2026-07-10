@@ -968,12 +968,8 @@
         <!-- ===== REPORTS ===== -->
         <sc-if value="{{ s.reports }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1000px;margin:0 auto;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-            <div style="display:flex;gap:8px;">
-              <button onclick="{{ setReportMonth }}" style="font-size:13px;font-weight:700;color:{{ rrMonth.fg }};background:{{ rrMonth.bg }};border:1px solid {{ rrMonth.border }};padding:8px 14px;border-radius:9px;cursor:pointer;">This Month</button>
-              <button onclick="{{ setReportWeek }}" style="font-size:13px;font-weight:700;color:{{ rrWeek.fg }};background:{{ rrWeek.bg }};border:1px solid {{ rrWeek.border }};padding:8px 14px;border-radius:9px;cursor:pointer;">This Week</button>
-                          </div>
-            <div style="display:flex;gap:8px;"><button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Excel</button><button onclick="{{ exportPDF }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px 18px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ PDF</button></div>
+          <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+            <button onclick="{{ exportPDF }}" style="background:var(--volt);border:0;color:#08090B;border-radius:10px;padding:11px 20px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;">↓ PDF</button>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">{{ reportTotalClasses }}</div></div>
