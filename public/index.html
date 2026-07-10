@@ -595,34 +595,6 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Attendance</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:{{ sel.attCol }};">{{ sel.attPct }}</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ sel.attended }}/{{ sel.classes }} classes</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Coverage</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
-          <sc-if value="{{ hasStatWeeks }}">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;margin-bottom:18px;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Weekly Breakdown — {{ statMonth }}</div>
-            <div style="display:grid;grid-template-columns:60px 1fr 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>WEEK</div><div>DATES (MON–SUN)</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
-            <sc-for list="{{ statWeeks }}" as="w" hint-placeholder-count="4">
-            <div style="display:grid;grid-template-columns:60px 1fr 90px 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
-              <div style="font-family:'Barlow Condensed';font-weight:800;color:var(--volt);">W{{ w.no }}</div>
-              <div style="color:var(--muted);">{{ w.label }}</div>
-              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ w.classes }}</div>
-              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ w.peserta }}</div>
-            </div>
-            </sc-for>
-          </div>
-          </sc-if>
-          <sc-if value="{{ hasStatDays }}">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;margin-bottom:18px;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Daily Breakdown — {{ statMonth }}</div>
-            <div style="display:grid;grid-template-columns:90px 1fr 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>DATE</div><div>DAY</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
-            <sc-for list="{{ statDays }}" as="d" hint-placeholder-count="6">
-            <div style="display:grid;grid-template-columns:90px 1fr 90px 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
-              <div style="font-family:'JetBrains Mono';font-size:13px;color:var(--muted);">{{ d.label }}</div>
-              <div style="font-weight:600;color:var(--muted);">{{ d.day }}</div>
-              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ d.classes }}</div>
-              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ d.peserta }}</div>
-            </div>
-            </sc-for>
-          </div>
-          </sc-if>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Per-Class Breakdown — {{ statMonth }}</div>
             <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>DATE</div><div>DAY</div><div>TIME</div><div>CLASS TYPE</div><div style="text-align:right;">PAX</div></div>

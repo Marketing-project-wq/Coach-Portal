@@ -1194,10 +1194,16 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   const counts = await bookingCounts((rows || []).map((r) => r.id));
   const stats = (rows || []).map((r) => ({ date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
   const monthLabel = `${MON_FULL[mm - 1]} ${yy}`;
-  // Month picker options — the last 12 months up to the current one.
+  // Month picker options — from the season start (July 2026) up to the current month only.
+  const floorYm = LEADERBOARD_SINCE.slice(0, 7);
   const months = [];
-  const cy = Number(today.slice(0, 4)), cm = Number(today.slice(5, 7));
-  for (let i = 0; i < 12; i++) { const dt = new Date(cy, cm - 1 - i, 1); const y = dt.getFullYear(), m = dt.getMonth(); const v = `${y}-${String(m + 1).padStart(2, '0')}`; months.push({ ym: v, label: `${MON_FULL[m]} ${y}`, picked: v === ym }); }
+  let ly = Number(today.slice(0, 4)), lm = Number(today.slice(5, 7));
+  while (true) {
+    const v = `${ly}-${String(lm).padStart(2, '0')}`;
+    if (v < floorYm) break;
+    months.push({ ym: v, label: `${MON_FULL[lm - 1]} ${ly}`, picked: v === ym });
+    lm--; if (lm === 0) { lm = 12; ly--; }
+  }
   // Weekly breakdown — bucket the month's classes into Monday-start weeks (classes + pax per week).
   const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   const weekMap = {};
