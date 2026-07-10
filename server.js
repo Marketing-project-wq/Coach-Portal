@@ -1195,7 +1195,16 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
     weekMap[key].classes++; weekMap[key].pax += (counts[r.id] || {}).confirmed || 0;
   }
   const weeks = Object.values(weekMap).sort((a, b) => a.start < b.start ? -1 : 1).map((w, i) => ({ no: i + 1, label: w.label, classes: w.classes, pax: w.pax }));
-  return send(res, 200, { stats, monthLabel, weeks });
+  // Daily breakdown — one row per day that has classes (classes + pax per day), so HC sees each day.
+  const dayMap = {};
+  for (const r of rows || []) {
+    const key = r.schedule_date;
+    const dt = new Date(key + 'T00:00:00');
+    if (!dayMap[key]) dayMap[key] = { date: key, label: fmtDMon(key), day: DOW_FULL[dt.getDay()], classes: 0, pax: 0 };
+    dayMap[key].classes++; dayMap[key].pax += (counts[r.id] || {}).confirmed || 0;
+  }
+  const days = Object.values(dayMap).sort((a, b) => a.date < b.date ? -1 : 1).map((d) => ({ label: d.label, day: d.day, classes: d.classes, pax: d.pax }));
+  return send(res, 200, { stats, monthLabel, weeks, days });
 });
 
 // ===== ADMIN =====

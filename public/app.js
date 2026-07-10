@@ -182,7 +182,7 @@ class Component extends DCLogic {
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null })).catch(fail);
-    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [] })).catch(fail); }
+    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [] })).catch(fail); }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
   }
@@ -803,6 +803,8 @@ class Component extends DCLogic {
     // per-coach weekly breakdown (stats detail): classes + participants each Mon-start week of the month
     const statWeeks = (D.statWeeks || []).map((w) => ({ no: w.no, label: w.label, classes: w.classes, peserta: w.pax }));
     const hasStatWeeks = statWeeks.length > 0;
+    const statDays = (D.statDays || []).map((d) => ({ label: d.label, day: d.day, classes: d.classes, peserta: d.pax }));
+    const hasStatDays = statDays.length > 0;
     // report range toggle (This Month / This Week)
     const reportRange = st.reportRange || 'month';
     const rrTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
@@ -868,7 +870,7 @@ class Component extends DCLogic {
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
-      statWeeks, hasStatWeeks,
+      statWeeks, hasStatWeeks, statDays, hasStatDays,
       reportTitle, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
       setReportMonth: () => this.setReportRange('month'), setReportWeek: () => this.setReportRange('week'),
       rsCoach, rsClasses, rsPax, rsCovered,
@@ -998,6 +1000,13 @@ class Component extends DCLogic {
       { no: 2, label: '6 Jul – 12 Jul', classes: 5, pax: 71 },
       { no: 3, label: '13 Jul – 19 Jul', classes: 4, pax: 52 },
       { no: 4, label: '20 Jul – 26 Jul', classes: 4, pax: 48 },
+    ];
+    d.statDays = [
+      { label: '1 Jul', day: 'Wednesday', classes: 1, pax: 14 },
+      { label: '3 Jul', day: 'Friday', classes: 1, pax: 9 },
+      { label: '5 Jul', day: 'Sunday', classes: 1, pax: 16 },
+      { label: '8 Jul', day: 'Tuesday', classes: 2, pax: 31 },
+      { label: '11 Jul', day: 'Friday', classes: 1, pax: 12 },
     ];
     return d;
   }
