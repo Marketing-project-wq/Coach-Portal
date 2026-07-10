@@ -583,15 +583,20 @@
             </sc-for>
           </div>
           <sc-if value="{{ hasBusiestTimes }}">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-top:18px;max-width:520px;">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-top:18px;max-width:760px;">
             <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Barlow Condensed';font-size:14px;">🕐 Busiest Class Time</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestTime }}</span></div>
-            <div style="display:grid;grid-template-columns:20px 1fr 80px 70px;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>TIME</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
+            <div style="display:grid;grid-template-columns:20px 1fr 70px 70px 60px;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>TIME · CLASS · COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">AVG/CLS</div><div style="text-align:right;">PAX</div></div>
             <sc-for list="{{ busiestTimes }}" as="t" hint-placeholder-count="5">
-            <div style="display:grid;grid-template-columns:20px 1fr 80px 70px;gap:8px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
-              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ t.rankNo }}</div>
-              <div style="font-weight:600;font-family:'JetBrains Mono';font-size:13px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
-              <div style="text-align:right;color:var(--muted);">{{ t.classes }}</div>
-              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ t.pax }}</div>
+            <div style="display:grid;grid-template-columns:20px 1fr 70px 70px 60px;gap:10px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:start;font-size:13.5px;">
+              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;padding-top:1px;">{{ t.rankNo }}</div>
+              <div>
+                <div style="font-weight:700;font-family:'JetBrains Mono';font-size:13.5px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
+                <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ t.types }}</div>
+                <sc-if value="{{ t.hasCoaches }}"><div style="font-size:11px;color:var(--muted2);margin-top:1px;">👤 {{ t.coaches }}</div></sc-if>
+              </div>
+              <div style="text-align:right;color:var(--muted);padding-top:1px;">{{ t.classes }}</div>
+              <div style="text-align:right;color:var(--muted);padding-top:1px;">{{ t.avg }}</div>
+              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;padding-top:1px;">{{ t.pax }}</div>
             </div>
             </sc-for>
           </div>
@@ -877,9 +882,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=b512ebe9"></script>
-<script src="sc-runtime.js?v=b512ebe9"></script>
-<script src="app.js?v=b512ebe9"></script>
+<script src="i18n.js?v=527e96eb"></script>
+<script src="sc-runtime.js?v=527e96eb"></script>
+<script src="app.js?v=527e96eb"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

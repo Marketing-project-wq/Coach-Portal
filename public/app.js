@@ -809,8 +809,20 @@ class Component extends DCLogic {
     const topCoachByPax = coaches.slice().sort((a, b) => (b.peserta || 0) - (a.peserta || 0))[0];
     const busiestCoach = (topCoachByPax && topCoachByPax.peserta) ? topCoachByPax.name : '—';
     const mTimeMap = {};
-    for (const c of (D.reportClassList || [])) { const t = c.time || '—'; if (!mTimeMap[t]) mTimeMap[t] = { time: t, classes: 0, pax: 0 }; mTimeMap[t].classes++; mTimeMap[t].pax += c.pax || 0; }
-    const busiestTimes = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes).slice(0, 6).map((x, i) => ({ rankNo: i + 1, time: x.time, classes: x.classes, pax: this.fmtNum(x.pax), top: i === 0 }));
+    for (const c of (D.reportClassList || [])) {
+      const t = c.time || '—';
+      if (!mTimeMap[t]) mTimeMap[t] = { time: t, classes: 0, pax: 0, types: {}, coaches: {} };
+      const e = mTimeMap[t]; e.classes++; e.pax += c.pax || 0;
+      if (c.type) e.types[c.type] = (e.types[c.type] || 0) + 1;
+      if (c.coach) e.coaches[c.coach] = (e.coaches[c.coach] || 0) + 1;
+    }
+    const byCount = (o) => Object.keys(o).sort((a, b) => o[b] - o[a]);
+    const busiestTimes = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes).slice(0, 8).map((x, i) => ({
+      rankNo: i + 1, time: x.time, classes: x.classes, pax: this.fmtNum(x.pax),
+      avg: x.classes ? Math.round(x.pax / x.classes) : 0,
+      types: byCount(x.types).join(', '), coaches: byCount(x.coaches).join(', '),
+      hasCoaches: Object.keys(x.coaches).length > 0, top: i === 0,
+    }));
     const hasBusiestTimes = busiestTimes.length > 0;
     const busiestTime = busiestTimes[0] ? busiestTimes[0].time : '—';
     // "Busiest" insights (which class type / weekday drew the most participants in range)
