@@ -894,8 +894,9 @@ class Component extends DCLogic {
     const calAgg = {}; let calMinDate = '';
     for (const c of (D.reportClassList || [])) {
       const d = c.dateISO; if (!d) continue;
-      if (!calAgg[d]) calAgg[d] = { classes: 0, pax: 0 };
+      if (!calAgg[d]) calAgg[d] = { classes: 0, pax: 0, coaches: {} };
       calAgg[d].classes++; calAgg[d].pax += c.pax || 0;
+      const ck = c.coach || '—'; calAgg[d].coaches[ck] = (calAgg[d].coaches[ck] || 0) + (c.pax || 0);
       if (!calMinDate || d < calMinDate) calMinDate = d;
     }
     const reportCalDow = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -905,11 +906,12 @@ class Component extends DCLogic {
       reportCalMonth = MONFULL[mm - 1] + ' ' + yy;
       const startDow = (new Date(yy, mm - 1, 1).getDay() + 6) % 7; // Mon=0
       const days = new Date(yy, mm, 0).getDate();
-      for (let i = 0; i < startDow; i++) reportCal.push({ notBlank: false, bg: 'transparent', border: 'transparent', has: false, day: '', classes: '', pax: '' });
+      for (let i = 0; i < startDow; i++) reportCal.push({ notBlank: false, bg: 'transparent', border: 'transparent', has: false, day: '', classes: '', pax: '', coachList: [] });
       for (let d = 1; d <= days; d++) {
         const iso = yy + '-' + String(mm).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const a = calAgg[iso];
-        reportCal.push({ notBlank: true, day: d, has: !!a, classes: a ? a.classes : 0, pax: a ? this.fmtNum(a.pax) : '', bg: a ? 'var(--volt-dim)' : 'var(--panel2)', border: a ? 'rgba(214,255,61,.35)' : 'var(--border)' });
+        const coachList = a ? Object.keys(a.coaches).sort((x, y) => a.coaches[y] - a.coaches[x]).map((nm) => ({ name: nm, pax: this.fmtNum(a.coaches[nm]) })) : [];
+        reportCal.push({ notBlank: true, day: d, has: !!a, classes: a ? a.classes : 0, pax: a ? this.fmtNum(a.pax) : '', coachList, bg: a ? 'var(--volt-dim)' : 'var(--panel2)', border: a ? 'rgba(214,255,61,.35)' : 'var(--border)' });
       }
     }
     const hasReportCal = reportCal.length > 0;
