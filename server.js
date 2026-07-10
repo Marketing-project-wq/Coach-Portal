@@ -1182,7 +1182,20 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   const counts = await bookingCounts((rows || []).map((r) => r.id));
   const stats = (rows || []).map((r) => ({ date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
   const monthLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
-  return send(res, 200, { stats, monthLabel });
+  // Weekly breakdown — bucket the month's classes into Monday-start weeks (classes + pax per week).
+  const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  const weekMap = {};
+  for (const r of rows || []) {
+    const dt = new Date(r.schedule_date + 'T00:00:00');
+    const dow = (dt.getDay() + 6) % 7; // 0=Mon
+    const ws = new Date(dt); ws.setDate(dt.getDate() - dow);
+    const we = new Date(ws); we.setDate(ws.getDate() + 6);
+    const key = iso(ws);
+    if (!weekMap[key]) weekMap[key] = { start: key, label: `${ws.getDate()} ${MON[ws.getMonth()]} – ${we.getDate()} ${MON[we.getMonth()]}`, classes: 0, pax: 0 };
+    weekMap[key].classes++; weekMap[key].pax += (counts[r.id] || {}).confirmed || 0;
+  }
+  const weeks = Object.values(weekMap).sort((a, b) => a.start < b.start ? -1 : 1).map((w, i) => ({ no: i + 1, label: w.label, classes: w.classes, pax: w.pax }));
+  return send(res, 200, { stats, monthLabel, weeks });
 });
 
 // ===== ADMIN =====

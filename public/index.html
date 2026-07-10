@@ -595,6 +595,20 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Attendance</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:{{ sel.attCol }};">{{ sel.attPct }}</div><div style="font-size:11px;color:var(--muted2);margin-top:2px;">{{ sel.attended }}/{{ sel.classes }} classes</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Coverage</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;">{{ sel.subs }}</div></div>
           </div>
+          <sc-if value="{{ hasStatWeeks }}">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;margin-bottom:18px;">
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Weekly Breakdown — {{ statMonth }}</div>
+            <div style="display:grid;grid-template-columns:60px 1fr 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>WEEK</div><div>DATES (MON–SUN)</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
+            <sc-for list="{{ statWeeks }}" as="w" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:60px 1fr 90px 90px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);font-size:14px;align-items:center;">
+              <div style="font-family:'Barlow Condensed';font-weight:800;color:var(--volt);">W{{ w.no }}</div>
+              <div style="color:var(--muted);">{{ w.label }}</div>
+              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ w.classes }}</div>
+              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ w.peserta }}</div>
+            </div>
+            </sc-for>
+          </div>
+          </sc-if>
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
             <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Per-Class Breakdown — {{ statMonth }}</div>
             <div style="display:grid;grid-template-columns:80px 90px 70px 1fr 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>DATE</div><div>DAY</div><div>TIME</div><div>CLASS TYPE</div><div style="text-align:right;">PAX</div></div>
@@ -639,6 +653,7 @@
                 <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ c.pax }}</div>
               </div>
               </sc-for>
+              <sc-if value="{{ hasQuietClass }}"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;font-size:12.5px;color:var(--muted);"><span>😴 Quietest: <span style="color:var(--text);font-weight:700;">{{ quietestClass }}</span></span><span style="font-family:'Barlow Condensed';font-weight:700;">{{ quietestClassPax }} pax</span></div></sc-if>
             </div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
               <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Barlow Condensed';font-size:14px;">📅 Busiest Day</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestDay }}</span></div>
@@ -651,6 +666,7 @@
                 <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ d.pax }}</div>
               </div>
               </sc-for>
+              <sc-if value="{{ hasQuietDay }}"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;font-size:12.5px;color:var(--muted);"><span>😴 Quietest: <span style="color:var(--text);font-weight:700;">{{ quietestDay }}</span></span><span style="font-family:'Barlow Condensed';font-weight:700;">{{ quietestDayPax }} pax</span></div></sc-if>
             </div>
           </div>
           </sc-if>
@@ -832,9 +848,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=b131fe2c"></script>
-<script src="sc-runtime.js?v=b131fe2c"></script>
-<script src="app.js?v=b131fe2c"></script>
+<script src="i18n.js?v=7f9875b0"></script>
+<script src="sc-runtime.js?v=7f9875b0"></script>
+<script src="app.js?v=7f9875b0"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
