@@ -182,7 +182,7 @@ class Component extends DCLogic {
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null })).catch(fail);
-    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats').then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [] })).catch(fail); }
+    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
   }
@@ -522,6 +522,13 @@ class Component extends DCLogic {
     this.setState({ reportRange: range });
     this.loadScreen('reports');
   }
+  // Pick which month the coach stats detail shows.
+  setStatMonth(ym) {
+    if ((this.state.statYm || '') === ym) return;
+    this.setState({ statYm: ym });
+    if (this.MOCK) return;
+    this.loadScreen('stats');
+  }
   // Sort the coach report by a column. Same column again flips the direction.
   setReportSort(key) {
     const st = this.state;
@@ -772,7 +779,7 @@ class Component extends DCLogic {
     const coaches = (D.coaches || []).map((c) => {
       const av = this.avatar(c.id); const rc = roleColor(c.role);
       const cls = c.classes || 0, att = c.attended != null ? c.attended : cls;
-      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), attended: att, attPct: cls ? (c.punctual + '%') : '—', attCol: !cls ? C.muted2 : (c.punctual >= 90 ? C.green : (c.punctual >= 50 ? C.amber : C.red)), toggleLabel: c.status === 'Active' ? 'Deactivate' : 'Activate', open: () => { this.setState({ selCoachName: c.name, screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
+      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), attended: att, attPct: cls ? (c.punctual + '%') : '—', attCol: !cls ? C.muted2 : (c.punctual >= 90 ? C.green : (c.punctual >= 50 ? C.amber : C.red)), toggleLabel: c.status === 'Active' ? 'Deactivate' : 'Activate', open: () => { this.setState({ selCoachName: c.name, statYm: '', screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
     });
     // sortable coach report — key maps to a coach field; click a header to sort, again to flip.
     const reportSort = st.reportSort || '', reportSortDir = st.reportSortDir || 'desc';
@@ -805,6 +812,7 @@ class Component extends DCLogic {
     const hasStatWeeks = statWeeks.length > 0;
     const statDays = (D.statDays || []).map((d) => ({ label: d.label, day: d.day, classes: d.classes, peserta: d.pax }));
     const hasStatDays = statDays.length > 0;
+    const statMonthOpts = (D.statMonths || []).map((m) => ({ ym: m.ym, label: m.label, picked: !!m.picked }));
     // report range toggle (This Month / This Week)
     const reportRange = st.reportRange || 'month';
     const rrTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
@@ -871,6 +879,7 @@ class Component extends DCLogic {
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       statWeeks, hasStatWeeks, statDays, hasStatDays,
+      statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
       reportTitle, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
       setReportMonth: () => this.setReportRange('month'), setReportWeek: () => this.setReportRange('week'),
       rsCoach, rsClasses, rsPax, rsCovered,
@@ -1000,6 +1009,10 @@ class Component extends DCLogic {
       { no: 2, label: '6 Jul – 12 Jul', classes: 5, pax: 71 },
       { no: 3, label: '13 Jul – 19 Jul', classes: 4, pax: 52 },
       { no: 4, label: '20 Jul – 26 Jul', classes: 4, pax: 48 },
+    ];
+    d.statMonths = [
+      { ym: '2026-07', label: 'July 2026', picked: true }, { ym: '2026-06', label: 'June 2026', picked: false },
+      { ym: '2026-05', label: 'May 2026', picked: false }, { ym: '2026-04', label: 'April 2026', picked: false },
     ];
     d.statDays = [
       { label: '1 Jul', day: 'Wednesday', classes: 1, pax: 14 },

@@ -1174,14 +1174,23 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const today = todayJakarta();
-  const d0 = new Date(today + 'T00:00:00');
-  const monthStart = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
+  // Which month to report — defaults to the current month; ?month=YYYY-MM picks any past month.
+  const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : today.slice(0, 7);
+  const yy = Number(ym.slice(0, 4)), mm = Number(ym.slice(5, 7));
+  const monthStart = `${ym}-01`;
+  const lastDay = new Date(yy, mm, 0).getDate();
+  const monthEndFull = `${ym}-${String(lastDay).padStart(2, '0')}`;
+  const monthEnd = monthEndFull < today ? monthEndFull : today; // cap the current month at today
   const types = await classTypes();
-  const rows0 = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&instructor=ilike.*${enc(params.name)}*&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${today}&order=schedule_date.asc`);
+  const rows0 = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&instructor=ilike.*${enc(params.name)}*&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${monthEnd}&order=schedule_date.asc`);
   const rows = (rows0 || []).filter((r) => instructorHasCoach(r.instructor, params.name));
   const counts = await bookingCounts((rows || []).map((r) => r.id));
   const stats = (rows || []).map((r) => ({ date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
-  const monthLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
+  const monthLabel = `${MON_FULL[mm - 1]} ${yy}`;
+  // Month picker options — the last 12 months up to the current one.
+  const months = [];
+  const cy = Number(today.slice(0, 4)), cm = Number(today.slice(5, 7));
+  for (let i = 0; i < 12; i++) { const dt = new Date(cy, cm - 1 - i, 1); const y = dt.getFullYear(), m = dt.getMonth(); const v = `${y}-${String(m + 1).padStart(2, '0')}`; months.push({ ym: v, label: `${MON_FULL[m]} ${y}`, picked: v === ym }); }
   // Weekly breakdown — bucket the month's classes into Monday-start weeks (classes + pax per week).
   const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   const weekMap = {};
@@ -1204,7 +1213,7 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
     dayMap[key].classes++; dayMap[key].pax += (counts[r.id] || {}).confirmed || 0;
   }
   const days = Object.values(dayMap).sort((a, b) => a.date < b.date ? -1 : 1).map((d) => ({ label: d.label, day: d.day, classes: d.classes, pax: d.pax }));
-  return send(res, 200, { stats, monthLabel, weeks, days });
+  return send(res, 200, { stats, monthLabel, weeks, days, ym, months });
 });
 
 // ===== ADMIN =====
