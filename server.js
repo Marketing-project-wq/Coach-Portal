@@ -1170,12 +1170,16 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const topClasses = Object.values(byType).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
   const topDays = Object.values(byDay).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
   // Flat, sortable class list for the range: class type, time, coach, date, participants.
-  const classList = (scheds || []).map((x) => ({
-    type: shortType((types[x.class_type_id] || {}).name) || 'Class',
-    time: hhmm(x.start_time), coach: x.instructor || '—',
-    date: fmtDMon(x.schedule_date), dateISO: x.schedule_date,
-    pax: (counts[x.id] || {}).confirmed || 0,
-  }));
+  const classList = (scheds || []).map((x) => {
+    const dow = new Date(x.schedule_date + 'T00:00:00').getDay();
+    return {
+      type: shortType((types[x.class_type_id] || {}).name) || 'Class',
+      time: hhmm(x.start_time), coach: x.instructor || '—',
+      date: fmtDMon(x.schedule_date), dateISO: x.schedule_date,
+      day: DOW_FULL[dow], dow,
+      pax: (counts[x.id] || {}).confirmed || 0,
+    };
+  });
   return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal, insights: { classes: topClasses, days: topDays }, classList });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
