@@ -697,6 +697,28 @@
             </div>
             </sc-for>
           </div>
+          <sc-if value="{{ hasClassRows }}">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;margin-top:18px;">
+            <div style="padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <div style="font-weight:800;font-family:'Barlow Condensed';font-size:16px;">All Classes — {{ reportPeriod }}</div>
+              <div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:var(--muted2);font-weight:700;">SORT</span>
+                <button onclick="{{ sortClassType }}" style="font-size:12px;font-weight:700;color:{{ csType.fg }};background:{{ csType.bg }};border:1px solid {{ csType.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Class</button>
+                <button onclick="{{ sortClassTime }}" style="font-size:12px;font-weight:700;color:{{ csTime.fg }};background:{{ csTime.bg }};border:1px solid {{ csTime.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Time</button>
+                <button onclick="{{ sortClassCoach }}" style="font-size:12px;font-weight:700;color:{{ csCoach.fg }};background:{{ csCoach.bg }};border:1px solid {{ csCoach.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Coach</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 80px 130px 90px 70px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div>CLASS</div><div>TIME</div><div>COACH</div><div>DATE</div><div style="text-align:right;">PAX</div></div>
+            <sc-for list="{{ reportClassRows }}" as="c" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:1fr 80px 130px 90px 70px;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
+              <div style="font-weight:600;">{{ c.type }}</div>
+              <div style="font-family:'JetBrains Mono';font-size:13px;">{{ c.time }}</div>
+              <div style="color:var(--muted);">{{ c.coach }}</div>
+              <div style="font-family:'JetBrains Mono';font-size:12.5px;color:var(--muted);">{{ c.date }}</div>
+              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ c.pax }}</div>
+            </div>
+            </sc-for>
+          </div>
+          </sc-if>
         </div>
         </sc-if>
 
@@ -862,9 +884,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=81657420"></script>
-<script src="sc-runtime.js?v=81657420"></script>
-<script src="app.js?v=81657420"></script>
+<script src="i18n.js?v=a2f275ed"></script>
+<script src="sc-runtime.js?v=a2f275ed"></script>
+<script src="app.js?v=a2f275ed"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

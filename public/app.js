@@ -181,7 +181,7 @@ class Component extends DCLogic {
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
-    else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null })).catch(fail);
+    else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail);
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
@@ -529,6 +529,8 @@ class Component extends DCLogic {
     if (this.MOCK) return;
     this.loadScreen('stats');
   }
+  // Sort the all-class report list by class type / time / coach.
+  setClassSort(key) { this.setState({ classSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
   setReportSort(key) {
     const st = this.state;
@@ -807,6 +809,19 @@ class Component extends DCLogic {
     const qD = insDays.length > 1 ? insDays[insDays.length - 1] : null;
     const hasQuietClass = !!qC, quietestClass = qC ? qC.name : '', quietestClassPax = qC ? this.fmtNum(qC.pax) : '';
     const hasQuietDay = !!qD, quietestDay = qD ? qD.day : '', quietestDayPax = qD ? this.fmtNum(qD.pax) : '';
+    // sortable all-class list for the report period (class / time / coach)
+    const classSort = st.classSort || 'time';
+    let classRows = (D.reportClassList || []).slice();
+    classRows.sort((a, b) => {
+      if (classSort === 'type') return String(a.type).localeCompare(String(b.type)) || String(a.time).localeCompare(String(b.time));
+      if (classSort === 'coach') return String(a.coach).localeCompare(String(b.coach)) || String(a.time).localeCompare(String(b.time));
+      // time: order by clock time, then date
+      return String(a.time).localeCompare(String(b.time)) || String(a.dateISO).localeCompare(String(b.dateISO));
+    });
+    const reportClassRows = classRows.map((c) => ({ type: c.type, time: c.time || '—', coach: c.coach, date: c.date, pax: c.pax }));
+    const hasClassRows = reportClassRows.length > 0;
+    const csTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
+    const csType = csTab(classSort === 'type'), csTime = csTab(classSort === 'time'), csCoach = csTab(classSort === 'coach');
     // per-coach weekly breakdown (stats detail): classes + participants each Mon-start week of the month
     const statWeeks = (D.statWeeks || []).map((w) => ({ no: w.no, label: w.label, classes: w.classes, peserta: w.pax }));
     const hasStatWeeks = statWeeks.length > 0;
@@ -880,12 +895,14 @@ class Component extends DCLogic {
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       statWeeks, hasStatWeeks, statDays, hasStatDays,
       statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
-      reportTitle, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
+      reportTitle, reportPeriod, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
       setReportMonth: () => this.setReportRange('month'), setReportWeek: () => this.setReportRange('week'),
       rsCoach, rsClasses, rsPax, rsCovered,
       sortReportName: () => this.setReportSort('name'), sortReportClasses: () => this.setReportSort('classes'), sortReportPax: () => this.setReportSort('pax'), sortReportCovered: () => this.setReportSort('covered'),
       topClasses, topDays, hasInsights, busiestClass, busiestDay,
       hasQuietClass, quietestClass, quietestClassPax, hasQuietDay, quietestDay, quietestDayPax,
+      reportClassRows, hasClassRows, csType, csTime, csCoach,
+      sortClassType: () => this.setClassSort('type'), sortClassTime: () => this.setClassSort('time'), sortClassCoach: () => this.setClassSort('coach'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
@@ -971,6 +988,13 @@ class Component extends DCLogic {
     d.reportTotalPax = (this.state.reportRange === 'week') ? 286 : 1177;
     d.reportCoverage = (this.state.reportRange === 'week') ? 1 : 5;
     d.reportInsights = { classes: [{ name: 'HYROX Complete', classes: 42, pax: 520 }, { name: 'HYROX Foundation', classes: 30, pax: 360 }, { name: 'Strength', classes: 18, pax: 190 }, { name: 'Running Club', classes: 10, pax: 107 }], days: [{ day: 'Saturday', classes: 24, pax: 300 }, { day: 'Monday', classes: 20, pax: 250 }, { day: 'Wednesday', classes: 18, pax: 220 }, { day: 'Friday', classes: 16, pax: 207 }, { day: 'Sunday', classes: 12, pax: 120 }] };
+    d.reportClassList = [
+      { type: 'HYROX Complete', time: '07:00', coach: 'Nando', date: '1 Jul', dateISO: '2026-07-01', pax: 14 },
+      { type: 'HYROX Foundation', time: '18:30', coach: 'Rheza', date: '1 Jul', dateISO: '2026-07-01', pax: 9 },
+      { type: 'Strength', time: '09:00', coach: 'Nando', date: '3 Jul', dateISO: '2026-07-03', pax: 12 },
+      { type: 'HYROX Complete', time: '07:00', coach: 'Rheza', date: '5 Jul', dateISO: '2026-07-05', pax: 16 },
+      { type: 'Running Club', time: '06:00', coach: 'Nando', date: '8 Jul', dateISO: '2026-07-08', pax: 8 },
+    ];
     // venue booking (arena + coach)
     d.venueIsHC = this.accountRole !== 'coach';
     d.venueCoaches = [{ name: 'Rheza', role: 'Coach', external: false }, { name: 'Elsen', role: 'Coach', external: false }, { name: 'Calysta', role: 'Coach', external: false }, { name: 'Nando', role: 'Head Coach', external: false }, { name: 'Brian', role: 'Coach', external: true }, { name: 'Gilang', role: 'Coach', external: true }, { name: 'Mae', role: 'Coach', external: true }, { name: 'YoKae', role: 'Coach', external: true }];

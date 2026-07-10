@@ -1129,7 +1129,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
     periodLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
   }
   const users = await sb('arena_coach_users?select=username,coach_name,role,is_active&order=coach_name.asc');
-  const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
+  const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id,start_time&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
   const byCoach = {};
   for (const sc of scheds || []) {
     // Co-taught classes ("A & Coach") count for each named coach.
@@ -1169,7 +1169,14 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   }
   const topClasses = Object.values(byType).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
   const topDays = Object.values(byDay).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
-  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal, insights: { classes: topClasses, days: topDays } });
+  // Flat, sortable class list for the range: class type, time, coach, date, participants.
+  const classList = (scheds || []).map((x) => ({
+    type: shortType((types[x.class_type_id] || {}).name) || 'Class',
+    time: hhmm(x.start_time), coach: x.instructor || '—',
+    date: fmtDMon(x.schedule_date), dateISO: x.schedule_date,
+    pax: (counts[x.id] || {}).confirmed || 0,
+  }));
+  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal, insights: { classes: topClasses, days: topDays }, classList });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
