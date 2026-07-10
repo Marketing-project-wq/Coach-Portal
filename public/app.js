@@ -559,6 +559,41 @@ class Component extends DCLogic {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     this.toastMsg('CSV file downloaded');
   }
+  // Export the current table as PDF via the browser's print dialog ("Save as PDF").
+  // Uses a hidden iframe so it works without popups or any external library.
+  exportPDF() {
+    const st = this.state, scr = st.screen, D = st.d;
+    let title, headers, rows;
+    if (scr === 'stats') {
+      title = (st.selCoachName || 'Coach') + ' — Per-Class Breakdown · ' + (D.statMonth || '');
+      headers = ['Date', 'Day', 'Time', 'Class Type', 'Pax'];
+      let arr = (D.stats || []).slice(); const s = st.statRowSort || 'date';
+      if (s === 'pax_desc') arr.sort((a, b) => (b.peserta || 0) - (a.peserta || 0));
+      else if (s === 'pax_asc') arr.sort((a, b) => (a.peserta || 0) - (b.peserta || 0));
+      rows = arr.map((r) => [r.date, r.day, r.time, r.type, r.peserta]);
+    } else {
+      title = 'All-Coach Report · ' + (D.reportPeriod || '');
+      headers = ['Coach', 'Role', 'Classes', 'Participants', 'Covered'];
+      rows = (D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, (c.subs || 0) + '×']);
+    }
+    if (!rows.length) return this.toastMsg('No data to export.');
+    this._printDoc(title, headers, rows);
+  }
+  _printDoc(title, headers, rows) {
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
+    const tbody = rows.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
+      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;}th,td{border-bottom:1px solid #ddd;padding:8px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}@media print{body{padding:0;}}</style>'
+      + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
+      + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></body></html>';
+    const ifr = document.createElement('iframe');
+    ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
+    document.body.appendChild(ifr);
+    const doc = ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
+    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); }, 350);
+    this.toastMsg('Opening print / Save as PDF…');
+  }
 
   // ---------- render ----------
   renderVals() {
@@ -949,7 +984,7 @@ class Component extends DCLogic {
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants,
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
-      exportCSV: () => this.exportCSV(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
+      exportCSV: () => this.exportCSV(), exportPDF: () => this.exportPDF(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
       stopProp: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
       hasToast: !!st.toast, toast: st.toast,

@@ -615,7 +615,7 @@
               <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--volt),#B0001F);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:800;font-size:20px;color:#ffffff;position:relative;overflow:hidden;">{{ sel.initials }}<sc-if value="{{ sel.hasPhoto }}"><img src="{{ sel.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
               <div><h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;margin:0;">{{ sel.name }}</h2><div style="color:var(--muted);font-size:13.5px;margin-top:3px;">{{ sel.role }} · {{ sel.phone }} · {{ sel.email }}</div></div>
             </div>
-            <div style="display:flex;align-items:center;gap:10px;"><sc-if value="{{ hasStatMonths }}"><select onchange="{{ setStatMonth }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:700;cursor:pointer;"><sc-for list="{{ statMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if><button onclick="{{ exportCSV }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ Export</button></div>
+            <div style="display:flex;align-items:center;gap:10px;"><sc-if value="{{ hasStatMonths }}"><select onchange="{{ setStatMonth }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:700;cursor:pointer;"><sc-for list="{{ statMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if><button onclick="{{ exportCSV }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ CSV</button><button onclick="{{ exportPDF }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ PDF</button></div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;"><div style="font-size:12px;color:var(--muted);">Total Classes</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:var(--volt);">{{ sel.classes }}</div></div>
@@ -654,7 +654,7 @@
               <button onclick="{{ setReportMonth }}" style="font-size:13px;font-weight:700;color:{{ rrMonth.fg }};background:{{ rrMonth.bg }};border:1px solid {{ rrMonth.border }};padding:8px 14px;border-radius:9px;cursor:pointer;">This Month</button>
               <button onclick="{{ setReportWeek }}" style="font-size:13px;font-weight:700;color:{{ rrWeek.fg }};background:{{ rrWeek.bg }};border:1px solid {{ rrWeek.border }};padding:8px 14px;border-radius:9px;cursor:pointer;">This Week</button>
                           </div>
-            <button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:10px;padding:11px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Export Excel / PDF</button>
+            <div style="display:flex;gap:8px;"><button onclick="{{ exportCSV }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:10px;padding:11px 18px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;">↓ Excel</button><button onclick="{{ exportPDF }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px 18px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--volt);">↓ PDF</button></div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:30px;color:var(--volt);">{{ reportTotalClasses }}</div></div>
@@ -891,9 +891,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=f6a9d568"></script>
-<script src="sc-runtime.js?v=f6a9d568"></script>
-<script src="app.js?v=f6a9d568"></script>
+<script src="i18n.js?v=350347a4"></script>
+<script src="sc-runtime.js?v=350347a4"></script>
+<script src="app.js?v=350347a4"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
