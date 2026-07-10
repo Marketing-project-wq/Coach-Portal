@@ -178,7 +178,7 @@ class Component extends DCLogic {
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
-    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail); }
+    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail);
@@ -531,6 +531,8 @@ class Component extends DCLogic {
   }
   // Sort the all-class report list by class type / time / coach.
   setClassSort(key) { this.setState({ classSort: key }); }
+  // Sort the Coach Monitoring cards by participants / coach name.
+  setMonitorSort(key) { this.setState({ monitorSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
   setReportSort(key) {
     const st = this.state;
@@ -797,6 +799,20 @@ class Component extends DCLogic {
     const reportRows = sortedReport.slice(0, 12);
     const arrow = (k) => reportSort === k ? (reportSortDir === 'asc' ? ' ↑' : ' ↓') : '';
     const rsCoach = 'COACH' + arrow('name'), rsClasses = 'CLASSES' + arrow('classes'), rsPax = 'PAX' + arrow('pax'), rsCovered = 'COVERED' + arrow('covered');
+    // Coach Monitoring — sort cards (participants / coach) + busiest coach & class-time insight
+    const monitorSort = st.monitorSort || 'pax';
+    let monitorCoaches = coaches.slice();
+    if (monitorSort === 'name') monitorCoaches.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    else monitorCoaches.sort((a, b) => (b.peserta || 0) - (a.peserta || 0));
+    const msTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
+    const msPax = msTab(monitorSort === 'pax'), msName = msTab(monitorSort === 'name');
+    const topCoachByPax = coaches.slice().sort((a, b) => (b.peserta || 0) - (a.peserta || 0))[0];
+    const busiestCoach = (topCoachByPax && topCoachByPax.peserta) ? topCoachByPax.name : '—';
+    const mTimeMap = {};
+    for (const c of (D.reportClassList || [])) { const t = c.time || '—'; if (!mTimeMap[t]) mTimeMap[t] = { time: t, classes: 0, pax: 0 }; mTimeMap[t].classes++; mTimeMap[t].pax += c.pax || 0; }
+    const busiestTimes = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes).slice(0, 6).map((x, i) => ({ rankNo: i + 1, time: x.time, classes: x.classes, pax: this.fmtNum(x.pax), top: i === 0 }));
+    const hasBusiestTimes = busiestTimes.length > 0;
+    const busiestTime = busiestTimes[0] ? busiestTimes[0].time : '—';
     // "Busiest" insights (which class type / weekday drew the most participants in range)
     const ins = D.reportInsights || {};
     const insClasses = ins.classes || [], insDays = ins.days || [];
@@ -903,6 +919,8 @@ class Component extends DCLogic {
       hasQuietClass, quietestClass, quietestClassPax, hasQuietDay, quietestDay, quietestDayPax,
       reportClassRows, hasClassRows, csType, csTime, csCoach,
       sortClassType: () => this.setClassSort('type'), sortClassTime: () => this.setClassSort('time'), sortClassCoach: () => this.setClassSort('coach'),
+      monitorCoaches, msPax, msName, busiestCoach, busiestTime, busiestTimes, hasBusiestTimes,
+      sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),

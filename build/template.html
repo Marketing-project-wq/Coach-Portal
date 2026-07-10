@@ -882,8 +882,15 @@
         <!-- ===== MONITORING LIST ===== -->
         <sc-if value="{{ s.monitor }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+            <div style="font-size:13px;color:var(--muted);">🔥 Most participants: <span style="color:var(--text);font-weight:700;">{{ busiestCoach }}</span> · Busiest time: <span style="color:var(--text);font-weight:700;">{{ busiestTime }}</span></div>
+            <div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:var(--muted2);font-weight:700;">SORT</span>
+              <button onclick="{{ sortMonitorPax }}" style="font-size:12px;font-weight:700;color:{{ msPax.fg }};background:{{ msPax.bg }};border:1px solid {{ msPax.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Participants</button>
+              <button onclick="{{ sortMonitorName }}" style="font-size:12px;font-weight:700;color:{{ msName.fg }};background:{{ msName.bg }};border:1px solid {{ msName.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Coach</button>
+            </div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
-            <sc-for list="{{ coaches }}" as="c" hint-placeholder-count="8">
+            <sc-for list="{{ monitorCoaches }}" as="c" hint-placeholder-count="8">
             <button onclick="{{ c.open }}" style="text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;cursor:pointer;transition:border-color .15s,transform .15s;" style-hover="border-color:var(--volt);transform:translateY(-3px);">
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
                 <div style="width:42px;height:42px;border-radius:50%;background:{{ c.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:15px;color:{{ c.avFg }};position:relative;overflow:hidden;">{{ c.initials }}<sc-if value="{{ c.hasPhoto }}"><img src="{{ c.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
@@ -897,6 +904,20 @@
             </button>
             </sc-for>
           </div>
+          <sc-if value="{{ hasBusiestTimes }}">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:18px;max-width:520px;">
+            <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Archivo';font-size:14px;">🕐 Busiest Class Time</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestTime }}</span></div>
+            <div style="display:grid;grid-template-columns:20px 1fr 80px 70px;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>TIME</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
+            <sc-for list="{{ busiestTimes }}" as="t" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:20px 1fr 80px 70px;gap:8px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
+              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ t.rankNo }}</div>
+              <div style="font-weight:600;font-family:'JetBrains Mono';font-size:13px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
+              <div style="text-align:right;color:var(--muted);">{{ t.classes }}</div>
+              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ t.pax }}</div>
+            </div>
+            </sc-for>
+          </div>
+          </sc-if>
         </div>
         </sc-if>
 
