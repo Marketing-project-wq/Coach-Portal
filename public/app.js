@@ -178,7 +178,7 @@ class Component extends DCLogic {
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
-    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches').then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
+    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail);
@@ -533,8 +533,9 @@ class Component extends DCLogic {
   setClassSort(key) { this.setState({ classSort: key }); }
   // Sort the Coach Monitoring cards by participants / coach name.
   setMonitorSort(key) { this.setState({ monitorSort: key }); }
-  // Filter the Class Demand list by day / coach.
-  setCdDay(v) { this.setState({ cdDay: v }); }
+  // Class Breakdown period scope (all / month / week) — reloads the monitoring data.
+  setMonitorRange(v) { if ((this.state.monitorRange || 'month') === v) return; this.setState({ monitorRange: v }); if (this.MOCK) return; this.loadScreen('monitor'); }
+  // Filter the Class Breakdown list by coach.
   setCdCoach(v) { this.setState({ cdCoach: v }); }
   // Sort the Per-Class Breakdown by date / most participants / least participants.
   setStatRowSort(key) { this.setState({ statRowSort: key }); }
@@ -863,22 +864,19 @@ class Component extends DCLogic {
     // Class-demand breakdown: ONE row per class (no merging) — time · day · class · coach · pax,
     // ranked most → least. Filterable by day & coach so HC can plan next month's schedule.
     const splitCoaches = (s) => String(s || '').split(/\s*&\s*|\s*,\s*/).map((x) => x.trim()).filter(Boolean);
-    const cdDay = st.cdDay || '', cdCoach = st.cdCoach || '';
-    const daySeen = {}, coachSeen = {};
-    for (const c of (D.reportClassList || [])) {
-      if (c.day != null) daySeen[String(c.dow)] = c.day;
-      for (const nm of splitCoaches(c.coach)) coachSeen[nm] = true;
-    }
+    const cdCoach = st.cdCoach || '';
+    const coachSeen = {};
+    for (const c of (D.reportClassList || [])) { for (const nm of splitCoaches(c.coach)) coachSeen[nm] = true; }
     const classDemand = (D.reportClassList || [])
-      .filter((c) => (cdDay === '' || String(c.dow) === cdDay) && (cdCoach === '' || splitCoaches(c.coach).indexOf(cdCoach) >= 0))
+      .filter((c) => (cdCoach === '' || splitCoaches(c.coach).indexOf(cdCoach) >= 0))
       .slice()
       .sort((a, b) => (b.pax || 0) - (a.pax || 0) || String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)))
       .map((c, i) => ({ day: c.day || '', date: c.date || '', time: c.time || '—', type: c.type || '—', coach: c.coach || '—', pax: this.fmtNum(c.pax), top: i === 0, paxCol: (c.pax || 0) === 0 ? C.red : C.text }));
     const hasClassDemand = classDemand.length > 0;
-    // filter options — days in Mon→Sun order, coaches alphabetical
-    const dowOrder = [1, 2, 3, 4, 5, 6, 0];
-    const cdDayOpts = dowOrder.filter((d) => daySeen[String(d)] != null).map((d) => ({ val: String(d), label: daySeen[String(d)], picked: cdDay === String(d) }));
     const cdCoachOpts = Object.keys(coachSeen).sort((a, b) => a.localeCompare(b)).map((n) => ({ val: n, label: n, picked: cdCoach === n }));
+    // period scope for the Class Breakdown (all / month / week)
+    const monitorRange = st.monitorRange || 'month';
+    const cdRangeOpts = [{ val: 'all', label: 'All' }, { val: 'month', label: 'Month' }, { val: 'week', label: 'Week' }].map((o) => Object.assign({}, o, { picked: monitorRange === o.val }));
     // "Busiest" insights (which class type / weekday drew the most participants in range)
     const ins = D.reportInsights || {};
     const insClasses = ins.classes || [], insDays = ins.days || [];
@@ -1004,7 +1002,7 @@ class Component extends DCLogic {
       hasQuietClass, quietestClass, quietestClassPax, hasQuietDay, quietestDay, quietestDayPax,
       reportCal, hasReportCal, reportCalDow, reportCalMonth,
       monitorCoaches, msPax, msName, busiestTime: busiestTimeLabel, classDemand, hasClassDemand,
-      cdDayOpts, cdCoachOpts, setCdDay: (e) => this.setCdDay(e && e.target ? e.target.value : ''), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
+      cdRangeOpts, cdCoachOpts, setCdRange: (e) => this.setMonitorRange(e && e.target ? e.target.value : 'month'), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,

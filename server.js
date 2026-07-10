@@ -1115,8 +1115,8 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const today = todayJakarta();
   const d0 = new Date(today + 'T00:00:00');
   const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-  // Range: "week" = Mon..today of the current week; otherwise the whole month to date.
-  const range = q.range === 'week' ? 'week' : 'month';
+  // Range: "week" = Mon..today; "all" = since the season start; else the whole month to date.
+  const range = q.range === 'week' ? 'week' : q.range === 'all' ? 'all' : 'month';
   let startDate, periodLabel;
   if (range === 'week') {
     const dow = (d0.getDay() + 6) % 7; // 0=Mon
@@ -1124,6 +1124,9 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
     const we = new Date(ws); we.setDate(ws.getDate() + 6);
     startDate = iso(ws);
     periodLabel = `${ws.getDate()}–${we.getDate()} ${MON[we.getMonth()]}`;
+  } else if (range === 'all') {
+    startDate = LEADERBOARD_SINCE; // season start (July 2026)
+    periodLabel = 'All time';
   } else {
     startDate = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}-01`;
     periodLabel = `${MON_FULL[d0.getMonth()]} ${d0.getFullYear()}`;
