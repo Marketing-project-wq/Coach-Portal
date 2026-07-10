@@ -883,7 +883,7 @@
         <sc-if value="{{ s.monitor }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-            <div style="font-size:13px;color:var(--muted);">🔥 Most participants: <span style="color:var(--text);font-weight:700;">{{ busiestCoach }}</span> · Busiest time: <span style="color:var(--text);font-weight:700;">{{ busiestTime }}</span></div>
+            <div style="font-size:13px;color:var(--muted);">🕐 Busiest time: <span style="color:var(--text);font-weight:700;">{{ busiestTime }}</span></div>
             <div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:var(--muted2);font-weight:700;">SORT</span>
               <button onclick="{{ sortMonitorPax }}" style="font-size:12px;font-weight:700;color:{{ msPax.fg }};background:{{ msPax.bg }};border:1px solid {{ msPax.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Participants</button>
               <button onclick="{{ sortMonitorName }}" style="font-size:12px;font-weight:700;color:{{ msName.fg }};background:{{ msName.bg }};border:1px solid {{ msName.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Coach</button>
@@ -911,14 +911,14 @@
             <div style="min-width:720px;">
             <div style="display:grid;grid-template-columns:26px 74px 1.3fr 1.2fr 64px 62px 54px;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>TIME</div><div>CLASS</div><div>COACH</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">AVG/CLS</div><div style="text-align:right;">PAX</div></div>
             <sc-for list="{{ busiestTimes }}" as="t" hint-placeholder-count="5">
-            <div style="display:grid;grid-template-columns:26px 74px 1.3fr 1.2fr 64px 62px 54px;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
-              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ t.rankNo }}</div>
-              <div style="font-weight:700;font-family:'JetBrains Mono';font-size:13.5px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
+            <div style="display:grid;grid-template-columns:26px 74px 1.3fr 1.2fr 64px 62px 54px;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:start;font-size:13.5px;">
+              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;padding-top:1px;">{{ t.rankNo }}</div>
+              <div style="font-weight:700;font-family:'JetBrains Mono';font-size:13.5px;padding-top:1px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
               <div style="font-size:12.5px;color:var(--text);">{{ t.types }}</div>
-              <div style="font-size:12px;color:var(--muted);">{{ t.coaches }}</div>
-              <div style="text-align:right;color:var(--muted);">{{ t.classes }}</div>
-              <div style="text-align:right;color:var(--muted);">{{ t.avg }}</div>
-              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ t.pax }}</div>
+              <div style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;"><sc-for list="{{ t.coachList }}" as="cn"><div>• {{ cn.name }}</div></sc-for></div>
+              <div style="text-align:right;color:var(--muted);padding-top:1px;">{{ t.classes }}</div>
+              <div style="text-align:right;color:var(--muted);padding-top:1px;">{{ t.avg }}</div>
+              <div style="text-align:right;font-family:'Archivo';font-weight:700;padding-top:1px;">{{ t.pax }}</div>
             </div>
             </sc-for>
             </div>

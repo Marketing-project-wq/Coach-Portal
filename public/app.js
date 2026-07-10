@@ -851,13 +851,14 @@ class Component extends DCLogic {
       if (!mTimeMap[t]) mTimeMap[t] = { time: t, classes: 0, pax: 0, types: {}, coaches: {} };
       const e = mTimeMap[t]; e.classes++; e.pax += c.pax || 0;
       if (c.type) e.types[c.type] = (e.types[c.type] || 0) + 1;
-      if (c.coach) e.coaches[c.coach] = (e.coaches[c.coach] || 0) + 1;
+      // Split co-taught instructors ("A & B", "A, B") so each coach is counted individually.
+      for (const nm of String(c.coach || '').split(/\s*&\s*|\s*,\s*/).map((s) => s.trim()).filter(Boolean)) e.coaches[nm] = (e.coaches[nm] || 0) + 1;
     }
     const byCount = (o) => Object.keys(o).sort((a, b) => o[b] - o[a]);
     const busiestTimes = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes).slice(0, 8).map((x, i) => ({
       rankNo: i + 1, time: x.time, classes: x.classes, pax: this.fmtNum(x.pax),
       avg: x.classes ? Math.round(x.pax / x.classes) : 0,
-      types: byCount(x.types).join(', '), coaches: byCount(x.coaches).join(', '),
+      types: byCount(x.types).join(', '), coachList: byCount(x.coaches).map((name) => ({ name })),
       hasCoaches: Object.keys(x.coaches).length > 0, top: i === 0,
     }));
     const hasBusiestTimes = busiestTimes.length > 0;
