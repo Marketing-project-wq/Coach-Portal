@@ -882,13 +882,6 @@
         <!-- ===== MONITORING LIST ===== -->
         <sc-if value="{{ s.monitor }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-            <div style="font-size:13px;color:var(--muted);">🕐 Busiest time: <span style="color:var(--text);font-weight:700;">{{ busiestTime }}</span></div>
-            <div style="display:flex;align-items:center;gap:7px;"><span style="font-size:11px;color:var(--muted2);font-weight:700;">SORT</span>
-              <button onclick="{{ sortMonitorPax }}" style="font-size:12px;font-weight:700;color:{{ msPax.fg }};background:{{ msPax.bg }};border:1px solid {{ msPax.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Participants</button>
-              <button onclick="{{ sortMonitorName }}" style="font-size:12px;font-weight:700;color:{{ msName.fg }};background:{{ msName.bg }};border:1px solid {{ msName.border }};padding:6px 12px;border-radius:8px;cursor:pointer;">Coach</button>
-            </div>
-          </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
             <sc-for list="{{ monitorCoaches }}" as="c" hint-placeholder-count="8">
             <button onclick="{{ c.open }}" style="text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;cursor:pointer;transition:border-color .15s,transform .15s;" style-hover="border-color:var(--volt);transform:translateY(-3px);">
@@ -919,7 +912,7 @@
             <sc-for list="{{ classDemand }}" as="t" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:70px 130px 1.3fr 1fr 56px;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
               <div style="font-weight:700;font-family:'JetBrains Mono';font-size:13.5px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
-              <div style="color:var(--muted);">{{ t.day }} <span style="color:var(--muted2);font-size:11.5px;">· {{ t.date }}</span></div>
+              <div style="color:var(--muted);">{{ t.day }}<div style="color:var(--muted2);font-size:11.5px;margin-top:1px;">{{ t.date }}</div></div>
               <div style="font-size:12.5px;color:var(--text);">{{ t.type }}</div>
               <div style="font-size:12.5px;color:var(--muted);">{{ t.coach }}</div>
               <div style="text-align:right;font-family:'Archivo';font-weight:700;color:{{ t.paxCol }};">{{ t.pax }}</div>
@@ -986,49 +979,6 @@
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Total Classes (team)</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;color:var(--volt);">{{ reportTotalClasses }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">Participants Served</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">{{ reportTotalPax }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;"><div style="font-size:12.5px;color:var(--muted);">{{ reportCoverageLabel }}</div><div style="font-family:'Archivo';font-weight:800;font-size:30px;">{{ reportCoverage }}</div></div>
-          </div>
-          <sc-if value="{{ hasInsights }}">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
-              <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Archivo';font-size:14px;">🔥 Busiest Class</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestClass }}</span></div>
-              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>CLASS</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
-              <sc-for list="{{ topClasses }}" as="c" hint-placeholder-count="4">
-              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
-                <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ c.rankNo }}</div>
-                <div style="font-weight:600;"><sc-if value="{{ c.top }}"><span style="color:var(--volt);">●</span> </sc-if>{{ c.name }}</div>
-                <div style="text-align:right;color:var(--muted);">{{ c.classes }}</div>
-                <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ c.pax }}</div>
-              </div>
-              </sc-for>
-              <sc-if value="{{ hasQuietClass }}"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;font-size:12.5px;color:var(--muted);"><span>😴 Quietest: <span style="color:var(--text);font-weight:700;">{{ quietestClass }}</span></span><span style="font-family:'Archivo';font-weight:700;">{{ quietestClassPax }} pax</span></div></sc-if>
-            </div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
-              <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Archivo';font-size:14px;">📅 Busiest Day</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestDay }}</span></div>
-              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>#</div><div>DAY</div><div style="text-align:right;">CLASSES</div><div style="text-align:right;">PAX</div></div>
-              <sc-for list="{{ topDays }}" as="d" hint-placeholder-count="4">
-              <div style="display:grid;grid-template-columns:20px 1fr 70px 70px;gap:8px;padding:11px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
-                <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:12px;">{{ d.rankNo }}</div>
-                <div style="font-weight:600;"><sc-if value="{{ d.top }}"><span style="color:var(--volt);">●</span> </sc-if>{{ d.day }}</div>
-                <div style="text-align:right;color:var(--muted);">{{ d.classes }}</div>
-                <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ d.pax }}</div>
-              </div>
-              </sc-for>
-              <sc-if value="{{ hasQuietDay }}"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;font-size:12.5px;color:var(--muted);"><span>😴 Quietest: <span style="color:var(--text);font-weight:700;">{{ quietestDay }}</span></span><span style="font-family:'Archivo';font-weight:700;">{{ quietestDayPax }} pax</span></div></sc-if>
-            </div>
-          </div>
-          </sc-if>
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-            <div style="padding:15px 20px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Archivo';font-size:16px;">{{ reportTitle }}</div>
-            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);"><div onclick="{{ sortReportName }}" style="cursor:pointer;user-select:none;">{{ rsCoach }}</div><div onclick="{{ sortReportClasses }}" style="text-align:right;cursor:pointer;user-select:none;">{{ rsClasses }}</div><div onclick="{{ sortReportPax }}" style="text-align:right;cursor:pointer;user-select:none;">{{ rsPax }}</div><div onclick="{{ sortReportCovered }}" style="text-align:right;cursor:pointer;user-select:none;">{{ rsCovered }}</div><div style="text-align:right;"></div></div>
-            <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
-            <div style="display:grid;grid-template-columns:1fr 110px 120px 90px 90px;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;font-size:14px;">
-              <div style="display:flex;align-items:center;gap:11px;"><div style="width:32px;height:32px;border-radius:50%;background:{{ r.avBg }};display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:800;font-size:12px;color:{{ r.avFg }};">{{ r.initials }}</div><div><span style="font-weight:700;">{{ r.name }}</span> <span style="font-size:11px;color:var(--muted);">{{ r.role }}</span></div></div>
-              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.classes }}</div>
-              <div style="text-align:right;font-family:'Archivo';font-weight:700;">{{ r.peserta }}</div>
-              <div style="text-align:right;color:var(--muted);">{{ r.subs }}×</div>
-              <div style="text-align:right;"><button onclick="{{ r.open }}" style="background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--volt);">Detail</button></div>
-            </div>
-            </sc-for>
           </div>
           <sc-if value="{{ hasClassRows }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-top:18px;">
