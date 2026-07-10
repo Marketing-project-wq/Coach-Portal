@@ -582,18 +582,18 @@
             </button>
             </sc-for>
           </div>
-          <sc-if value="{{ hasBusiestTimes }}">
+          <sc-if value="{{ hasClassDemand }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-top:18px;">
-            <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font-weight:800;font-family:'Barlow Condensed';font-size:14px;">🕐 Busiest Class Time</span><span style="font-size:13px;color:var(--volt);font-weight:700;">{{ busiestTime }}</span></div>
+            <div style="padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span style="font-weight:800;font-family:'Barlow Condensed';font-size:14px;">🕐 Class Demand — Most → Least Participants</span><span style="font-size:11.5px;color:var(--muted2);">for planning next month</span></div>
             <div style="overflow-x:auto;">
             <div style="min-width:560px;">
             <div style="display:grid;grid-template-columns:80px 1.4fr 1fr 60px;gap:12px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--muted2);"><div>TIME</div><div>CLASS</div><div>COACH</div><div style="text-align:right;">PAX</div></div>
-            <sc-for list="{{ busiestTimes }}" as="t" hint-placeholder-count="5">
+            <sc-for list="{{ classDemand }}" as="t" hint-placeholder-count="8">
             <div style="display:grid;grid-template-columns:80px 1.4fr 1fr 60px;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:start;font-size:13.5px;">
               <div style="font-weight:700;font-family:'JetBrains Mono';font-size:13.5px;"><sc-if value="{{ t.top }}"><span style="color:var(--volt);font-family:'Manrope';">●</span> </sc-if>{{ t.time }}</div>
-              <div style="font-size:12.5px;color:var(--text);">{{ t.types }}</div>
+              <div style="font-size:12.5px;color:var(--text);">{{ t.type }}</div>
               <div style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;"><sc-for list="{{ t.coachList }}" as="cn"><div>• {{ cn.name }}</div></sc-for></div>
-              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;">{{ t.pax }}</div>
+              <div style="text-align:right;font-family:'Barlow Condensed';font-weight:700;color:{{ t.paxCol }};">{{ t.pax }}</div>
             </div>
             </sc-for>
             </div>
@@ -888,9 +888,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=8b9cc788"></script>
-<script src="sc-runtime.js?v=8b9cc788"></script>
-<script src="app.js?v=8b9cc788"></script>
+<script src="i18n.js?v=bf73a60c"></script>
+<script src="sc-runtime.js?v=bf73a60c"></script>
+<script src="app.js?v=bf73a60c"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

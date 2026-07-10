@@ -855,14 +855,21 @@ class Component extends DCLogic {
       for (const nm of String(c.coach || '').split(/\s*&\s*|\s*,\s*/).map((s) => s.trim()).filter(Boolean)) e.coaches[nm] = (e.coaches[nm] || 0) + 1;
     }
     const byCount = (o) => Object.keys(o).sort((a, b) => o[b] - o[a]);
-    const busiestTimes = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes).slice(0, 8).map((x, i) => ({
-      rankNo: i + 1, time: x.time, classes: x.classes, pax: this.fmtNum(x.pax),
-      avg: x.classes ? Math.round(x.pax / x.classes) : 0,
-      types: byCount(x.types).join(', '), coachList: byCount(x.coaches).map((name) => ({ name })),
-      hasCoaches: Object.keys(x.coaches).length > 0, top: i === 0,
-    }));
-    const hasBusiestTimes = busiestTimes.length > 0;
-    const busiestTime = busiestTimes[0] ? busiestTimes[0].time : '—';
+    const busiestTime = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes)[0];
+    const busiestTimeLabel = busiestTime ? busiestTime.time : '—';
+    // Full class-demand list for scheduling: every (time · class · coach) slot, total participants,
+    // ranked most → least (down to zero). Helps HC plan next month's schedule.
+    const splitCoaches = (s) => String(s || '').split(/\s*&\s*|\s*,\s*/).map((x) => x.trim()).filter(Boolean);
+    const slotMap = {};
+    for (const c of (D.reportClassList || [])) {
+      const key = (c.time || '—') + '|' + (c.type || '') + '|' + (c.coach || '');
+      if (!slotMap[key]) slotMap[key] = { time: c.time || '—', type: c.type || '', coach: c.coach || '', pax: 0, sessions: 0 };
+      slotMap[key].pax += c.pax || 0; slotMap[key].sessions++;
+    }
+    const classDemand = Object.values(slotMap)
+      .sort((a, b) => b.pax - a.pax || b.sessions - a.sessions || String(a.time).localeCompare(String(b.time)))
+      .map((x, i) => ({ time: x.time, type: x.type || '—', coachList: splitCoaches(x.coach).map((name) => ({ name })), pax: this.fmtNum(x.pax), sessions: x.sessions, top: i === 0, paxCol: x.pax === 0 ? C.red : C.text }));
+    const hasClassDemand = classDemand.length > 0;
     // "Busiest" insights (which class type / weekday drew the most participants in range)
     const ins = D.reportInsights || {};
     const insClasses = ins.classes || [], insDays = ins.days || [];
@@ -977,7 +984,7 @@ class Component extends DCLogic {
       hasQuietClass, quietestClass, quietestClassPax, hasQuietDay, quietestDay, quietestDayPax,
       reportClassRows, hasClassRows, csType, csTime, csCoach,
       sortClassType: () => this.setClassSort('type'), sortClassTime: () => this.setClassSort('time'), sortClassCoach: () => this.setClassSort('coach'),
-      monitorCoaches, msPax, msName, busiestCoach, busiestTime, busiestTimes, hasBusiestTimes,
+      monitorCoaches, msPax, msName, busiestTime: busiestTimeLabel, classDemand, hasClassDemand,
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
@@ -1065,11 +1072,15 @@ class Component extends DCLogic {
     d.reportCoverage = (this.state.reportRange === 'week') ? 1 : 5;
     d.reportInsights = { classes: [{ name: 'HYROX Complete', classes: 42, pax: 520 }, { name: 'HYROX Foundation', classes: 30, pax: 360 }, { name: 'Strength', classes: 18, pax: 190 }, { name: 'Running Club', classes: 10, pax: 107 }], days: [{ day: 'Saturday', classes: 24, pax: 300 }, { day: 'Monday', classes: 20, pax: 250 }, { day: 'Wednesday', classes: 18, pax: 220 }, { day: 'Friday', classes: 16, pax: 207 }, { day: 'Sunday', classes: 12, pax: 120 }] };
     d.reportClassList = [
+      { type: 'HYROX Foundation', time: '19:30', coach: 'Elsen & Brian', date: '2 Jul', dateISO: '2026-07-02', pax: 21 },
+      { type: 'HYROX Foundation', time: '19:30', coach: 'Elsen & Brian', date: '9 Jul', dateISO: '2026-07-09', pax: 29 },
       { type: 'HYROX Complete', time: '07:00', coach: 'Nando', date: '1 Jul', dateISO: '2026-07-01', pax: 14 },
-      { type: 'HYROX Foundation', time: '18:30', coach: 'Rheza', date: '1 Jul', dateISO: '2026-07-01', pax: 9 },
-      { type: 'Strength', time: '09:00', coach: 'Nando', date: '3 Jul', dateISO: '2026-07-03', pax: 12 },
       { type: 'HYROX Complete', time: '07:00', coach: 'Rheza', date: '5 Jul', dateISO: '2026-07-05', pax: 16 },
+      { type: '20FIT Special', time: '10:00', coach: 'Gilang', date: '3 Jul', dateISO: '2026-07-03', pax: 12 },
+      { type: 'Strength', time: '09:00', coach: 'Nando', date: '3 Jul', dateISO: '2026-07-03', pax: 12 },
       { type: 'Running Club', time: '06:00', coach: 'Nando', date: '8 Jul', dateISO: '2026-07-08', pax: 8 },
+      { type: 'HYROX Complete', time: '18:30', coach: 'Mae', date: '10 Jul', dateISO: '2026-07-10', pax: 1 },
+      { type: 'Mobility', time: '11:00', coach: 'Sakha', date: '7 Jul', dateISO: '2026-07-07', pax: 0 },
     ];
     // venue booking (arena + coach)
     d.venueIsHC = this.accountRole !== 'coach';
