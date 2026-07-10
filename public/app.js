@@ -891,19 +891,30 @@ class Component extends DCLogic {
     const qD = insDays.length > 1 ? insDays[insDays.length - 1] : null;
     const hasQuietClass = !!qC, quietestClass = qC ? qC.name : '', quietestClassPax = qC ? this.fmtNum(qC.pax) : '';
     const hasQuietDay = !!qD, quietestDay = qD ? qD.day : '', quietestDayPax = qD ? this.fmtNum(qD.pax) : '';
-    // sortable all-class list for the report period (class / time / coach)
-    const classSort = st.classSort || 'time';
-    let classRows = (D.reportClassList || []).slice();
-    classRows.sort((a, b) => {
-      if (classSort === 'type') return String(a.type).localeCompare(String(b.type)) || String(a.time).localeCompare(String(b.time));
-      if (classSort === 'coach') return String(a.coach).localeCompare(String(b.coach)) || String(a.time).localeCompare(String(b.time));
-      // time: order by clock time, then date
-      return String(a.time).localeCompare(String(b.time)) || String(a.dateISO).localeCompare(String(b.dateISO));
-    });
-    const reportClassRows = classRows.map((c) => ({ type: c.type, time: c.time || '—', coach: c.coach, date: c.date, pax: c.pax }));
-    const hasClassRows = reportClassRows.length > 0;
-    const csTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
-    const csType = csTab(classSort === 'type'), csTime = csTab(classSort === 'time'), csCoach = csTab(classSort === 'coach');
+    // Reports calendar — classes + total participants per date (compact month view).
+    const MONFULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const calAgg = {}; let calMinDate = '';
+    for (const c of (D.reportClassList || [])) {
+      const d = c.dateISO; if (!d) continue;
+      if (!calAgg[d]) calAgg[d] = { classes: 0, pax: 0 };
+      calAgg[d].classes++; calAgg[d].pax += c.pax || 0;
+      if (!calMinDate || d < calMinDate) calMinDate = d;
+    }
+    const reportCalDow = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    let reportCal = [], reportCalMonth = '';
+    if (calMinDate) {
+      const yy = Number(calMinDate.slice(0, 4)), mm = Number(calMinDate.slice(5, 7));
+      reportCalMonth = MONFULL[mm - 1] + ' ' + yy;
+      const startDow = (new Date(yy, mm - 1, 1).getDay() + 6) % 7; // Mon=0
+      const days = new Date(yy, mm, 0).getDate();
+      for (let i = 0; i < startDow; i++) reportCal.push({ notBlank: false, bg: 'transparent', border: 'transparent', has: false, day: '', classes: '', pax: '' });
+      for (let d = 1; d <= days; d++) {
+        const iso = yy + '-' + String(mm).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        const a = calAgg[iso];
+        reportCal.push({ notBlank: true, day: d, has: !!a, classes: a ? a.classes : 0, pax: a ? this.fmtNum(a.pax) : '', bg: a ? 'var(--volt-dim)' : 'var(--panel2)', border: a ? 'rgba(214,255,61,.35)' : 'var(--border)' });
+      }
+    }
+    const hasReportCal = reportCal.length > 0;
     // per-coach weekly breakdown (stats detail): classes + participants each Mon-start week of the month
     const statWeeks = (D.statWeeks || []).map((w) => ({ no: w.no, label: w.label, classes: w.classes, peserta: w.pax }));
     const hasStatWeeks = statWeeks.length > 0;
@@ -991,8 +1002,7 @@ class Component extends DCLogic {
       sortReportName: () => this.setReportSort('name'), sortReportClasses: () => this.setReportSort('classes'), sortReportPax: () => this.setReportSort('pax'), sortReportCovered: () => this.setReportSort('covered'),
       topClasses, topDays, hasInsights, busiestClass, busiestDay,
       hasQuietClass, quietestClass, quietestClassPax, hasQuietDay, quietestDay, quietestDayPax,
-      reportClassRows, hasClassRows, csType, csTime, csCoach,
-      sortClassType: () => this.setClassSort('type'), sortClassTime: () => this.setClassSort('time'), sortClassCoach: () => this.setClassSort('coach'),
+      reportCal, hasReportCal, reportCalDow, reportCalMonth,
       monitorCoaches, msPax, msName, busiestTime: busiestTimeLabel, classDemand, hasClassDemand,
       cdDayOpts, cdCoachOpts, setCdDay: (e) => this.setCdDay(e && e.target ? e.target.value : ''), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
