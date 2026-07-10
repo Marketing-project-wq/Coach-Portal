@@ -860,24 +860,20 @@ class Component extends DCLogic {
     const byCount = (o) => Object.keys(o).sort((a, b) => o[b] - o[a]);
     const busiestTime = Object.values(mTimeMap).sort((a, b) => b.pax - a.pax || b.classes - a.classes)[0];
     const busiestTimeLabel = busiestTime ? busiestTime.time : '—';
-    // Full class-demand list for scheduling: every (day · time · class · coach) slot, total
-    // participants, ranked most → least (down to zero). Filterable by day & coach so the head
-    // coach can plan next month's schedule without a giant dump.
+    // Class-demand breakdown: ONE row per class (no merging) — time · day · class · coach · pax,
+    // ranked most → least. Filterable by day & coach so HC can plan next month's schedule.
     const splitCoaches = (s) => String(s || '').split(/\s*&\s*|\s*,\s*/).map((x) => x.trim()).filter(Boolean);
     const cdDay = st.cdDay || '', cdCoach = st.cdCoach || '';
-    const daySeen = {}, coachSeen = {}, slotMap = {};
+    const daySeen = {}, coachSeen = {};
     for (const c of (D.reportClassList || [])) {
       if (c.day != null) daySeen[String(c.dow)] = c.day;
       for (const nm of splitCoaches(c.coach)) coachSeen[nm] = true;
-      if (cdDay !== '' && String(c.dow) !== cdDay) continue;
-      if (cdCoach !== '' && splitCoaches(c.coach).indexOf(cdCoach) < 0) continue;
-      const key = String(c.dow) + '|' + (c.time || '—') + '|' + (c.type || '') + '|' + (c.coach || '');
-      if (!slotMap[key]) slotMap[key] = { dow: c.dow, day: c.day || '', time: c.time || '—', type: c.type || '', coach: c.coach || '', pax: 0, sessions: 0 };
-      slotMap[key].pax += c.pax || 0; slotMap[key].sessions++;
     }
-    const classDemand = Object.values(slotMap)
-      .sort((a, b) => b.pax - a.pax || b.sessions - a.sessions || String(a.time).localeCompare(String(b.time)))
-      .map((x, i) => ({ day: x.day, time: x.time, type: x.type || '—', coachList: splitCoaches(x.coach).map((name) => ({ name })), pax: this.fmtNum(x.pax), sessions: x.sessions, top: i === 0, paxCol: x.pax === 0 ? C.red : C.text }));
+    const classDemand = (D.reportClassList || [])
+      .filter((c) => (cdDay === '' || String(c.dow) === cdDay) && (cdCoach === '' || splitCoaches(c.coach).indexOf(cdCoach) >= 0))
+      .slice()
+      .sort((a, b) => (b.pax || 0) - (a.pax || 0) || String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)))
+      .map((c, i) => ({ day: c.day || '', date: c.date || '', time: c.time || '—', type: c.type || '—', coach: c.coach || '—', pax: this.fmtNum(c.pax), top: i === 0, paxCol: (c.pax || 0) === 0 ? C.red : C.text }));
     const hasClassDemand = classDemand.length > 0;
     // filter options — days in Mon→Sun order, coaches alphabetical
     const dowOrder = [1, 2, 3, 4, 5, 6, 0];
