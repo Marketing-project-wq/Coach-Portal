@@ -533,6 +533,8 @@ class Component extends DCLogic {
   setClassSort(key) { this.setState({ classSort: key }); }
   // Sort the Coach Monitoring cards by participants / coach name.
   setMonitorSort(key) { this.setState({ monitorSort: key }); }
+  // Sort the Per-Class Breakdown by date / most participants / least participants.
+  setStatRowSort(key) { this.setState({ statRowSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
   setReportSort(key) {
     const st = this.state;
@@ -867,7 +869,14 @@ class Component extends DCLogic {
     const reportCoverage = D.reportCoverage != null ? String(D.reportCoverage) : '—';
     const reportCoverageLabel = reportRange === 'week' ? 'Coverage This Week' : 'Coverage This Month';
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 0, attended: 0, attPct: '—', attCol: C.muted2, subs: 0, photo: '', hasPhoto: false };
-    const statRows = D.stats || [];
+    // Per-Class Breakdown sort: by date (default), most participants, or least.
+    const statRowSort = st.statRowSort || 'date';
+    let statRowsArr = (D.stats || []).slice();
+    if (statRowSort === 'pax_desc') statRowsArr.sort((a, b) => (b.peserta || 0) - (a.peserta || 0));
+    else if (statRowSort === 'pax_asc') statRowsArr.sort((a, b) => (a.peserta || 0) - (b.peserta || 0));
+    const statRows = statRowsArr;
+    const srTab = (on) => ({ bg: on ? C.volt : 'transparent', fg: on ? '#08090B' : C.muted, border: on ? C.volt : C.border2 });
+    const srDate = srTab(statRowSort === 'date'), srMost = srTab(statRowSort === 'pax_desc'), srLeast = srTab(statRowSort === 'pax_asc');
     const statMonth = D.statMonth || '';
     // templates
     const templates = D.templates || [];
@@ -922,6 +931,7 @@ class Component extends DCLogic {
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
       statWeeks, hasStatWeeks, statDays, hasStatDays,
+      srDate, srMost, srLeast, sortStatDate: () => this.setStatRowSort('date'), sortStatMost: () => this.setStatRowSort('pax_desc'), sortStatLeast: () => this.setStatRowSort('pax_asc'),
       statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
       reportTitle, reportPeriod, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
       setReportMonth: () => this.setReportRange('month'), setReportWeek: () => this.setReportRange('week'),
