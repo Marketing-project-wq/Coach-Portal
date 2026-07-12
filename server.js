@@ -166,12 +166,19 @@ function instructorTokens(instructor) {
     .map((t) => t.trim())
     .filter(Boolean);
 }
-// True when `coach` is (one of) the instructor(s) of a class. Exact per-token
-// match (case-insensitive) so "Mae" never matches e.g. an unrelated longer name.
+// True when `coach` is (one of) the instructor(s) of a class. Tolerant of small
+// naming differences between Admin Hub's schedule instructor field and the coach's
+// account name — matches "Elsen", "Coach Elsen", "Elsen S", "Elsen Pratama & Brian"
+// — but still whole-word, so "Mae" never matches "Maena" and "Elsen" never "Elsena".
 function instructorHasCoach(instructor, coach) {
   const c = String(coach || '').trim().toLowerCase();
   if (!c) return false;
-  return instructorTokens(instructor).some((t) => t.toLowerCase() === c);
+  const esc = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(^|[^a-z0-9])' + esc + '([^a-z0-9]|$)', 'i');
+  return instructorTokens(instructor).some((t) => {
+    const tok = t.trim().toLowerCase();
+    return tok === c || re.test(tok.replace(/^coach\s+/i, ' '));
+  });
 }
 
 async function coachSchedules(coach, from, to) {
@@ -1133,14 +1140,6 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   }
   const users = await sb('arena_coach_users?select=username,coach_name,role,is_active&order=coach_name.asc');
   const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id,start_time&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
-  const byCoach = {};
-  for (const sc of scheds || []) {
-    // Co-taught classes ("A & Coach") count for each named coach.
-    for (const nm of instructorTokens(sc.instructor)) {
-      byCoach[nm] = byCoach[nm] || { classes: 0, ids: [] };
-      byCoach[nm].classes++; byCoach[nm].ids.push(sc.id);
-    }
-  }
   const allIds = (scheds || []).map((x) => x.id);
   const [counts, started] = await Promise.all([bookingCounts(allIds), startedSet(allIds)]);
   const subs = await sb(`arena_coach_substitutions?select=from_coach,status,created_at&created_at=gte.${startDate}T00:00:00`);
@@ -1148,7 +1147,10 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   for (const su of subs || []) { subCount[su.from_coach] = (subCount[su.from_coach] || 0) + 1; coverageTotal++; }
   const pm = await coachPhotoMap();
   const list = (users || []).filter((u) => u.role !== 'admin').map((u) => {
-    const b = byCoach[u.coach_name] || { classes: 0, ids: [] };
+    // Attribute each class to this coach with tolerant name matching (handles small
+    // instructor-name differences from Admin Hub). Co-taught classes count for each coach.
+    const b = { ids: (scheds || []).filter((sc) => instructorHasCoach(sc.instructor, u.coach_name)).map((x) => x.id) };
+    b.classes = b.ids.length;
     const peserta = b.ids.reduce((a, id) => a + ((counts[id] || {}).confirmed || 0), 0);
     // Attendance = classes actually checked-in (Start Class) / total scheduled classes in range.
     const attended = b.ids.filter((id) => started.has(id)).length;
