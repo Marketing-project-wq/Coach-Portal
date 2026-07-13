@@ -767,9 +767,9 @@ route('GET', '/api/coach/members', async (req, res, s, q) => {
   const floor = await earliestYm('arena_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7));
   return send(res, 200, { members, total: members.length, active30, months: monthOptions(today, floor), ym });
 });
-// ===== HEAD COACH: arena-rental leaderboard — customers who book the arena most, month-filterable =====
+// ===== ADMIN: arena-rental leaderboard — customers who book the arena most, month-filterable =====
 route('GET', '/api/venue/leaderboard', async (req, res, s, q) => {
-  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const today = todayJakarta();
   const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : '';
   const w = monthWindow(ym, today);

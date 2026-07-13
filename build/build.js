@@ -203,19 +203,6 @@ const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;ma
 const venueAssignScreen = '<sc-if value="{{ s.venueassign }}"><div style="max-width:900px;margin:0 auto;">'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Assign Venue</div>'
   + '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Assign a responsible coach to each Arena + Coach booking.</div>'
-  // Arena-rental leaderboard — customers who book the arena most (month-filterable).
-  + '<sc-if value="{{ hasVenueRenters }}"><div style="' + cardBox + 'overflow:hidden;margin-bottom:22px;">'
-    + '<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
-      + '<div style="font-weight:800;font-family:\'Archivo\';font-size:15px;">&#127942; Top Penyewa Arena</div>'
-      + '<sc-if value="{{ hasVenueLbMonths }}"><select onchange="{{ setVenueLbMonth }}" style="' + selStyle + '"><option value="">All months</option><sc-for list="{{ venueLbMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>'
-    + '</div>'
-    + '<sc-for list="{{ venueRenters }}" as="r"><div style="display:flex;align-items:center;gap:13px;padding:12px 18px;border-bottom:1px solid var(--border);">'
-      + '<div style="width:26px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:15px;color:{{ r.medalCol }};flex-shrink:0;">{{ r.rank }}</div>'
-      + '<div style="width:34px;height:34px;border-radius:50%;background:{{ r.avBg }};color:{{ r.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:12px;flex-shrink:0;">{{ r.initials }}</div>'
-      + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;">{{ r.name }}</div><div style="font-size:11.5px;color:var(--muted);">Terakhir: {{ r.lastLabel }}</div></div>'
-      + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:18px;">{{ r.count }}</div><div style="font-size:10.5px;color:var(--muted);">booking</div></div>'
-    + '</div></sc-for>'
-  + '</div></sc-if>'
   + '<sc-if value="{{ hasVenueDispatch }}"><div style="display:flex;flex-direction:column;gap:12px;">'
     + '<sc-for list="{{ venueDispatch }}" as="b">' + venueCard + '</sc-for>'
   + '</div></sc-if>'
@@ -230,6 +217,24 @@ const venueAssignScreen = '<sc-if value="{{ s.venueassign }}"><div style="max-wi
   + '</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        ' + venueAssignScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
+const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">&#127942; Top Penyewa Arena</div>'
+    + '<sc-if value="{{ hasVenueLbMonths }}"><select onchange="{{ setVenueLbMonth }}" style="' + selStyle + '"><option value="">All months</option><sc-for list="{{ venueLbMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>'
+  + '</div>'
+  + '<sc-if value="{{ hasVenueRenters }}"><div style="' + cardBox + 'overflow:hidden;">'
+    + '<sc-for list="{{ venueRenters }}" as="r"><div style="display:flex;align-items:center;gap:13px;padding:13px 18px;border-bottom:1px solid var(--border);">'
+      + '<div style="width:26px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:{{ r.medalCol }};flex-shrink:0;">{{ r.rank }}</div>'
+      + '<div style="width:36px;height:36px;border-radius:50%;background:{{ r.avBg }};color:{{ r.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:12.5px;flex-shrink:0;">{{ r.initials }}</div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ r.name }}</div><div style="font-size:11.5px;color:var(--muted);">Terakhir sewa: {{ r.lastLabel }}</div></div>'
+      + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:20px;">{{ r.count }}</div><div style="font-size:10.5px;color:var(--muted);">booking</div></div>'
+    + '</div></sc-for>'
+  + '</div></sc-if>'
+  + '<sc-if value="{{ noVenueRenters }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada data booking arena pada periode ini.</div></sc-if>'
+  + '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', rentersScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
 // ---- Menu Kelas — shared class-program reference (patokan) for every coach ----
 const menuNav = '<sc-if value="{{ showMenuNav }}"><button onclick="{{ goMenu }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.menu.bg }};color:{{ nav.menu.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.menu.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Class Menu</button></sc-if>';

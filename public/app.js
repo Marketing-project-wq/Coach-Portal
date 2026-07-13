@@ -175,7 +175,8 @@ class Component extends DCLogic {
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews' + (this.state.reviewCoach ? '?coach=' + encodeURIComponent(this.state.reviewCoach) : '')).then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories, reviewCoaches: r.coaches || [] })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
-    else if (screen === 'venue' || screen === 'venueassign') { this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail); if (screen === 'venueassign') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(() => {}); }
+    else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
@@ -531,7 +532,7 @@ class Component extends DCLogic {
   }
   // Month filters for the Participants leaderboard & the arena-rental leaderboard.
   setMemberMonth(ym) { if ((this.state.memberYm || '') === ym) return; this.setState({ memberYm: ym }); if (!this.MOCK) this.loadScreen('members'); }
-  setVenueLbMonth(ym) { if ((this.state.venueLbYm || '') === ym) return; this.setState({ venueLbYm: ym }); if (!this.MOCK) this.loadScreen('venueassign'); }
+  setVenueLbMonth(ym) { if ((this.state.venueLbYm || '') === ym) return; this.setState({ venueLbYm: ym }); if (!this.MOCK) this.loadScreen('renters'); }
   // Sort the all-class report list by class type / time / coach.
   setClassSort(key) { this.setState({ classSort: key }); }
   // Sort the Coach Monitoring cards by participants / coach name.
@@ -632,7 +633,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -649,10 +650,11 @@ class Component extends DCLogic {
     titles.leaderboard = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Leaderboard'];
     titles.venue = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Venue Booking'];
     titles.venueassign = ['Head Coach', 'Assign Venue'];
+    titles.renters = ['Admin', 'Arena Renters'];
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -692,6 +694,7 @@ class Component extends DCLogic {
     // arena-rental leaderboard (Assign Venue) — customers who book the arena most
     const venueRenters = (D.venueRenters || []).map((x) => { const av = this.avatar(x.name); return { rank: x.rank, name: x.name, initials: this.ini(x.name), count: x.count, lastLabel: x.lastLabel, avBg: av[0], avFg: av[1], medalCol: x.rank === 1 ? '#E8B923' : x.rank === 2 ? '#9AA0A6' : x.rank === 3 ? '#CD7F32' : this.C.muted2 }; });
     const hasVenueRenters = venueRenters.length > 0;
+    const noVenueRenters = !hasVenueRenters;
     const venueLbYm = st.venueLbYm || '';
     const venueLbMonthOpts = (D.venueLbMonths || []).map((o) => ({ ym: o.ym, label: o.label, picked: venueLbYm === o.ym }));
     // participant reviews
@@ -998,7 +1001,7 @@ class Component extends DCLogic {
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
       memberMonthOpts, hasMemberMonths: memberMonthOpts.length > 0, setMemberMonth: (e) => this.setMemberMonth(e && e.target ? e.target.value : ''),
-      venueRenters, hasVenueRenters, venueLbMonthOpts, hasVenueLbMonths: venueLbMonthOpts.length > 0, setVenueLbMonth: (e) => this.setVenueLbMonth(e && e.target ? e.target.value : ''),
+      venueRenters, hasVenueRenters, noVenueRenters, venueLbMonthOpts, hasVenueLbMonths: venueLbMonthOpts.length > 0, setVenueLbMonth: (e) => this.setVenueLbMonth(e && e.target ? e.target.value : ''), goRenters: () => this.go('renters'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       boardSortPax: seg(boardSort === 'pax'), boardSortRating: seg(boardSort === 'rating'), sortByPax: () => this.setBoardSort('pax'), sortByRating: () => this.setBoardSort('rating'),
       showVenueNav: true, goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
