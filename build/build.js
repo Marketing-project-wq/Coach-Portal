@@ -164,6 +164,10 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', boardScreen + '
 // Nav item visible to ALL roles (coach / head coach / admin).
 const venueNav = '<sc-if value="{{ showVenueNav }}"><button onclick="{{ goVenue }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.venue.bg }};color:{{ nav.venue.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.venue.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Venue Booking</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/button>)/, '$1' + venueNav);
+// GRO-only "Participants" nav — lives in the always-visible COACH area (the HC membersNav
+// is inside the isHC block, invisible to GRO). Anchored on the always-shown goVenue button.
+const groMembersNav = '<sc-if value="{{ isGro }}"><button onclick="{{ goMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.members.bg }};color:{{ nav.members.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.members.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Participants</button></sc-if>';
+template = template.replace(/(<button onclick="\{\{ goVenue \}\}"[\s\S]*?<\/button>)/, '$1' + groMembersNav);
 // Head-coach-only "Assign Venue" nav (dispatch bookings to other coaches) — added inside the HEAD COACH section.
 const venueAssignNav = '<button onclick="{{ goVenueAssign }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.venueassign.bg }};color:{{ nav.venueassign.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.venueassign.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Assign Venue</button>';
 template = template.replace(/(<button onclick="\{\{ goSchedule \}\}"[\s\S]*?<\/button>)/, '$1' + venueAssignNav);
@@ -221,7 +225,7 @@ template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '
 // Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
 const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'
   + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">'
-    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">&#127942; Top Penyewa Arena</div>'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">&#127942; Top Arena Renters</div>'
     + '<sc-if value="{{ hasVenueLbMonths }}"><select onchange="{{ setVenueLbMonth }}" style="' + selStyle + '"><option value="">All months</option><sc-for list="{{ venueLbMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>'
   + '</div>'
   + '<sc-if value="{{ hasVenueRenters }}"><div style="' + cardBox + 'overflow:hidden;">'

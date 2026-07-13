@@ -54,7 +54,7 @@ class Component extends DCLogic {
       this.accountRole = role;
       this.isExternal = role === 'coach' && /[?&]ext=1/.test(location.search);
       const scr = (location.search.match(/screen=(\w+)/) || [])[1];
-      this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts');
+      this.state.loggedIn = true; this.state.role = role; this.state.screen = scr || (role === 'coach' || role === 'gro' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts');
       this.state.user = this.userObj({ display_name: role === 'admin' ? 'Admin 20FIT' : 'Rheza', role, photo: role === 'coach' ? 'https://cpvzwqptzcxnwzfzgrmt.supabase.co/storage/v1/object/public/coach-photos/rheza-1778032238203.png' : '' });
       this.state.d = this.mockData();
       this.state.selFbClass = 'x1';
@@ -94,8 +94,8 @@ class Component extends DCLogic {
   }
   userObj(me) {
     const nm = me.display_name || me.coach_name || 'User';
-    const roleLabel = me.role === 'hc' ? 'Head Coach' : me.role === 'admin' ? 'Administrator' : 'Coach';
-    const name = me.role === 'admin' ? 'Admin 20FIT' : (/^coach/i.test(nm) ? nm : 'Coach ' + nm);
+    const roleLabel = me.role === 'hc' ? 'Head Coach' : me.role === 'admin' ? 'Administrator' : me.role === 'gro' ? 'GRO' : 'Coach';
+    const name = me.role === 'admin' ? 'Admin 20FIT' : me.role === 'gro' ? nm : (/^coach/i.test(nm) ? nm : 'Coach ' + nm);
     return { name, role: roleLabel, first: nm.replace(/^coach\s*/i, ''), initials: me.role === 'admin' ? 'AD' : this.ini(nm), photo: me.photo || '', hasPhoto: !!me.photo };
   }
 
@@ -151,12 +151,14 @@ class Component extends DCLogic {
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
   applyRole(role, restore) {
-    const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : 'accounts';
+    const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : role === 'gro' ? 'dash' : 'accounts';
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
     if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
     // External coaches may only reach Schedule, Monitoring, Coverage, Venue Booking and Class Menu.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu'].indexOf(screen) < 0) screen = 'dash';
+    // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
+    if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
     if (window.localStorage) localStorage.setItem('arena_screen', screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
@@ -268,6 +270,19 @@ class Component extends DCLogic {
       .catch((e) => this.toastMsg(e.message));
   }
   // Attach / change the menu for the open class (Option B).
+  // GRO marks a participant present / no-show (upserts arena_class_attendance).
+  markAttend(scheduleId, bookingId, status) {
+    if (!scheduleId || !bookingId) return;
+    if (this.MOCK) {
+      const cd = this.state.d.classDetail; if (!cd) return;
+      const participants = (cd.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: p.attendance === status ? null : status }) : p);
+      this.setD({ classDetail: Object.assign({}, cd, { participants }) });
+      return;
+    }
+    this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
+      .then(() => { this.toastMsg(status === 'checked_in' ? 'Marked present' : 'Marked no-show'); this.openClass(scheduleId); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   setClassMenu(menuId) {
     const cd = this.state.d.classDetail && this.state.d.classDetail.schedule;
     const id = cd && cd.schedule_id; if (!id) return;
@@ -629,6 +644,7 @@ class Component extends DCLogic {
     const C = this.C, st = this.state, D = st.d;
     const isHC = st.role === 'hc' || st.role === 'admin';
     const isAdmin = st.role === 'admin';
+    const isGro = st.role === 'gro';
     const scr = st.screen;
     const user = st.user;
 
@@ -650,7 +666,7 @@ class Component extends DCLogic {
     titles.leaderboard = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Leaderboard'];
     titles.venue = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Venue Booking'];
     titles.venueassign = ['Head Coach', 'Assign Venue'];
-    titles.renters = ['Admin', 'Arena Renters'];
+    titles.renters = ['Admin', 'Top Arena Renters'];
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
@@ -812,11 +828,17 @@ class Component extends DCLogic {
     const coType = co ? (co.type || 'Class') : '', coDate = co ? (co.dateLabel || '') : '';
     const coCheckin = co ? (co.checkin || '') : '', coCheckout = co ? (co.checkout || '') : '';
     const coDuration = co && co.durationMin != null ? (co.durationMin + ' min') : '', coParticipants = co && co.participants != null ? String(co.participants) : '0';
+    const clsId = cd.schedule_id;
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => {
       const r = this.recencyLabel(p.daysSince); const v = p.visits || 0;
       const menus = String(p.menusLabel || '').split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name }));
-      return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0 };
+      const att = p.attendance; // 'checked_in' | 'no_show' | null
+      const inBg = att === 'checked_in' ? C.green : 'transparent', inFg = att === 'checked_in' ? '#fff' : C.muted;
+      const noBg = att === 'no_show' ? C.red : 'transparent', noFg = att === 'no_show' ? '#fff' : C.muted;
+      return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
+        inBg, inFg, noBg, noFg, markIn: () => this.markAttend(clsId, p.booking_id, 'checked_in'), markNo: () => this.markAttend(clsId, p.booking_id, 'no_show') };
     });
+    const showCheckin = isGro; // GRO checks participants in/out from the class detail
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
     // email log
@@ -988,10 +1010,10 @@ class Component extends DCLogic {
       setLangEN: () => this.setLang('en'), setLangID: () => this.setLang('id'),
       langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',
       langIdBg: st.lang === 'id' ? 'var(--volt)' : 'transparent', langIdFg: st.lang === 'id' ? '#ffffff' : 'var(--muted)',
-      isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin,
+      isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin, showRoleToggle: !isGro,
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
-      isExternal: this.isExternal, showReview: !this.isExternal, showLeaderboard: !this.isExternal,
-      showMembers: isHC, canOpenClass: !this.isExternal,
+      isExternal: this.isExternal, isGro, showReview: !this.isExternal && !isGro, showLeaderboard: !this.isExternal && !isGro,
+      showMembers: isHC || isGro, canOpenClass: !this.isExternal,
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'UPCOMING', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),
@@ -1010,7 +1032,7 @@ class Component extends DCLogic {
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
       venueHidden, hasVenueHidden,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
-      showMenuNav: true, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
+      showMenuNav: !isGro, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
       openMenuModal: () => this.openMenuModal(),
       showMenuModal: !!st.menuModal, menuModalTitle: (mb && mb.id) ? 'Edit Menu' : 'Add Menu',
       mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbCategoryOpts, mbNote: mb ? mb.note : '', mbNoteBottom: mb ? mb.noteBottom : '', mbBlocks,
@@ -1043,7 +1065,7 @@ class Component extends DCLogic {
       cdRangeOpts, cdCoachOpts, setCdRange: (e) => this.setMonitorRange(e && e.target ? e.target.value : 'month'), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
-      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList,
+      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants,
@@ -1058,7 +1080,7 @@ class Component extends DCLogic {
   // ---------- mock sample data (for ?mock=1 render tests) ----------
   mockData() {
     const d = this.emptyData();
-    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, canCheckout: false, checkedOut: false, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', peserta: 8, cap: 12, started: true, accent: '#D6FF3D', status: 'In Progress', canAbsen: false, canCheckout: true, checkedOut: false, dateLabel: 'Thu 2 Jul' }, { schedule_id: 'x3', time: '19:00', end: '– 20:00', type: 'HYROX Complete', peserta: 10, cap: 14, started: true, accent: '#3ED598', status: 'Finished', canAbsen: false, canCheckout: false, checkedOut: true, dateLabel: 'Thu 2 Jul' }];
+    d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', coach: 'Nando', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, canCheckout: false, checkedOut: false, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', coach: 'Elsen & Brian', peserta: 8, cap: 12, started: true, accent: '#D6FF3D', status: 'In Progress', canAbsen: false, canCheckout: true, checkedOut: false, dateLabel: 'Thu 2 Jul' }, { schedule_id: 'x3', time: '19:00', end: '– 20:00', type: 'HYROX Complete', coach: 'Rheza', peserta: 10, cap: 14, started: true, accent: '#3ED598', status: 'Finished', canAbsen: false, canCheckout: false, checkedOut: true, dateLabel: 'Thu 2 Jul' }];
     d.today[0].menuId = 'm0';
     d.menuOptions = [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete' }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation' }];
     d.todayLabel = 'Wednesday, 1 July 2026 · 1 class today';
@@ -1109,7 +1131,7 @@ class Component extends DCLogic {
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
     const amrapContent = JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [{ label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski' }, { amount: '150', unit: 'meter', name: 'row' }, { amount: '1', unit: 'lap', name: 'run' }] }] });
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking: 'CL-0001', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking: 'CL-0002', status: 'Checked-in', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Confirmed', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
       menuOptions: [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation', content: 'Warm up + technique drills' }],
       linkedMenu: { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent } };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];

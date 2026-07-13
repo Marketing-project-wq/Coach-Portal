@@ -558,7 +558,7 @@
         <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:14px 10px 6px;display:flex;align-items:center;gap:7px;">ADMIN <span style="width:5px;height:5px;border-radius:50%;background:var(--volt);"></span></div>
         <button onclick="{{ goAccounts }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.accounts.bg }};color:{{ nav.accounts.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.accounts.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Account</button>
-        <button onclick="{{ goRenters }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.renters.bg }};color:{{ nav.renters.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.renters.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Arena Renters</button>
+        <button onclick="{{ goRenters }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.renters.bg }};color:{{ nav.renters.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.renters.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Top Arena Renters</button>
         <button onclick="{{ goSettings }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.settings.bg }};color:{{ nav.settings.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.settings.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Settings</button>
         <button onclick="{{ goPerms }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.perms.bg }};color:{{ nav.perms.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.perms.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Permissions</button>
         </sc-if>
@@ -585,11 +585,13 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;">
+          <sc-if value="{{ showRoleToggle }}">
           <div style="display:flex;background:var(--panel);border:1px solid var(--border);border-radius:100px;padding:3px;">
             <button onclick="{{ setRoleCoach }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.coach.bg }};color:{{ rseg.coach.fg }};transition:background-color .15s,color .15s;">Coach</button>
             <button onclick="{{ setRoleHC }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.hc.bg }};color:{{ rseg.hc.fg }};transition:background-color .15s,color .15s;">Head Coach</button>
             <button onclick="{{ setRoleAdmin }}" style="border:0;cursor:pointer;font-family:'Hanken Grotesk';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:100px;background:{{ rseg.admin.bg }};color:{{ rseg.admin.fg }};transition:background-color .15s,color .15s;">Admin</button>
           </div>
+          </sc-if>
         </div>
       </header>
 
@@ -620,6 +622,7 @@
                 <span style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};">{{ c.status }}</span>
               </div>
               <div style="font-family:'Archivo';font-weight:800;font-size:21px;letter-spacing:-.01em;">{{ c.type }}</div>
+              <sc-if value="{{ showCoachName }}"><div style="font-size:12.5px;color:var(--muted);margin-top:3px;">👤 {{ c.coach }}</div></sc-if>
               <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;margin-top:6px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax</div>
               <sc-if value="{{ canOpenClass || c.canAbsen || c.canCheckout || c.checkedOut }}"><div style="display:flex;gap:10px;margin-top:18px;align-items:center;">
                 <sc-if value="{{ canOpenClass }}"><button onclick="{{ openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Class Detail</button></sc-if>
@@ -714,13 +717,14 @@
               <div style="font-weight:800;font-family:'Archivo';font-size:16px;">Participant List</div>
               <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Search participants…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Hanken Grotesk';font-size:13.5px;"></div>
             </div>
-            <div style="display:grid;grid-template-columns:40px 1fr;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
-              <div>#</div><div>NAME</div>
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
+              <div style="width:26px;flex-shrink:0;">#</div><div style="flex:1;">NAME</div><sc-if value="{{ showCheckin }}"><div style="flex-shrink:0;">KEHADIRAN</div></sc-if>
             </div>
             <sc-for list="{{ participants }}" as="p" hint-placeholder-count="8">
-            <div style="display:grid;grid-template-columns:40px 1fr;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:start;font-size:14px;">
-              <div style="font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;padding-top:1px;">{{ p.n }}</div>
-              <div><div style="font-weight:600;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ p.attendInfo }}<span style="color:{{ p.lastCol }};font-weight:600;">{{ p.lastLabel }}</span></div><sc-if value="{{ p.hasMenus }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center;"><span style="font-size:10.5px;color:var(--muted2);font-weight:700;">Menu:</span><sc-for list="{{ p.menus }}" as="mn"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;">{{ mn.name }}</span></sc-for></div></sc-if></div>
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border);font-size:14px;">
+              <div style="width:26px;font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;padding-top:2px;flex-shrink:0;">{{ p.n }}</div>
+              <div style="flex:1;min-width:0;"><div style="font-weight:600;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ p.attendInfo }}<span style="color:{{ p.lastCol }};font-weight:600;">{{ p.lastLabel }}</span></div><sc-if value="{{ p.hasMenus }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center;"><span style="font-size:10.5px;color:var(--muted2);font-weight:700;">Menu:</span><sc-for list="{{ p.menus }}" as="mn"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;">{{ mn.name }}</span></sc-for></div></sc-if></div>
+              <sc-if value="{{ showCheckin }}"><div style="display:flex;gap:6px;flex-shrink:0;"><button onclick="{{ p.markIn }}" style="border:1px solid var(--border2);background:{{ p.inBg }};color:{{ p.inFg }};border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;">Hadir</button><button onclick="{{ p.markNo }}" style="border:1px solid var(--border2);background:{{ p.noBg }};color:{{ p.noFg }};border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;">Absen</button></div></sc-if>
             </div>
             </sc-for>
           </div>

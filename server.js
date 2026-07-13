@@ -181,6 +181,15 @@ function instructorHasCoach(instructor, coach) {
   });
 }
 
+// GRO (Guest Relations Officer): read-only over the whole arena + can check participants in.
+function isGro(s) { return s && s.r === 'gro'; }
+function roleLabel(role) { return role === 'hc' ? 'Head Coach' : role === 'admin' ? 'Admin' : role === 'gro' ? 'GRO' : 'Coach'; }
+// All classes in a date range (every coach) — used by GRO's team-wide schedule/check-in view.
+async function allSchedules(from, to) {
+  let q = `arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&is_cancelled=eq.false&schedule_date=gte.${from}`;
+  if (to) q += `&schedule_date=lte.${to}`;
+  return (await sb(q + '&order=schedule_date.asc,start_time.asc')) || [];
+}
 async function coachSchedules(coach, from, to) {
   // Broaden at the DB with ilike (so "A & Coach" is fetched too), then tighten
   // with an exact per-token match in Node to drop any substring false positives.
@@ -276,7 +285,7 @@ function cardsFrom(sched, counts, sessionMap, types, today, linkMap) {
     const isStarted = st != null;
     const checkedOut = st === 'completed';
     const upcoming = x.schedule_date >= today; // today or later
-    return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name),
+    return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name), coach: x.instructor || '',
       peserta: c.confirmed, cap: x.quota || 0, started: isStarted, checkedOut,
       accent: checkedOut ? '#3ED598' : (isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C')),
       status: checkedOut ? 'Finished' : (isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled')),
@@ -455,9 +464,9 @@ route('GET', '/api/coach/classes', async (req, res, s, q) => {
   const from = q.from || today;
   const to = q.to || null;
   const types = await classTypes();
-  const sched = (await coachSchedules(s.c, from, to)).slice(0, 80);
+  const sched = (isGro(s) ? await allSchedules(from, to) : await coachSchedules(s.c, from, to)).slice(0, 120);
   const ids = sched.map((x) => x.id);
-  const [counts, started, venues, linkMap, menuOptions] = await Promise.all([bookingCounts(ids), sessionStatusMap(ids), coachVenueCards(s.c, from, to, today), classMenuLinks(ids), menuOptionsList()]);
+  const [counts, started, venues, linkMap, menuOptions] = await Promise.all([bookingCounts(ids), sessionStatusMap(ids), isGro(s) ? Promise.resolve([]) : coachVenueCards(s.c, from, to, today), classMenuLinks(ids), menuOptionsList()]);
   return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today, linkMap), venues, menuOptions, from, to });
 });
 
@@ -594,7 +603,7 @@ async function myVenueBookings(coach, assignMap, ptRates, from) {
 // List venue bookings — HC/admin see all upcoming from Admin Hub (to dispatch) PLUS the
 // bookings assigned to themselves; a coach sees only bookings assigned to them.
 route('GET', '/api/venue/bookings', async (req, res, s) => {
-  const isHC = requireHC(s);
+  const isHC = requireHC(s) || isGro(s); // GRO also sees every arena booking (to check guests in)
   const today = todayJakarta();
   const [assignMap, ptRates] = await Promise.all([venueAssignments(), ptPackageRates()]);
   if (isHC) {
@@ -754,8 +763,8 @@ route('GET', '/api/coach/members', async (req, res, s, q) => {
   const today = todayJakarta();
   const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : '';
   const w = monthWindow(ym, today);
-  // Head Coach / Admin see the whole arena's participants; a plain coach sees their own classes.
-  const map = requireHC(s)
+  // Head Coach / Admin / GRO see the whole arena's participants; a plain coach sees their own classes.
+  const map = (requireHC(s) || isGro(s))
     ? await teamAttendanceMap(w.from, w.to)
     : await attendanceMapForScheds(await coachSchedules(s.c, w.from, w.to), w.to);
   const members = Object.keys(map).map((k) => {
@@ -1309,7 +1318,7 @@ route('GET', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const rows = await sb('arena_coach_users?select=id,username,coach_name,display_name,role,email,phone,is_active,password_plain&order=role.desc,coach_name.asc');
   const pm = await coachPhotoMap();
-  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : u.role === 'admin' ? 'Admin' : 'Coach', email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name), password: u.password_plain || '' })) });
+  return send(res, 200, { coaches: (rows || []).map((u) => ({ id: u.id, username: u.username, name: u.coach_name, role: roleLabel(u.role), email: u.email || '', phone: u.phone || '', status: u.is_active ? 'Active' : 'Inactive', photo: coachPhoto(pm, u.coach_name), password: u.password_plain || '' })) });
 });
 route('POST', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
@@ -1337,7 +1346,7 @@ route('POST', '/api/admin/coaches/:id/toggle', async (req, res, s, q, params) =>
 route('POST', '/api/admin/coaches/:id/role', async (req, res, s, q, params) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);
-  if (!body || !['coach', 'hc', 'admin'].includes(body.role)) return send(res, 400, { error: 'Invalid role.' });
+  if (!body || !['coach', 'hc', 'admin', 'gro'].includes(body.role)) return send(res, 400, { error: 'Invalid role.' });
   await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ role: body.role, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
