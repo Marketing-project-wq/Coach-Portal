@@ -577,11 +577,13 @@ class Component extends DCLogic {
     } else {
       title = '20FIT Arena — Report · ' + (D.reportPeriod || '');
       const coachRows = (D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, (c.subs || 0) + '×']);
-      const sched = (D.reportClassList || []).slice().sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)));
-      const schedRows = sched.map((c) => [c.date, c.time || '—', c.day || '', c.coach, c.type, c.pax]);
+      // Sorted per coach (then date, then time) so each coach's classes group together.
+      const sched = (D.reportClassList || []).slice().sort((a, b) =>
+        String(a.coach).localeCompare(String(b.coach)) || String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)));
+      const schedRows = sched.map((c) => [c.coach, c.date, c.time || '—', c.day || '', c.type, c.pax]);
       sections = [
         { heading: 'All-Coach Report', headers: ['Coach', 'Role', 'Classes', 'Participants', 'Covered'], rows: coachRows },
-        { heading: 'Jadwal Mengajar — Tanggal · Jam · Coach', headers: ['Date', 'Time', 'Day', 'Coach', 'Class', 'Pax'], rows: schedRows },
+        { heading: 'Jadwal Mengajar per Coach — Tanggal · Jam', headers: ['Coach', 'Date', 'Time', 'Day', 'Class', 'Pax'], rows: schedRows },
       ];
     }
     if (!sections.reduce((n, s) => n + s.rows.length, 0)) return this.toastMsg('No data to export.');
