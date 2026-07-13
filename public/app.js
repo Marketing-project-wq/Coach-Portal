@@ -576,8 +576,7 @@ class Component extends DCLogic {
       sections = [{ heading: '', headers: ['Date', 'Day', 'Time', 'Class Type', 'Pax'], rows: arr.map((r) => [r.date, r.day, r.time, r.type, r.peserta]) }];
     } else {
       title = '20FIT Arena — Report · ' + (D.reportPeriod || '');
-      const coachRows = (D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, (c.subs || 0) + '×']);
-      sections = [{ heading: 'All-Coach Report', headers: ['Coach', 'Role', 'Classes', 'Participants', 'Covered'], rows: coachRows }];
+      sections = [];
       // One separate, numbered table per coach — each with a TOTAL row at the bottom.
       const split = (s) => String(s || '').split(/\s*(?:&|\+|,|\/)\s*/).map((x) => x.trim()).filter(Boolean);
       const belongs = (instr, nm) => {
