@@ -215,7 +215,13 @@ async function attendanceMapForScheds(scheds, today) {
     for (const mr of mrows || []) menuTitleById[mr.id] = mr.title;
   }
   for (const id of ids) { const mid = linkMap[id]; if (mid && menuTitleById[mid]) metaById[id].menu = menuTitleById[mid]; }
-  const rows = await sb(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${ids.map(enc).join(',')})`);
+  // Fetch confirmed bookings in id-chunks (paginated) so a large all-time window can't blow the URL or the row cap.
+  const rows = [];
+  for (let i = 0; i < ids.length; i += 120) {
+    const chunk = ids.slice(i, i + 120);
+    const part = await sbAll(`arena_class_bookings?select=schedule_id,full_name&status=eq.confirmed&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    if (part && part.length) for (const b of part) rows.push(b);
+  }
   for (const b of rows || []) {
     const nm = String(b.full_name || '').trim();
     if (!nm) continue;
@@ -713,15 +719,25 @@ route('POST', '/api/coach/menu/:id/update', async (req, res, s, q, params) => {
   return send(res, 200, { ok: true });
 });
 
-// Month picker options for HC screens — from the season start (July 2026) up to the current month.
-function monthOptions(today) {
-  const floorYm = LEADERBOARD_SINCE.slice(0, 7);
+// Month picker options for HC screens — from the earliest month that actually has data in
+// Admin Hub (floorYm) up to the current month. Falls back to the season start.
+function monthOptions(today, floorYm) {
+  floorYm = /^\d{4}-\d{2}$/.test(floorYm || '') ? floorYm : LEADERBOARD_SINCE.slice(0, 7);
   const out = [];
   let y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7));
-  while (true) { const v = `${y}-${String(m).padStart(2, '0')}`; if (v < floorYm) break; out.push({ ym: v, label: `${MON_FULL[m - 1]} ${y}` }); m--; if (m === 0) { m = 12; y--; } }
+  while (true) { const v = `${y}-${String(m).padStart(2, '0')}`; if (v < floorYm) break; out.push({ ym: v, label: `${MON_FULL[m - 1]} ${y}` }); m--; if (m === 0) { m = 12; y--; } if (out.length > 60) break; }
   return out;
 }
-// Resolve a ?month=YYYY-MM (or blank = all-time since season start) to a [from,to] window.
+// Earliest YYYY-MM present in an Admin Hub table (so month pickers reflect the real data range).
+async function earliestYm(table, col, fallbackYm) {
+  try {
+    const rows = await sb(`${table}?select=${col}&order=${col}.asc&limit=1`);
+    const d = rows && rows[0] && rows[0][col];
+    if (d && /^\d{4}-\d{2}/.test(String(d))) return String(d).slice(0, 7);
+  } catch (_e) { /* ignore */ }
+  return fallbackYm;
+}
+// Resolve a ?month=YYYY-MM (or blank = ALL data) to a [from,to] window.
 function monthWindow(ym, today) {
   if (/^\d{4}-\d{2}$/.test(ym || '')) {
     const yy = Number(ym.slice(0, 4)), mm = Number(ym.slice(5, 7));
@@ -729,7 +745,7 @@ function monthWindow(ym, today) {
     const full = `${ym}-${String(lastDay).padStart(2, '0')}`;
     return { from: `${ym}-01`, to: full < today ? full : today, full };
   }
-  return { from: LEADERBOARD_SINCE, to: today, full: today };
+  return { from: '2000-01-01', to: today, full: today };
 }
 
 // ===== COACH: participants — leaderboard by class attendance (team-wide for HC), month-filterable =====
@@ -748,7 +764,8 @@ route('GET', '/api/coach/members', async (req, res, s, q) => {
   }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
   members.forEach((m, i) => { m.rank = i + 1; });
   const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
-  return send(res, 200, { members, total: members.length, active30, months: monthOptions(today), ym });
+  const floor = await earliestYm('arena_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7));
+  return send(res, 200, { members, total: members.length, active30, months: monthOptions(today, floor), ym });
 });
 // ===== HEAD COACH: arena-rental leaderboard — customers who book the arena most, month-filterable =====
 route('GET', '/api/venue/leaderboard', async (req, res, s, q) => {
@@ -769,7 +786,8 @@ route('GET', '/api/venue/leaderboard', async (req, res, s, q) => {
   }
   const renters = Object.values(map).sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : -1))
     .map((x, i) => ({ rank: i + 1, name: x.name, count: x.count, lastLabel: x.last ? fmtDMon(x.last) : '-' }));
-  return send(res, 200, { renters, total: renters.length, months: monthOptions(today), ym });
+  const floor = await earliestYm('arena_bookings', 'booking_date', LEADERBOARD_SINCE.slice(0, 7));
+  return send(res, 200, { renters, total: renters.length, months: monthOptions(today, floor), ym });
 });
 
 // ===== PUBLIC review (no login) — participants review the coach's class they attended =====
@@ -1257,16 +1275,9 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   const counts = await bookingCounts((rows || []).map((r) => r.id));
   const stats = (rows || []).map((r) => ({ date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
   const monthLabel = `${MON_FULL[mm - 1]} ${yy}`;
-  // Month picker options — from the season start (July 2026) up to the current month only.
-  const floorYm = LEADERBOARD_SINCE.slice(0, 7);
-  const months = [];
-  let ly = Number(today.slice(0, 4)), lm = Number(today.slice(5, 7));
-  while (true) {
-    const v = `${ly}-${String(lm).padStart(2, '0')}`;
-    if (v < floorYm) break;
-    months.push({ ym: v, label: `${MON_FULL[lm - 1]} ${ly}`, picked: v === ym });
-    lm--; if (lm === 0) { lm = 12; ly--; }
-  }
+  // Month picker options — from the earliest month with data in Admin Hub up to the current month.
+  const floorYm = await earliestYm('arena_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7));
+  const months = monthOptions(today, floorYm).map((o) => ({ ym: o.ym, label: o.label, picked: o.ym === ym }));
   // Weekly breakdown — bucket the month's classes into Monday-start weeks (classes + pax per week).
   const iso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   const weekMap = {};
