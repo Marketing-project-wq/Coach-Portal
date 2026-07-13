@@ -717,6 +717,10 @@
             <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;margin:0 0 22px;">Add New Coach</h2>
             <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Full Name</label>
             <input placeholder="e.g. Coach Dimas" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Manrope';font-size:14.5px;outline:0;margin-bottom:16px;">
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Role</label>
+            <select id="newCoachRole" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Manrope';font-size:14.5px;outline:0;margin-bottom:16px;cursor:pointer;"><option value="coach">Coach</option><option value="hc">Head Coach</option><option value="gro">GRO</option><option value="admin">Admin</option></select>
+            <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Username <span style="color:var(--muted2);font-weight:400;">(login — kosongkan untuk otomatis dari nama)</span></label>
+            <input id="newCoachUser" placeholder="e.g. GRO Arena" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Manrope';font-size:14.5px;outline:0;margin-bottom:16px;">
             <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Email</label>
             <input placeholder="dimas@20fit.id" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px;color:var(--text);font-family:'Manrope';font-size:14.5px;outline:0;margin-bottom:16px;">
             <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px;">Phone Number</label>
@@ -849,9 +853,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=ddb6d2bd"></script>
-<script src="sc-runtime.js?v=ddb6d2bd"></script>
-<script src="app.js?v=ddb6d2bd"></script>
+<script src="i18n.js?v=ac154007"></script>
+<script src="sc-runtime.js?v=ac154007"></script>
+<script src="app.js?v=ac154007"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

@@ -471,7 +471,9 @@ class Component extends DCLogic {
     const name = byPh('Dimas') || byPh('Coach');
     if (!name) return this.toastMsg('Coach name is required.');
     const pwEl = document.getElementById('newCoachPw');
-    const payload = { name, email: byPh('@20fit.id'), phone: byPh('0812'), password: (pwEl && pwEl.value) || undefined };
+    const roleEl = document.getElementById('newCoachRole');
+    const userEl = document.getElementById('newCoachUser');
+    const payload = { name, email: byPh('@20fit.id'), phone: byPh('0812'), password: (pwEl && pwEl.value) || undefined, role: (roleEl && roleEl.value) || 'coach', username: (userEl && userEl.value.trim()) || undefined };
     if (this.MOCK) { this.toastMsg('New coach added · Active'); return this.go('accounts'); }
     this.api('/api/admin/coaches', { method: 'POST', body: JSON.stringify(payload) })
       .then((r) => { this.toastMsg('Coach added · user: ' + r.username + ' · pw: ' + r.password); this.go('accounts'); })
