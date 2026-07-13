@@ -567,30 +567,38 @@ class Component extends DCLogic {
   // Uses a hidden iframe so it works without popups or any external library.
   exportPDF() {
     const st = this.state, scr = st.screen, D = st.d;
-    let title, headers, rows;
+    let title, sections;
     if (scr === 'stats') {
       title = (st.selCoachName || 'Coach') + ' — Per-Class Breakdown · ' + (D.statMonth || '');
-      headers = ['Date', 'Day', 'Time', 'Class Type', 'Pax'];
       let arr = (D.stats || []).slice(); const s = st.statRowSort || 'date';
       if (s === 'pax_desc') arr.sort((a, b) => (b.peserta || 0) - (a.peserta || 0));
       else if (s === 'pax_asc') arr.sort((a, b) => (a.peserta || 0) - (b.peserta || 0));
-      rows = arr.map((r) => [r.date, r.day, r.time, r.type, r.peserta]);
+      sections = [{ heading: '', headers: ['Date', 'Day', 'Time', 'Class Type', 'Pax'], rows: arr.map((r) => [r.date, r.day, r.time, r.type, r.peserta]) }];
     } else {
-      title = 'All-Coach Report · ' + (D.reportPeriod || '');
-      headers = ['Coach', 'Role', 'Classes', 'Participants', 'Covered'];
-      rows = (D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, (c.subs || 0) + '×']);
+      title = '20FIT Arena — Report · ' + (D.reportPeriod || '');
+      const coachRows = (D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, (c.subs || 0) + '×']);
+      const sched = (D.reportClassList || []).slice().sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)));
+      const schedRows = sched.map((c) => [c.date, c.time || '—', c.day || '', c.coach, c.type, c.pax]);
+      sections = [
+        { heading: 'All-Coach Report', headers: ['Coach', 'Role', 'Classes', 'Participants', 'Covered'], rows: coachRows },
+        { heading: 'Jadwal Mengajar — Tanggal · Jam · Coach', headers: ['Date', 'Time', 'Day', 'Coach', 'Class', 'Pax'], rows: schedRows },
+      ];
     }
-    if (!rows.length) return this.toastMsg('No data to export.');
-    this._printDoc(title, headers, rows);
+    if (!sections.reduce((n, s) => n + s.rows.length, 0)) return this.toastMsg('No data to export.');
+    this._printDoc(title, sections);
   }
-  _printDoc(title, headers, rows) {
+  _printDoc(title, sections) {
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-    const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
-    const tbody = rows.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
+    const tableFor = (sec) => {
+      const thead = '<tr>' + sec.headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
+      const tbody = sec.rows.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
+      return (sec.heading ? '<h2>' + esc(sec.heading) + '</h2>' : '') + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>';
+    };
+    const body = sections.map(tableFor).join('');
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
-      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;}th,td{border-bottom:1px solid #ddd;padding:8px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}@media print{body{padding:0;}}</style>'
+      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}@media print{body{padding:0;}h2{break-after:avoid;}}</style>'
       + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
-      + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></body></html>';
+      + body + '</body></html>';
     const ifr = document.createElement('iframe');
     ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
     document.body.appendChild(ifr);
