@@ -577,14 +577,25 @@ class Component extends DCLogic {
     } else {
       title = '20FIT Arena — Report · ' + (D.reportPeriod || '');
       const coachRows = (D.coaches || []).map((c) => [c.name, c.role, c.classes, c.peserta, (c.subs || 0) + '×']);
-      // Sorted per coach (then date, then time) so each coach's classes group together.
-      const sched = (D.reportClassList || []).slice().sort((a, b) =>
-        String(a.coach).localeCompare(String(b.coach)) || String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)));
-      const schedRows = sched.map((c) => [c.coach, c.date, c.time || '—', c.day || '', c.type, c.pax]);
-      sections = [
-        { heading: 'All-Coach Report', headers: ['Coach', 'Role', 'Classes', 'Participants', 'Covered'], rows: coachRows },
-        { heading: 'Jadwal Mengajar per Coach — Tanggal · Jam', headers: ['Coach', 'Date', 'Time', 'Day', 'Class', 'Pax'], rows: schedRows },
-      ];
+      sections = [{ heading: 'All-Coach Report', headers: ['Coach', 'Role', 'Classes', 'Participants', 'Covered'], rows: coachRows }];
+      // One separate, numbered table per coach — each with a TOTAL row at the bottom.
+      const split = (s) => String(s || '').split(/\s*(?:&|\+|,|\/)\s*/).map((x) => x.trim()).filter(Boolean);
+      const belongs = (instr, nm) => {
+        const c = String(nm || '').trim().toLowerCase(); if (!c) return false;
+        const esc = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp('(^|[^a-z0-9])' + esc + '([^a-z0-9]|$)', 'i');
+        return split(instr).some((t) => { const tok = t.toLowerCase(); return tok === c || re.test(tok.replace(/^coach\s+/i, ' ')); });
+      };
+      const coachNames = (D.coaches || []).map((c) => c.name).filter(Boolean).sort((a, b) => a.localeCompare(b));
+      for (const nm of coachNames) {
+        const mine = (D.reportClassList || []).filter((c) => belongs(c.coach, nm))
+          .sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)));
+        if (!mine.length) continue;
+        const rows = mine.map((c, i) => [i + 1, c.date, c.time || '—', c.day || '', c.type, c.pax]);
+        const totalPax = mine.reduce((s, c) => s + (c.pax || 0), 0);
+        sections.push({ heading: nm, headers: ['#', 'Date', 'Time', 'Day', 'Class', 'Pax'], rows,
+          totalRow: ['', 'TOTAL', '', '', mine.length + ' kelas', totalPax] });
+      }
     }
     if (!sections.reduce((n, s) => n + s.rows.length, 0)) return this.toastMsg('No data to export.');
     this._printDoc(title, sections);
@@ -594,11 +605,12 @@ class Component extends DCLogic {
     const tableFor = (sec) => {
       const thead = '<tr>' + sec.headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
       const tbody = sec.rows.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
-      return (sec.heading ? '<h2>' + esc(sec.heading) + '</h2>' : '') + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>';
+      const tfoot = sec.totalRow ? '<tr class="total">' + sec.totalRow.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>' : '';
+      return (sec.heading ? '<h2>' + esc(sec.heading) + '</h2>' : '') + '<table><thead>' + thead + '</thead><tbody>' + tbody + tfoot + '</tbody></table>';
     };
     const body = sections.map(tableFor).join('');
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
-      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}@media print{body{padding:0;}h2{break-after:avoid;}}</style>'
+      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:6px;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}tr.total td{border-top:2px solid #333;border-bottom:none;font-weight:800;background:#fafafa;}@media print{body{padding:0;}h2,table{break-inside:avoid;}}</style>'
       + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
       + body + '</body></html>';
     const ifr = document.createElement('iframe');
