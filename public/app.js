@@ -170,12 +170,12 @@ class Component extends DCLogic {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Failed to load.'); };
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); }
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
-    else if (screen === 'members') this.api('/api/coach/members').then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30 })).catch(fail);
+    else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews' + (this.state.reviewCoach ? '?coach=' + encodeURIComponent(this.state.reviewCoach) : '')).then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories, reviewCoaches: r.coaches || [] })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
-    else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'venue' || screen === 'venueassign') { this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail); if (screen === 'venueassign') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(() => {}); }
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
@@ -529,6 +529,9 @@ class Component extends DCLogic {
     if (this.MOCK) return;
     this.loadScreen('stats');
   }
+  // Month filters for the Participants leaderboard & the arena-rental leaderboard.
+  setMemberMonth(ym) { if ((this.state.memberYm || '') === ym) return; this.setState({ memberYm: ym }); if (!this.MOCK) this.loadScreen('members'); }
+  setVenueLbMonth(ym) { if ((this.state.venueLbYm || '') === ym) return; this.setState({ venueLbYm: ym }); if (!this.MOCK) this.loadScreen('venueassign'); }
   // Sort the all-class report list by class type / time / coach.
   setClassSort(key) { this.setState({ classSort: key }); }
   // Sort the Coach Monitoring cards by participants / coach name.
@@ -684,6 +687,13 @@ class Component extends DCLogic {
       return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classes, hasClasses: classes.length > 0, menus, hasMenus: menus.length > 0 };
     });
     const noMembers = members.length === 0;
+    const memberYm = st.memberYm || '';
+    const memberMonthOpts = (D.memberMonths || []).map((o) => ({ ym: o.ym, label: o.label, picked: memberYm === o.ym }));
+    // arena-rental leaderboard (Assign Venue) — customers who book the arena most
+    const venueRenters = (D.venueRenters || []).map((x) => { const av = this.avatar(x.name); return { rank: x.rank, name: x.name, initials: this.ini(x.name), count: x.count, lastLabel: x.lastLabel, avBg: av[0], avFg: av[1], medalCol: x.rank === 1 ? '#E8B923' : x.rank === 2 ? '#9AA0A6' : x.rank === 3 ? '#CD7F32' : this.C.muted2 }; });
+    const hasVenueRenters = venueRenters.length > 0;
+    const venueLbYm = st.venueLbYm || '';
+    const venueLbMonthOpts = (D.venueLbMonths || []).map((o) => ({ ym: o.ym, label: o.label, picked: venueLbYm === o.ym }));
     // participant reviews
     const isHCView = st.role === 'hc' || st.role === 'admin';
     const reviews = (D.reviews || []).map((rv) => Object.assign({}, rv, { coachSuffix: (isHCView && rv.coach) ? ' · Coach ' + rv.coach : '', tags: Array.isArray(rv.tags) ? rv.tags : [], hasComment: !!(rv.comment && rv.comment.length) }));
@@ -987,6 +997,8 @@ class Component extends DCLogic {
       noClasses: (D.today || []).length === 0,
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
+      memberMonthOpts, hasMemberMonths: memberMonthOpts.length > 0, setMemberMonth: (e) => this.setMemberMonth(e && e.target ? e.target.value : ''),
+      venueRenters, hasVenueRenters, venueLbMonthOpts, hasVenueLbMonths: venueLbMonthOpts.length > 0, setVenueLbMonth: (e) => this.setVenueLbMonth(e && e.target ? e.target.value : ''),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       boardSortPax: seg(boardSort === 'pax'), boardSortRating: seg(boardSort === 'rating'), sortByPax: () => this.setBoardSort('pax'), sortByRating: () => this.setBoardSort('rating'),
       showVenueNav: true, goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
@@ -1070,6 +1082,13 @@ class Component extends DCLogic {
       { name: 'Indah Wulansari', visits: 4, lastVisit: '1 Jul', daysSince: 1, classes: [{ name: 'HYROX Complete', count: 3 }, { name: 'HYROX Foundation', count: 1 }] },
     ];
     d.membersTotal = 42; d.membersActive = 28;
+    d.memberMonths = [{ ym: '2026-07', label: 'July 2026' }, { ym: '2026-06', label: 'June 2026' }, { ym: '2026-05', label: 'May 2026' }];
+    d.venueLbMonths = d.memberMonths;
+    d.venueRenters = [
+      { rank: 1, name: 'R Club', count: 9, lastLabel: '10 Jul' }, { rank: 2, name: 'Satrio', count: 6, lastLabel: '8 Jul' },
+      { rank: 3, name: 'Corporate Group', count: 4, lastLabel: '5 Jul' }, { rank: 4, name: 'Andra Wijaya', count: 3, lastLabel: '3 Jul' },
+      { rank: 5, name: 'Woro Liana', count: 2, lastLabel: '1 Jul' },
+    ];
     d.reviewAvg = 4.6; d.reviewCount = 2;
     d.reviewCats = [{ label: 'Clear Instructions', avg: '4.8' }, { label: 'Technique Correction', avg: '4.5' }, { label: 'Member Support', avg: '4.9' }, { label: 'Professionalism', avg: '4.7' }, { label: 'Class Management', avg: '4.6' }];
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'The coach is patient & clear, the class is fun!', tags: ['Clear instructions', 'Patient & supportive', 'Fun class'], date: '1 Jul' }, { coach: 'Brian', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: 'External coach, solid session.', tags: ['On time', 'Motivating'], date: '28 Jun' }];

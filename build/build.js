@@ -122,19 +122,24 @@ const reviewsScreen = '<sc-if value="{{ s.reviews }}"><div style="max-width:820p
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', reviewsScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Peserta Kelas" screen — attendance frequency + last-visit recency per participant
 const cardBox = 'background:var(--panel);border:1px solid var(--border);border-radius:16px;';
+const selStyle = 'background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;font-weight:700;cursor:pointer;';
 const membersScreen = '<sc-if value="{{ s.members }}"><div style="max-width:900px;margin:0 auto;">'
-  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:20px;">My Participants</div>'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">Participants Leaderboard</div>'
+    + '<sc-if value="{{ hasMemberMonths }}"><select onchange="{{ setMemberMonth }}" style="' + selStyle + '"><option value="">All months</option><sc-for list="{{ memberMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>'
+  + '</div>'
   + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px;">'
   + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Participants</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;">{{ membersTotal }}</div></div>'
   + '<div style="' + cardBox + 'padding:16px 18px;"><div style="font-size:12px;color:var(--muted);">Active Last 30 Days</div><div style="font-family:\'Archivo\';font-weight:900;font-size:28px;color:var(--green);">{{ membersActive }}</div></div>'
   + '</div>'
   + '<sc-if value="{{ hasMembers }}"><div style="' + cardBox + 'overflow:hidden;">'
-  + '<sc-for list="{{ members }}" as="m"><div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);">'
+  + '<sc-for list="{{ members }}" as="m"><div style="display:flex;align-items:center;gap:13px;padding:14px 18px;border-bottom:1px solid var(--border);">'
+  + '<div style="width:24px;text-align:center;font-family:\'Archivo\';font-weight:800;font-size:15px;color:var(--muted2);flex-shrink:0;">{{ m.rank }}</div>'
   + '<div style="width:38px;height:38px;border-radius:50%;background:{{ m.avBg }};color:{{ m.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:13px;flex-shrink:0;">{{ m.initials }}</div>'
   + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14.5px;">{{ m.name }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">Last: {{ m.lastVisit }} &#183; <span style="color:{{ m.lastCol }};font-weight:700;">{{ m.lastLabel }}</span></div><sc-if value="{{ m.hasClasses }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"><sc-for list="{{ m.classes }}" as="c"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;">{{ c.label }}</span></sc-for></div></sc-if><sc-if value="{{ m.hasMenus }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center;"><span style="font-size:10px;color:var(--muted2);font-weight:700;">Menu:</span><sc-for list="{{ m.menus }}" as="mn"><span style="background:var(--panel2);border:1px solid var(--border2);color:var(--muted);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;">{{ mn.label }}</span></sc-for></div></sc-if></div>'
   + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:20px;">{{ m.visits }}</div><div style="font-size:11px;color:var(--muted);">visits</div></div>'
   + '</div></sc-for></div></sc-if>'
-  + '<sc-if value="{{ noMembers }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">No participants recorded as attending your classes yet.</div></sc-if>'
+  + '<sc-if value="{{ noMembers }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Belum ada peserta pada periode ini.</div></sc-if>'
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', membersScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 // Inject the "Leaderboard Coach" screen — ranked by average participant rating
@@ -198,6 +203,19 @@ const venueScreen = '<sc-if value="{{ s.venue }}"><div style="max-width:900px;ma
 const venueAssignScreen = '<sc-if value="{{ s.venueassign }}"><div style="max-width:900px;margin:0 auto;">'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">Assign Venue</div>'
   + '<div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Assign a responsible coach to each Arena + Coach booking.</div>'
+  // Arena-rental leaderboard — customers who book the arena most (month-filterable).
+  + '<sc-if value="{{ hasVenueRenters }}"><div style="' + cardBox + 'overflow:hidden;margin-bottom:22px;">'
+    + '<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      + '<div style="font-weight:800;font-family:\'Archivo\';font-size:15px;">&#127942; Top Penyewa Arena</div>'
+      + '<sc-if value="{{ hasVenueLbMonths }}"><select onchange="{{ setVenueLbMonth }}" style="' + selStyle + '"><option value="">All months</option><sc-for list="{{ venueLbMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>'
+    + '</div>'
+    + '<sc-for list="{{ venueRenters }}" as="r"><div style="display:flex;align-items:center;gap:13px;padding:12px 18px;border-bottom:1px solid var(--border);">'
+      + '<div style="width:26px;text-align:center;font-family:\'Archivo\';font-weight:900;font-size:15px;color:{{ r.medalCol }};flex-shrink:0;">{{ r.rank }}</div>'
+      + '<div style="width:34px;height:34px;border-radius:50%;background:{{ r.avBg }};color:{{ r.avFg }};display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:800;font-size:12px;flex-shrink:0;">{{ r.initials }}</div>'
+      + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;">{{ r.name }}</div><div style="font-size:11.5px;color:var(--muted);">Terakhir: {{ r.lastLabel }}</div></div>'
+      + '<div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Archivo\';font-weight:800;font-size:18px;">{{ r.count }}</div><div style="font-size:10.5px;color:var(--muted);">booking</div></div>'
+    + '</div></sc-for>'
+  + '</div></sc-if>'
   + '<sc-if value="{{ hasVenueDispatch }}"><div style="display:flex;flex-direction:column;gap:12px;">'
     + '<sc-for list="{{ venueDispatch }}" as="b">' + venueCard + '</sc-for>'
   + '</div></sc-if>'

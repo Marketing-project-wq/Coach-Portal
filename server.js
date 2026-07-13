@@ -193,6 +193,14 @@ async function coachSchedules(coach, from, to) {
 // normalized participant name -> { name, visits, last } across a coach's past classes (confirmed bookings)
 async function coachAttendanceMap(coach, today) {
   const scheds = await coachSchedules(coach, '2000-01-01', today);
+  return attendanceMapForScheds(scheds, today);
+}
+// Team-wide participant attendance over a date window (all coaches) — for the Participants leaderboard.
+async function teamAttendanceMap(fromDate, toDate) {
+  const scheds = await sbAll(`arena_class_schedules?select=id,schedule_date,class_type_id,instructor&is_cancelled=eq.false&schedule_date=gte.${fromDate}&schedule_date=lte.${toDate}`);
+  return attendanceMapForScheds(scheds || [], toDate);
+}
+async function attendanceMapForScheds(scheds, today) {
   const types = await classTypes();
   const metaById = {}; const ids = [];
   for (const x of scheds) { metaById[x.id] = { date: x.schedule_date, type: shortType((types[x.class_type_id] || {}).name) }; ids.push(x.id); }
@@ -705,17 +713,63 @@ route('POST', '/api/coach/menu/:id/update', async (req, res, s, q, params) => {
   return send(res, 200, { ok: true });
 });
 
-// ===== COACH: participants — how many times each attended + recency of last visit =====
-route('GET', '/api/coach/members', async (req, res, s) => {
+// Month picker options for HC screens — from the season start (July 2026) up to the current month.
+function monthOptions(today) {
+  const floorYm = LEADERBOARD_SINCE.slice(0, 7);
+  const out = [];
+  let y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7));
+  while (true) { const v = `${y}-${String(m).padStart(2, '0')}`; if (v < floorYm) break; out.push({ ym: v, label: `${MON_FULL[m - 1]} ${y}` }); m--; if (m === 0) { m = 12; y--; } }
+  return out;
+}
+// Resolve a ?month=YYYY-MM (or blank = all-time since season start) to a [from,to] window.
+function monthWindow(ym, today) {
+  if (/^\d{4}-\d{2}$/.test(ym || '')) {
+    const yy = Number(ym.slice(0, 4)), mm = Number(ym.slice(5, 7));
+    const lastDay = new Date(yy, mm, 0).getDate();
+    const full = `${ym}-${String(lastDay).padStart(2, '0')}`;
+    return { from: `${ym}-01`, to: full < today ? full : today, full };
+  }
+  return { from: LEADERBOARD_SINCE, to: today, full: today };
+}
+
+// ===== COACH: participants — leaderboard by class attendance (team-wide for HC), month-filterable =====
+route('GET', '/api/coach/members', async (req, res, s, q) => {
   if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
   const today = todayJakarta();
-  const map = await coachAttendanceMap(s.c, today);
+  const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : '';
+  const w = monthWindow(ym, today);
+  // Head Coach / Admin see the whole arena's participants; a plain coach sees their own classes.
+  const map = requireHC(s)
+    ? await teamAttendanceMap(w.from, w.to)
+    : await attendanceMapForScheds(await coachSchedules(s.c, w.from, w.to), w.to);
   const members = Object.keys(map).map((k) => {
     const m = map[k];
     return { name: m.name, visits: m.visits, lastVisit: m.last ? fmtDMon(m.last) : '-', daysSince: daysSinceISO(m.last, today), classesLabel: classesLabelFor(m), classes: classChipsFor(m), menus: menuChipsFor(m), menusLabel: menusLabelFor(m) };
   }).sort((a, b) => b.visits - a.visits || ((a.daysSince == null ? 1e9 : a.daysSince) - (b.daysSince == null ? 1e9 : b.daysSince)));
+  members.forEach((m, i) => { m.rank = i + 1; });
   const active30 = members.filter((m) => m.daysSince != null && m.daysSince <= 30).length;
-  return send(res, 200, { members, total: members.length, active30 });
+  return send(res, 200, { members, total: members.length, active30, months: monthOptions(today), ym });
+});
+// ===== HEAD COACH: arena-rental leaderboard — customers who book the arena most, month-filterable =====
+route('GET', '/api/venue/leaderboard', async (req, res, s, q) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
+  const today = todayJakarta();
+  const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : '';
+  const w = monthWindow(ym, today);
+  // Count every non-cancelled arena booking per customer (upcoming bookings included).
+  const upper = ym ? `&booking_date=lte.${w.full}` : '';
+  const rows = await sbAll(`arena_bookings?select=full_name,booking_date&status=neq.cancelled&booking_date=gte.${w.from}${upper}`);
+  const map = {};
+  for (const b of rows || []) {
+    const nm = String(b.full_name || '').trim(); if (!nm) continue;
+    const k = nm.toLowerCase();
+    if (!map[k]) map[k] = { name: nm, count: 0, last: '' };
+    map[k].count++;
+    if (b.booking_date > map[k].last) { map[k].last = b.booking_date; map[k].name = nm; }
+  }
+  const renters = Object.values(map).sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : -1))
+    .map((x, i) => ({ rank: i + 1, name: x.name, count: x.count, lastLabel: x.last ? fmtDMon(x.last) : '-' }));
+  return send(res, 200, { renters, total: renters.length, months: monthOptions(today), ym });
 });
 
 // ===== PUBLIC review (no login) — participants review the coach's class they attended =====
