@@ -884,12 +884,10 @@ class Component extends DCLogic {
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => {
       const r = this.recencyLabel(p.daysSince); const v = p.visits || 0;
       const menus = String(p.menusLabel || '').split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name }));
-      const att = p.attendance; // 'checked_in' | 'no_show' | null
-      const inBg = att === 'checked_in' ? C.green : 'transparent', inFg = att === 'checked_in' ? '#fff' : C.muted;
-      const noBg = att === 'no_show' ? C.red : 'transparent', noFg = att === 'no_show' ? '#fff' : C.muted;
+      const on = p.attendance === 'checked_in';
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
-        inBg, inFg, noBg, noFg, markIn: () => this.markAttend(clsId, p.booking_id, 'checked_in'), markNo: () => this.markAttend(clsId, p.booking_id, 'no_show') };
+        attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'no_show' : 'checked_in') };
     });
     const showCheckin = isGro; // GRO checks participants in/out from the class detail
     // sub options
@@ -1085,13 +1083,13 @@ class Component extends DCLogic {
       const cg = dg.classes[dg._c[ckey]];
       const a = r.attendance;
       cg.pax++; if (a === 'checked_in') cg.attended++;
+      const on = a === 'checked_in';
       cg.participants.push({
         name: r.participant, phone: r.phone || '—', email: r.email || '—',
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
-        attLabel: a === 'checked_in' ? 'Hadir' : (a === 'no_show' ? 'Absen' : '—'), attCol: a === 'checked_in' ? C.green : (a === 'no_show' ? C.red : C.muted2),
-        inBg: a === 'checked_in' ? C.green : 'transparent', inFg: a === 'checked_in' ? '#fff' : C.muted,
-        noBg: a === 'no_show' ? C.red : 'transparent', noFg: a === 'no_show' ? '#fff' : C.muted,
-        markIn: () => this.registerAttend(r.scheduleId, r.bookingId, 'checked_in'), markNo: () => this.registerAttend(r.scheduleId, r.bookingId, 'no_show'),
+        attLabel: on ? 'Hadir' : (a === 'no_show' ? 'Absen' : '—'), attCol: on ? C.green : (a === 'no_show' ? C.red : C.muted2),
+        attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
+        toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'no_show' : 'checked_in'),
       });
     }
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', participants: c.participants })) }));
@@ -1104,15 +1102,14 @@ class Component extends DCLogic {
     const cpConfirmed = cpParts.filter((p) => p.bookingStatus === 'confirmed').length;
     const cpPending = cpParts.filter((p) => p.bookingStatus === 'pending_payment').length;
     const cpParticipants = cpParts.map((p, i) => {
-      const a = p.attendance;
+      const on = p.attendance === 'checked_in';
       return {
         n: i + 1, booking: p.booking || '—', name: p.name, phone: p.phone || '—', email: p.email || '—',
         payment: p.payment || '', hasPayment: !!p.payment, payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted),
         statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
-        inBg: a === 'checked_in' ? C.green : 'transparent', inFg: a === 'checked_in' ? '#fff' : C.muted,
-        noBg: a === 'no_show' ? C.red : 'transparent', noFg: a === 'no_show' ? '#fff' : C.muted,
-        markIn: () => this.popupAttend(cpSched.schedule_id, p.booking_id, 'checked_in'), markNo: () => this.popupAttend(cpSched.schedule_id, p.booking_id, 'no_show'),
+        attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
+        toggle: () => this.popupAttend(cpSched.schedule_id, p.booking_id, on ? 'no_show' : 'checked_in'),
       };
     });
 
