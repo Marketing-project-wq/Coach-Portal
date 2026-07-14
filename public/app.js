@@ -234,6 +234,43 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : 'Peserta ditandai absen'); this.openClassPopup(scheduleId); this.loadRegister(); })
       .catch((e) => this.toastMsg(e.message));
   }
+  // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
+  _compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(cv.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject; img.src = reader.result;
+      };
+      reader.onerror = reject; reader.readAsDataURL(file);
+    });
+  }
+  uploadClassPhoto(e) {
+    const file = e && e.target && e.target.files && e.target.files[0];
+    if (e && e.target) e.target.value = '';
+    if (!file) return;
+    const cp = this.state.classPopup; const sid = cp && cp.schedule && cp.schedule.schedule_id;
+    if (!sid) return;
+    if (this.MOCK) { const r = new FileReader(); r.onload = () => this.setState({ classPopup: Object.assign({}, cp, { schedule: Object.assign({}, cp.schedule, { photo: r.result }) }) }); r.readAsDataURL(file); return; }
+    this.toastMsg('Mengupload foto…');
+    this._compressImage(file, 1000, 0.7)
+      .then((dataUrl) => this.api('/api/coach/class/' + encodeURIComponent(sid) + '/photo', { method: 'POST', body: JSON.stringify({ image: dataUrl }) }))
+      .then((r) => { if (r && r.needsMigration) return this.toastMsg('Storage foto belum aktif — jalankan setup dulu.'); this.toastMsg('Foto tersimpan'); this.openClassPopup(sid); })
+      .catch((err) => this.toastMsg(err.message || 'Gagal upload foto'));
+  }
+  deleteClassPhoto() {
+    const cp = this.state.classPopup; const sid = cp && cp.schedule && cp.schedule.schedule_id;
+    if (!sid) return;
+    if (this.MOCK) { this.setState({ classPopup: Object.assign({}, cp, { schedule: Object.assign({}, cp.schedule, { photo: '' }) }) }); return; }
+    this.api('/api/coach/class/' + encodeURIComponent(sid) + '/photo/delete', { method: 'POST' }).then(() => { this.toastMsg('Foto dihapus'); this.openClassPopup(sid); }).catch((e) => this.toastMsg(e.message));
+  }
   openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
   openVenueAbsen(v) { this.setState({ absen: true, absenClass: { venueId: v.id, type: 'Arena + Coach · ' + (v.customer || 'Arena booking'), time: v.time || '' } }); }
   confirmAbsen() {
@@ -326,23 +363,37 @@ class Component extends DCLogic {
     if (!rows.length) return this.toastMsg('Belum ada data untuk di-export.');
     const monthLbl = (this.state.d.registerMonths || []).find((m) => m.picked);
     const title = 'Laporan Absensi Arena · ' + (monthLbl ? monthLbl.label : 'Semua bulan');
-    const headers = ['Tanggal', 'Jam', 'Nama Kelas', 'Coach', 'Nama GRO', 'Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
-    const secRows = rows.map((r) => [r.dateLabel, r.time, r.className, r.coach, r.gro || '—', r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
-    this._printAttendance(title, headers, secRows);
+    const order = []; const by = {};
+    for (const r of rows) {
+      const k = r.scheduleId || (r.date + r.time + r.className);
+      if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', photo: r.classPhoto || '', rows: [] }; order.push(k); }
+      const g = by[k];
+      if (!g.gro && r.gro) g.gro = r.gro;
+      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+    }
+    this._printAttendanceGrouped(title, order.map((k) => by[k]));
   }
-  _printAttendance(title, headers, rows) {
-    const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+  _printAttendanceGrouped(title, groups) {
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const headers = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
     const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
-    const tbody = rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 8 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
+    const blocks = groups.map((g) => {
+      const photo = g.photo ? '<img class="ph" src="' + esc(g.photo) + '">' : '<div class="nophoto">Tidak ada foto</div>';
+      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div></div></div>';
+      const tbody = g.rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
+      return '<div class="clsblock">' + head + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div>';
+    }).join('');
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
-      + '<style>@page{size:landscape;margin:12mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:18px;}h1{font-size:17px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:14px;}table{border-collapse:collapse;width:100%;font-size:10.5px;}th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.hadir{color:#1C8A4B;font-weight:700;}td.absen{color:#C77A00;font-weight:700;}@media print{body{padding:0;}tr{break-inside:avoid;}}</style>'
-      + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
-      + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></body></html>';
+      + '<style>@page{margin:12mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:18px;}h1{font-size:17px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:16px;}'
+      + '.clsblock{break-inside:avoid;margin-bottom:18px;}.clshead{display:flex;align-items:center;gap:12px;margin:0 0 7px;}.ph{width:70px;height:70px;object-fit:cover;border-radius:7px;border:1px solid #ccc;}.nophoto{width:70px;height:70px;border:1px dashed #ccc;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;text-align:center;}'
+      + '.clstitle{font-weight:800;font-size:13px;}.clssub{color:#666;font-size:11px;margin-top:2px;}'
+      + 'table{border-collapse:collapse;width:100%;font-size:11px;}th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.hadir{color:#1C8A4B;font-weight:700;}td.absen{color:#C77A00;font-weight:700;}@media print{body{padding:0;}}</style>'
+      + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>' + blocks + '</body></html>';
     const ifr = document.createElement('iframe');
     ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
     document.body.appendChild(ifr);
     const doc = ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
-    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); }, 350);
+    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); }, 500);
     this.toastMsg('Menyiapkan PDF laporan absensi…');
   }
   setRegisterMonth(e) { this.setState({ registerYm: (e && e.target ? e.target.value : '') || '' }); this.loadRegister(); }
@@ -1111,7 +1162,7 @@ class Component extends DCLogic {
       if (!(r.date in _dIdx)) { _dIdx[r.date] = _byDate.length; _byDate.push({ dateLabel: r.dateLabel, _c: {}, classes: [] }); }
       const dg = _byDate[_dIdx[r.date]];
       const ckey = r.scheduleId || (r.time + r.className);
-      if (!(ckey in dg._c)) { dg._c[ckey] = dg.classes.length; dg.classes.push({ time: r.time, className: r.className, coach: r.coach || '—', scheduleId: r.scheduleId, pax: 0, attended: 0, participants: [] }); }
+      if (!(ckey in dg._c)) { dg._c[ckey] = dg.classes.length; dg.classes.push({ time: r.time, className: r.className, coach: r.coach || '—', scheduleId: r.scheduleId, photo: r.classPhoto || '', pax: 0, attended: 0, participants: [] }); }
       const cg = dg.classes[dg._c[ckey]];
       const a = r.attendance;
       cg.pax++; if (a === 'checked_in') cg.attended++;
@@ -1125,7 +1176,7 @@ class Component extends DCLogic {
         note: r.note || '', hasNote: !!r.note, saveNote: (e) => this.saveNote(r.scheduleId, r.bookingId, e && e.target ? e.target.value : '', 'register'),
       });
     }
-    const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', participants: c.participants })) }));
+    const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', participants: c.participants })) }));
     const registerMonthOpts = D.registerMonths || [];
 
     // Class popup (modal) — opened by clicking a class in the Kalender Arena.
@@ -1152,6 +1203,8 @@ class Component extends DCLogic {
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
       cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',
       cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
+      cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
+      onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
       hasRegister: registerGroups.length > 0, noRegister: registerGroups.length === 0,
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
@@ -1270,11 +1323,12 @@ class Component extends DCLogic {
     ];
     d.registerMonths = d.memberMonths;
     d.registerCanCheck = true;
+    const GRPPH = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='120' height='120' fill='%23c9d9e8'/><circle cx='60' cy='44' r='20' fill='%237f97b0'/><rect x='24' y='70' width='72' height='42' rx='20' fill='%237f97b0'/></svg>";
     d.registerRows = [
-      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: 'GRO Arena', participant: 'Andra Wijaya', phone: '0812-3456-7890', email: 'andra@email.com', attendance: 'checked_in', payment: 'Lunas', scheduleId: 'sch5', bookingId: 'b1' },
-      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: '', participant: 'Sari Putri', phone: '0813-1111-2222', email: 'sari@email.com', attendance: null, payment: 'Belum', scheduleId: 'sch5', bookingId: 'b2' },
-      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '19:30', className: '20FIT Arena HYROX Foundation Class', coach: 'YoKae', gro: 'GRO Arena', participant: 'Woro Liana', phone: '0857-9999-0000', email: 'woro@email.com', attendance: 'no_show', payment: 'Lunas', scheduleId: 'sch6', bookingId: 'b3' },
-      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '07:00', className: '20FIT Arena HYROX Complete Class', coach: 'Nando', gro: 'GRO Arena', participant: 'Budi Santoso', phone: '0811-2222-3333', email: 'budi@email.com', attendance: 'checked_in', payment: 'Lunas', scheduleId: 'sch1', bookingId: 'b4' },
+      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: 'GRO Arena', participant: 'Andra Wijaya', phone: '0812-3456-7890', email: 'andra@email.com', attendance: 'checked_in', payment: 'Lunas', classPhoto: GRPPH, scheduleId: 'sch5', bookingId: 'b1' },
+      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: '', participant: 'Sari Putri', phone: '0813-1111-2222', email: 'sari@email.com', attendance: null, payment: 'Belum', classPhoto: GRPPH, scheduleId: 'sch5', bookingId: 'b2' },
+      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '19:30', className: '20FIT Arena HYROX Foundation Class', coach: 'YoKae', gro: 'GRO Arena', participant: 'Woro Liana', phone: '0857-9999-0000', email: 'woro@email.com', attendance: 'no_show', payment: 'Lunas', classPhoto: '', scheduleId: 'sch6', bookingId: 'b3' },
+      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '07:00', className: '20FIT Arena HYROX Complete Class', coach: 'Nando', gro: 'GRO Arena', participant: 'Budi Santoso', phone: '0811-2222-3333', email: 'budi@email.com', attendance: 'checked_in', payment: 'Lunas', classPhoto: GRPPH, scheduleId: 'sch1', bookingId: 'b4' },
     ];
     d.arenaCalLabel = 'July 2026'; d.arenaCalYm = '2026-07'; d.arenaCalPrevYm = '2026-06'; d.arenaCalNextYm = '2026-08';
     d.arenaCalCells = (() => {
@@ -1304,7 +1358,7 @@ class Component extends DCLogic {
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
     const amrapContent = JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [{ label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski' }, { amount: '150', unit: 'meter', name: 'row' }, { amount: '1', unit: 'lap', name: 'run' }] }] });
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', fullType: '20FIT Arena HYROX Complete Class', coach: 'Nando', dateLabel: 'Sat, 11 Jul', quota: 40, time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', bookingStatus: 'confirmed', phone: '0812-3456-7890', email: 'andra@email.com', payment: 'Lunas', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Pending', bookingStatus: 'pending_payment', phone: '0813-1111-2222', email: 'sari@email.com', payment: 'Belum', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', fullType: '20FIT Arena HYROX Complete Class', coach: 'Nando', dateLabel: 'Sat, 11 Jul', quota: 40, photo: '', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', bookingStatus: 'confirmed', phone: '0812-3456-7890', email: 'andra@email.com', payment: 'Lunas', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Pending', bookingStatus: 'pending_payment', phone: '0813-1111-2222', email: 'sari@email.com', payment: 'Belum', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
       menuOptions: [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation', content: 'Warm up + technique drills' }],
       linkedMenu: { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent } };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];

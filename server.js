@@ -797,6 +797,33 @@ async function attendanceRows(whereClause) {
   }
   return await sb(`arena_class_attendance?select=booking_id,status,marked_by&${whereClause}`);
 }
+// Group attendance photo (one per class). Reads fall back to empty if the table doesn't exist yet.
+let _photoTableOk = true;
+async function classPhotoMap(ids) {
+  if (!ids.length || !_photoTableOk) return {};
+  const map = {};
+  try {
+    for (let i = 0; i < ids.length; i += 120) {
+      const chunk = ids.slice(i, i + 120);
+      const rows = await sb(`arena_class_photos?select=schedule_id,photo_url&schedule_id=in.(${chunk.map(enc).join(',')})`);
+      for (const r of rows || []) map[r.schedule_id] = r.photo_url;
+    }
+  } catch (_e) { _photoTableOk = false; return {}; }
+  return map;
+}
+// Upload a group photo (base64 data URL) to the attendance-proof storage bucket; returns the public URL.
+async function uploadClassPhoto(scheduleId, dataUrl) {
+  const m = /^data:(image\/(png|jpe?g|webp));base64,(.+)$/s.exec(dataUrl || '');
+  if (!m) throw new Error('Format foto tidak valid.');
+  const buf = Buffer.from(m[3], 'base64');
+  const ext = m[2] === 'png' ? 'png' : (m[2] === 'webp' ? 'webp' : 'jpg');
+  const path = `class/${scheduleId}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/attendance-proof/${path}`, {
+    method: 'POST', headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': m[1], 'x-upsert': 'true' }, body: buf,
+  });
+  if (!res.ok) throw new Error('Storage ' + res.status + ': ' + await res.text().catch(() => ''));
+  return `${SUPABASE_URL}/storage/v1/object/public/attendance-proof/${path}`;
+}
 // Resolve a ?month=YYYY-MM (or blank = ALL data) to a [from,to] window.
 function monthWindow(ym, today) {
   if (/^\d{4}-\d{2}$/.test(ym || '')) {
@@ -830,6 +857,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
     const at = await attendanceRows(`schedule_id=in.(${chunk.map(enc).join(',')})`);
     for (const a of at || []) attById[a.booking_id] = a;
   }
+  const photoMap = await classPhotoMap(ids);
   const rows = bookings.filter((b) => b.status !== 'cancelled').map((b) => {
     const sc = schedById[b.schedule_id] || {};
     const a = attById[b.id];
@@ -839,7 +867,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
       coach: sc.instructor || '', gro: a ? (a.marked_by || '') : '',
       participant: b.full_name || '(no name)', phone: b.phone || '', email: b.email || '',
       attendance: a ? a.status : null, // 'checked_in' | 'no_show' | null
-      note: a ? (a.note || '') : '',
+      note: a ? (a.note || '') : '', classPhoto: photoMap[b.schedule_id] || '',
       payment: b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')),
       scheduleId: b.schedule_id, bookingId: b.id,
     };
@@ -1102,7 +1130,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const menuOptions = menuRows.map((m) => ({ id: m.id, title: m.title, category: m.category || '' }));
   const lm = linkedMenuId ? menuRows.find((m) => m.id === linkedMenuId) : null;
   const linkedMenu = lm ? { id: lm.id, title: lm.title, category: lm.category || '', content: lm.content || '' } : null;
-  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, started, checkedOut, canCheckout }, started, participants, menuOptions, linkedMenu });
+  const photoMap = canContact ? await classPhotoMap([params.id]) : {};
+  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, photo: photoMap[params.id] || '', started, checkedOut, canCheckout }, started, participants, menuOptions, linkedMenu });
 });
 // Attach / change / clear the menu for a class (Option B). No-op-safe if the link table is missing.
 route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
@@ -1164,6 +1193,23 @@ route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   }
   if (!['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
   await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
+  return send(res, 200, { ok: true });
+});
+// GRO uploads a single group attendance photo for the class (shown in the report + PDF).
+route('POST', '/api/coach/class/:id/photo', async (req, res, s, q, params) => {
+  const body = await readBody(req, 6e6);
+  if (!body || !body.image) return send(res, 400, { error: 'Foto tidak ada.' });
+  let url;
+  try { url = await uploadClassPhoto(params.id, body.image); }
+  catch (e) { return send(res, 400, { error: 'Gagal upload foto: ' + e.message }); }
+  const versioned = url + '?v=' + Date.now();
+  try {
+    await sb('arena_class_photos', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, photo_url: versioned, uploaded_by: s.c, uploaded_at: new Date().toISOString() }) });
+  } catch (_e) { return send(res, 200, { ok: false, needsMigration: true, url: versioned }); }
+  return send(res, 200, { ok: true, url: versioned });
+});
+route('POST', '/api/coach/class/:id/photo/delete', async (req, res, s, q, params) => {
+  try { await sb(`arena_class_photos?schedule_id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); } catch (_e) { /* table may not exist yet */ }
   return send(res, 200, { ok: true });
 });
 // GRO writes a free-text note for a participant (shown in the detailed attendance report).
