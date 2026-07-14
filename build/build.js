@@ -90,10 +90,14 @@ const calPanel = '<div style="background:var(--panel);border:1px solid var(--bor
   + '</div>'
   + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Has a class · click a date to see its schedule</div>'
   + '</div>';
-template = template.replace(jadwalHead, calPanel + jadwalHead);
+// Calendar stays for everyone; the per-day class cards below it are hidden for GRO
+// (they work from the Absensi table instead) — open the wrapper right after the calendar.
+template = template.replace(jadwalHead, calPanel + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
 // Empty state when the selected day has no classes
 const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>';
 template = template.replace(jadwalHead, jadwalHead + noClassBox);
+// Close the showDayCards wrapper right after the class-cards grid (before the venue section).
+template = template.replace('<sc-if value="{{ hasScheduleVenues }}">', '</sc-if>\n          <sc-if value="{{ hasScheduleVenues }}">');
 // Remove the bottom grid entirely (the old "Kalender Minggu Ini" + "Riwayat Terakhir" panels)
 // from the Schedule screen — the JADWAL cards are the last section now.
 template = template.replace(/<div style="display:grid;grid-template-columns:1\.4fr 1fr;gap:16px;margin-top:24px;">[\s\S]*?Recent History[\s\S]*?<\/sc-for>\s*<\/div>\s*<\/div>/, '');

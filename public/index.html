@@ -298,7 +298,7 @@
             
           </div>
 
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:18px 20px;margin-bottom:22px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;">Calendar · {{ calMonthLabel }}</div><div style="display:flex;gap:8px;"><button onclick="{{ calPrev }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8249;</button><button onclick="{{ calNext }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8250;</button></div></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;"><sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0 4px;">{{ d }}</div></sc-for><sc-for list="{{ calCells }}" as="c"><div onclick="{{ c.pick }}" style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};cursor:{{ c.cursor }};" style-hover="border-color:var(--muted);"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:{{ c.countCol }};font-weight:700;margin-top:1px;">{{ c.count }} cls</div></sc-if></sc-if></div></sc-for></div><div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(228,0,43,.3);display:inline-block;"></span>Has a class · click a date to see its schedule</div></div><div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">SCHEDULE · {{ jadwalLabel }}</div><sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:18px 20px;margin-bottom:22px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;">Calendar · {{ calMonthLabel }}</div><div style="display:flex;gap:8px;"><button onclick="{{ calPrev }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8249;</button><button onclick="{{ calNext }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;">&#8250;</button></div></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;"><sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0 4px;">{{ d }}</div></sc-for><sc-for list="{{ calCells }}" as="c"><div onclick="{{ c.pick }}" style="min-height:40px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:{{ c.bg }};border:1px solid {{ c.border }};cursor:{{ c.cursor }};" style-hover="border-color:var(--muted);"><sc-if value="{{ c.show }}"><div style="font-size:13px;font-weight:700;color:{{ c.col }};">{{ c.day }}</div><sc-if value="{{ c.teach }}"><div style="font-size:9px;color:{{ c.countCol }};font-weight:700;margin-top:1px;">{{ c.count }} cls</div></sc-if></sc-if></div></sc-for></div><div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(228,0,43,.3);display:inline-block;"></span>Has a class · click a date to see its schedule</div></div><sc-if value="{{ showDayCards }}"><div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);margin:6px 0 14px;">SCHEDULE · {{ jadwalLabel }}</div><sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <sc-for list="{{ coachToday }}" as="c" hint-placeholder-count="2">
             <div style="background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:14px 15px;position:relative;overflow:hidden;">
@@ -325,6 +325,7 @@
             </sc-for>
           </div>
 
+          </sc-if>
           <sc-if value="{{ hasScheduleVenues }}">
           <div style="font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--volt);margin:22px 0 12px;">VENUE BOOKING + COACH</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -892,9 +893,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=ef6381e5"></script>
-<script src="sc-runtime.js?v=ef6381e5"></script>
-<script src="app.js?v=ef6381e5"></script>
+<script src="i18n.js?v=de46a042"></script>
+<script src="sc-runtime.js?v=de46a042"></script>
+<script src="app.js?v=de46a042"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

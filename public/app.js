@@ -1076,6 +1076,7 @@ class Component extends DCLogic {
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
       venueHidden, hasVenueHidden,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
+      showDayCards: !isGro,
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerRows,
       hasRegister: registerRows.length > 0, noRegister: registerRows.length === 0,
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
