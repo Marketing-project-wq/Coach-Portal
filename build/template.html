@@ -660,6 +660,44 @@
           </div>
           </sc-if>
 
+          <sc-if value="{{ showRegister }}">
+          <div style="margin-top:28px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+              <div style="font-family:'Archivo';font-weight:800;font-size:18px;">Absensi Peserta</div>
+              <sc-if value="{{ hasRegisterMonths }}"><select onchange="{{ setRegisterMonth }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;font-weight:700;cursor:pointer;"><sc-for list="{{ registerMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>
+            </div>
+            <sc-if value="{{ hasRegister }}">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <div style="min-width:1290px;font-size:12.5px;">
+                  <div style="display:grid;grid-template-columns:112px 62px 150px 120px 116px 150px 140px 180px 160px 90px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
+                    <div style="padding:11px 12px;">TANGGAL</div><div style="padding:11px 12px;">JAM</div><div style="padding:11px 12px;">NAMA KELAS</div><div style="padding:11px 12px;">NAMA COACH</div><div style="padding:11px 12px;">NAMA GRO</div><div style="padding:11px 12px;">NAMA PESERTA</div><div style="padding:11px 12px;">NO. HANDPHONE</div><div style="padding:11px 12px;">EMAIL</div><div style="padding:11px 12px;">ABSENSI</div><div style="padding:11px 12px;">PAYMENT</div>
+                  </div>
+                  <sc-for list="{{ registerRows }}" as="rr">
+                  <div style="display:grid;grid-template-columns:112px 62px 150px 120px 116px 150px 140px 180px 160px 90px;border-top:1px solid var(--border);align-items:center;">
+                    <div style="padding:10px 12px;">{{ rr.dateLabel }}</div>
+                    <div style="padding:10px 12px;font-family:'JetBrains Mono';">{{ rr.time }}</div>
+                    <div style="padding:10px 12px;">{{ rr.className }}</div>
+                    <div style="padding:10px 12px;">{{ rr.coach }}</div>
+                    <div style="padding:10px 12px;color:var(--muted);">{{ rr.groShown }}</div>
+                    <div style="padding:10px 12px;font-weight:700;">{{ rr.participant }}</div>
+                    <div style="padding:10px 12px;font-family:'JetBrains Mono';color:var(--muted);">{{ rr.phoneShown }}</div>
+                    <div style="padding:10px 12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;">{{ rr.emailShown }}</div>
+                    <div style="padding:10px 12px;">
+                      <sc-if value="{{ registerCanCheck }}"><div style="display:flex;gap:6px;"><button onclick="{{ rr.markIn }}" style="border:1px solid var(--border2);background:{{ rr.inBg }};color:{{ rr.inFg }};border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;">Hadir</button><button onclick="{{ rr.markNo }}" style="border:1px solid var(--border2);background:{{ rr.noBg }};color:{{ rr.noFg }};border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;">Absen</button></div></sc-if>
+                      <sc-if value="{{ registerReadonly }}"><span style="font-weight:700;color:{{ rr.attCol }};">{{ rr.attLabel }}</span></sc-if>
+                    </div>
+                    <div style="padding:10px 12px;font-weight:700;color:{{ rr.payCol }};">{{ rr.payment }}</div>
+                  </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ noRegister }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">Belum ada data peserta pada periode ini.</div></sc-if>
+          </div>
+          </sc-if>
+
           <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:24px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-weight:800;font-family:'Archivo';font-size:16px;">This Week's Calendar</div><div style="font-size:13px;color:var(--muted);">23–29 Jun</div></div>

@@ -757,6 +757,45 @@ function monthWindow(ym, today) {
   return { from: '2000-01-01', to: today, full: today };
 }
 
+// ===== Attendance register — one flat table of every participant across every class in a month.
+// GRO uses it to check participants in (name/phone/email visible + Hadir/Absen); HC/Admin read it
+// as the attendance report. Contact fields are exposed here on purpose (unlike the coach class view). =====
+route('GET', '/api/attendance/register', async (req, res, s, q) => {
+  if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Not available for this role.' });
+  const today = todayJakarta();
+  const floorYm = await earliestYm('arena_class_schedules', 'schedule_date', today.slice(0, 7));
+  const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : today.slice(0, 7);
+  const w = monthWindow(ym, today);
+  const upper = w.full || today; // include upcoming days of the selected month, not just up to today
+  const types = await classTypes();
+  const scheds = await allSchedules(w.from, upper);
+  const schedById = {}; const ids = [];
+  for (const sc of scheds) { schedById[sc.id] = sc; ids.push(sc.id); }
+  const bookings = []; const attById = {};
+  for (let i = 0; i < ids.length; i += 120) {
+    const chunk = ids.slice(i, i + 120);
+    const bk = await sbAll(`arena_class_bookings?select=id,schedule_id,full_name,phone,email,status&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    for (const b of bk || []) bookings.push(b);
+    const at = await sb(`arena_class_attendance?select=booking_id,status,marked_by&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    for (const a of at || []) attById[a.booking_id] = a;
+  }
+  const rows = bookings.filter((b) => b.status !== 'cancelled').map((b) => {
+    const sc = schedById[b.schedule_id] || {};
+    const a = attById[b.id];
+    return {
+      date: sc.schedule_date || '', dateLabel: sc.schedule_date ? dLabel(sc.schedule_date) : '',
+      time: hhmm(sc.start_time), className: shortType((types[sc.class_type_id] || {}).name),
+      coach: sc.instructor || '', gro: a ? (a.marked_by || '') : '',
+      participant: b.full_name || '(no name)', phone: b.phone || '', email: b.email || '',
+      attendance: a ? a.status : null, // 'checked_in' | 'no_show' | null
+      payment: b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')),
+      scheduleId: b.schedule_id, bookingId: b.id,
+    };
+  });
+  rows.sort((x, y) => (x.date + x.time + x.className + x.participant).localeCompare(y.date + y.time + y.className + y.participant));
+  return send(res, 200, { rows, months: monthOptions(today, floorYm).map((o) => ({ ...o, picked: o.ym === ym })), month: ym, canCheck: isGro(s) });
+});
+
 // ===== COACH: participants — leaderboard by class attendance (team-wide for HC), month-filterable =====
 route('GET', '/api/coach/members', async (req, res, s, q) => {
   if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
