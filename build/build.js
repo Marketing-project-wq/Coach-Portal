@@ -149,7 +149,9 @@ const registerRecap = '<sc-if value="{{ showRegister }}">'
   + '</sc-if>';
 // Simple month calendar stays for coach/HC/admin; GRO gets the Kalender Arena above instead.
 // The per-day class cards below are hidden for GRO — open that wrapper right after the calendars.
-template = template.replace(jadwalHead, '<sc-if value="{{ showSimpleCal }}">' + calPanel + '</sc-if>' + arenaCalPanel + registerRecap + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
+template = template.replace(jadwalHead, '<sc-if value="{{ showSimpleCal }}">' + calPanel + '</sc-if>' + arenaCalPanel + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
+// The attendance recap lives on the Reports screen (Head Coach / Admin), not the Schedule screen.
+template = template.replace('<!-- REPORTS-RECAP -->', registerRecap);
 // Empty state when the selected day has no classes
 const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>';
 template = template.replace(jadwalHead, jadwalHead + noClassBox);
