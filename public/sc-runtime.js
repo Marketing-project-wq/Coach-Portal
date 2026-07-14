@@ -104,6 +104,16 @@
     },
   };
   window.DCLogic = class {
-    setState(patch) { Object.assign(this.state, patch); if (this.__render) this.__render(); }
+    // State updates apply synchronously, but the (expensive) full re-render is coalesced to
+    // once per animation frame — so a nav switch that fires several setState/setD calls only
+    // rebuilds the DOM once instead of 4–5 times. Keeps the UI snappy.
+    setState(patch) {
+      Object.assign(this.state, patch);
+      if (!this.__render || this.__renderQueued) return;
+      this.__renderQueued = true;
+      var self = this;
+      var raf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function (cb) { return setTimeout(cb, 0); };
+      raf(function () { self.__renderQueued = false; self.__render(); });
+    }
   };
 })();

@@ -1158,14 +1158,6 @@
         <span style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:100px;background:rgba(199,122,0,.12);color:var(--amber);text-transform:uppercase;letter-spacing:.03em;">{{ cpPending }}</span>
         <span style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:100px;background:var(--bg);border:1px solid var(--border2);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">{{ cpQuota }}</span>
       </div>
-      <sc-if value="{{ cpCanCheck }}">
-      <div style="display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:12px 14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;">
-        <sc-if value="{{ cpHasPhoto }}"><img src="{{ cpPhoto }}" style="width:66px;height:66px;border-radius:10px;object-fit:cover;flex-shrink:0;"></sc-if>
-        <div style="flex:1;min-width:130px;"><div style="font-weight:800;font-size:13.5px;">&#128247; Foto Grup Kehadiran</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">1 foto untuk kelas ini &middot; ikut ke report &amp; PDF</div></div>
-        <label style="background:var(--volt);color:#fff;border-radius:9px;padding:9px 16px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;">{{ cpPhotoBtnLabel }}<input type="file" accept="image/*" capture="environment" onchange="{{ onUploadPhoto }}" style="display:none;"></label>
-        <sc-if value="{{ cpHasPhoto }}"><button onclick="{{ removeClassPhoto }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:9px;padding:9px 13px;font-weight:700;font-size:12px;cursor:pointer;">Hapus</button></sc-if>
-      </div>
-      </sc-if>
       <sc-if value="{{ cpHasParticipants }}">
       <div class="pop-table" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex:1;min-height:0;">
         <div style="overflow:auto;max-height:52vh;">

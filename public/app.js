@@ -378,7 +378,7 @@ class Component extends DCLogic {
     const headers = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
     const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
     const blocks = groups.map((g) => {
-      const photo = g.photo ? '<img class="ph" src="' + esc(g.photo) + '">' : '<div class="nophoto">Tidak ada foto</div>';
+      const photo = g.photo ? '<img class="ph" src="' + esc(g.photo) + '">' : '';
       const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div></div></div>';
       const tbody = g.rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
       return '<div class="clsblock">' + head + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div>';
