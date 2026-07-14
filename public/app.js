@@ -392,9 +392,20 @@ class Component extends DCLogic {
     const ifr = document.createElement('iframe');
     ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
     document.body.appendChild(ifr);
-    const doc = ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
-    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); }, 500);
-    this.toastMsg('Menyiapkan PDF laporan absensi…');
+    const win = ifr.contentWindow; const doc = win.document; doc.open(); doc.write(html); doc.close();
+    this.toastMsg('Menyiapkan PDF (memuat foto)…');
+    const doPrint = () => { try { win.focus(); win.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); };
+    // Wait for every photo to finish loading (max 8s) so the images are actually in the PDF.
+    const settle = () => {
+      const imgs = Array.from(doc.images || []);
+      const pending = imgs.filter((im) => !im.complete);
+      if (!pending.length) return setTimeout(doPrint, 200);
+      let done = 0; let fired = false;
+      const finish = () => { if (fired) return; fired = true; setTimeout(doPrint, 200); };
+      pending.forEach((im) => { im.addEventListener('load', () => { if (++done >= pending.length) finish(); }); im.addEventListener('error', () => { if (++done >= pending.length) finish(); }); });
+      setTimeout(finish, 8000);
+    };
+    setTimeout(settle, 100);
   }
   setRegisterMonth(e) { this.setState({ registerYm: (e && e.target ? e.target.value : '') || '' }); this.loadRegister(); }
   registerAttend(scheduleId, bookingId, status) {
