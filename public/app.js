@@ -880,6 +880,7 @@ class Component extends DCLogic {
     const coCheckin = co ? (co.checkin || '') : '', coCheckout = co ? (co.checkout || '') : '';
     const coDuration = co && co.durationMin != null ? (co.durationMin + ' min') : '', coParticipants = co && co.participants != null ? String(co.participants) : '0';
     const coAttended = co && co.attended != null ? String(co.attended) : '0';
+    const coAbsent = co && co.participants != null && co.attended != null ? String(Math.max(0, co.participants - co.attended)) : '0';
     const clsId = cd.schedule_id;
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => {
       const r = this.recencyLabel(p.daysSince); const v = p.visits || 0;
@@ -1087,12 +1088,12 @@ class Component extends DCLogic {
       cg.participants.push({
         name: r.participant, phone: r.phone || '—', email: r.email || '—',
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
-        attLabel: on ? 'Hadir' : (a === 'no_show' ? 'Absen' : '—'), attCol: on ? C.green : (a === 'no_show' ? C.red : C.muted2),
+        attLabel: on ? 'Hadir' : 'Tidak hadir', attCol: on ? C.green : C.amber,
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
         toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'none' : 'checked_in'),
       });
     }
-    const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', participants: c.participants })) }));
+    const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', participants: c.participants })) }));
     const registerMonthOpts = D.registerMonths || [];
 
     // Class popup (modal) — opened by clicking a class in the Kalender Arena.
@@ -1187,7 +1188,7 @@ class Component extends DCLogic {
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
-      coType, coDate, coCheckin, coCheckout, coDuration, coParticipants, coAttended,
+      coType, coDate, coCheckin, coCheckout, coDuration, coParticipants, coAttended, coAbsent,
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       exportCSV: () => this.exportCSV(), exportPDF: () => this.exportPDF(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),

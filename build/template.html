@@ -1139,6 +1139,7 @@
           <div style="font-size:13px;color:var(--text);margin-top:10px;">Check-in <b>{{ coCheckin }}</b> → Check-out <b>{{ coCheckout }}</b> · <b>{{ coDuration }}</b></div>
           <div style="font-size:13px;color:var(--text);margin-top:4px;">Registered participants: <b>{{ coParticipants }}</b></div>
           <div style="font-size:13px;color:var(--text);margin-top:4px;">Present (GRO check-in): <b style="color:var(--green);">{{ coAttended }}</b></div>
+          <div style="font-size:13px;color:var(--text);margin-top:4px;">Did not attend: <b style="color:var(--amber);">{{ coAbsent }}</b></div>
         </div>
         <button onclick="{{ closeCheckout }}" style="width:100%;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:'Archivo';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">Done</button>
       </sc-if>
