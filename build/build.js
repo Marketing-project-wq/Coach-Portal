@@ -113,9 +113,36 @@ const arenaCalPanel = '<sc-if value="{{ showArenaCal }}">'
     + '</div></div>'
   + '</div>'
   + '</sc-if>';
+// "Rekap Absensi" — the attendance recap directly below the calendar, grouped by date → class →
+// participant (name/phone/email/payment). GRO checks in inline; HC/Admin read it as a report.
+const rcSel = 'background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;font-weight:700;cursor:pointer;';
+const registerRecap = '<sc-if value="{{ showRegister }}">'
+  + '<div style="margin-bottom:22px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">'
+      + '<div style="font-family:\'Archivo\';font-weight:800;font-size:18px;">Rekap Absensi</div>'
+      + '<sc-if value="{{ hasRegisterMonths }}"><select onchange="{{ setRegisterMonth }}" style="' + rcSel + '"><sc-for list="{{ registerMonthOpts }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select></sc-if>'
+    + '</div>'
+    + '<sc-if value="{{ hasRegister }}"><sc-for list="{{ registerGroups }}" as="g">'
+      + '<div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:16px 0 9px;">{{ g.dateLabel }}</div>'
+      + '<sc-for list="{{ g.classes }}" as="cl"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--panel2);border-bottom:1px solid var(--border);">'
+          + '<div style="min-width:0;"><div style="font-weight:800;font-size:14px;"><span style="font-family:\'JetBrains Mono\';">{{ cl.time }}</span> &#183; {{ cl.className }}</div><div style="font-size:12px;color:var(--muted);margin-top:2px;">&#128100; {{ cl.coach }}</div></div>'
+          + '<div style="text-align:right;flex-shrink:0;"><div style="font-weight:800;font-size:14px;">{{ cl.paxLabel }}</div><div style="font-size:11.5px;color:var(--green);font-weight:700;">{{ cl.attendedLabel }}</div></div>'
+        + '</div>'
+        + '<sc-for list="{{ cl.participants }}" as="p"><div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);">'
+          + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13.5px;">{{ p.name }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px;font-family:\'JetBrains Mono\';">&#128222; {{ p.phone }} &#183; &#9993; {{ p.email }}</div></div>'
+          + '<sc-if value="{{ p.hasPayment }}"><span style="font-size:10.5px;font-weight:700;color:{{ p.payCol }};border:1px solid var(--border2);border-radius:100px;padding:3px 10px;flex-shrink:0;">{{ p.payment }}</span></sc-if>'
+          + '<sc-if value="{{ registerCanCheck }}"><div style="display:flex;gap:6px;flex-shrink:0;"><button onclick="{{ p.markIn }}" style="border:1px solid var(--border2);background:{{ p.inBg }};color:{{ p.inFg }};border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;">Hadir</button><button onclick="{{ p.markNo }}" style="border:1px solid var(--border2);background:{{ p.noBg }};color:{{ p.noFg }};border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;">Absen</button></div></sc-if>'
+          + '<sc-if value="{{ registerReadonly }}"><span style="font-weight:700;font-size:12.5px;color:{{ p.attCol }};flex-shrink:0;min-width:52px;text-align:right;">{{ p.attLabel }}</span></sc-if>'
+        + '</div></sc-for>'
+      + '</div></sc-for>'
+    + '</sc-for></sc-if>'
+    + '<sc-if value="{{ noRegister }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">Belum ada data peserta pada periode ini.</div></sc-if>'
+  + '</div>'
+  + '</sc-if>';
 // Simple month calendar stays for coach/HC/admin; GRO gets the Kalender Arena above instead.
 // The per-day class cards below are hidden for GRO — open that wrapper right after the calendars.
-template = template.replace(jadwalHead, '<sc-if value="{{ showSimpleCal }}">' + calPanel + '</sc-if>' + arenaCalPanel + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
+template = template.replace(jadwalHead, '<sc-if value="{{ showSimpleCal }}">' + calPanel + '</sc-if>' + arenaCalPanel + registerRecap + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
 // Empty state when the selected day has no classes
 const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>';
 template = template.replace(jadwalHead, jadwalHead + noClassBox);
