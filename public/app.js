@@ -1197,14 +1197,16 @@ class Component extends DCLogic {
     const cpConfirmed = cpParts.filter((p) => p.bookingStatus === 'confirmed').length;
     const cpPending = cpParts.filter((p) => p.bookingStatus === 'pending_payment').length;
     const cpParticipants = cpParts.map((p, i) => {
-      const on = p.attendance === 'checked_in';
+      const a = p.attendance; const isHadir = a === 'checked_in'; const isTidak = a === 'no_show';
       return {
         n: i + 1, booking: p.booking || '—', name: p.name, phone: p.phone || '—', email: p.email || '—',
         payment: p.payment || '', hasPayment: !!p.payment, payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted),
         statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
-        attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
-        toggle: () => this.popupAttend(cpSched.schedule_id, p.booking_id, on ? 'none' : 'checked_in'),
+        hadirBg: isHadir ? C.green : 'transparent', hadirFg: isHadir ? '#fff' : C.muted,
+        tidakBg: isTidak ? C.amber : 'transparent', tidakFg: isTidak ? '#fff' : C.muted,
+        markHadir: () => this.popupAttend(cpSched.schedule_id, p.booking_id, isHadir ? 'none' : 'checked_in'),
+        markTidak: () => this.popupAttend(cpSched.schedule_id, p.booking_id, isTidak ? 'none' : 'no_show'),
         note: p.note || '', saveNote: (e) => this.saveNote(cpSched.schedule_id, p.booking_id, e && e.target ? e.target.value : ''),
       };
     });
