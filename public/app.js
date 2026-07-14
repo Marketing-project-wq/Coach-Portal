@@ -314,6 +314,37 @@ class Component extends DCLogic {
       .then((r) => this.setD({ registerRows: r.rows || [], registerMonths: r.months || [], registerCanCheck: !!r.canCheck }))
       .catch(() => {});
   }
+  saveNote(scheduleId, bookingId, note, refresh) {
+    if (!scheduleId || !bookingId) return;
+    if (this.MOCK) return;
+    this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/note', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, note: note || '' }) })
+      .then((r) => { if (r && r.needsMigration) this.toastMsg('Kolom catatan belum aktif — jalankan migrasi DB dulu.'); if (refresh === 'register') this.loadRegister(); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  exportAttendancePdf() {
+    const rows = this.state.d.registerRows || [];
+    if (!rows.length) return this.toastMsg('Belum ada data untuk di-export.');
+    const monthLbl = (this.state.d.registerMonths || []).find((m) => m.picked);
+    const title = 'Laporan Absensi Arena · ' + (monthLbl ? monthLbl.label : 'Semua bulan');
+    const headers = ['Tanggal', 'Jam', 'Nama Kelas', 'Coach', 'Nama GRO', 'Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
+    const secRows = rows.map((r) => [r.dateLabel, r.time, r.className, r.coach, r.gro || '—', r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+    this._printAttendance(title, headers, secRows);
+  }
+  _printAttendance(title, headers, rows) {
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
+    const tbody = rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 8 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
+      + '<style>@page{size:landscape;margin:12mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:18px;}h1{font-size:17px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:14px;}table{border-collapse:collapse;width:100%;font-size:10.5px;}th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.hadir{color:#1C8A4B;font-weight:700;}td.absen{color:#C77A00;font-weight:700;}@media print{body{padding:0;}tr{break-inside:avoid;}}</style>'
+      + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
+      + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></body></html>';
+    const ifr = document.createElement('iframe');
+    ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
+    document.body.appendChild(ifr);
+    const doc = ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
+    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); }, 350);
+    this.toastMsg('Menyiapkan PDF laporan absensi…');
+  }
   setRegisterMonth(e) { this.setState({ registerYm: (e && e.target ? e.target.value : '') || '' }); this.loadRegister(); }
   registerAttend(scheduleId, bookingId, status) {
     if (!scheduleId || !bookingId) return;
@@ -1091,6 +1122,7 @@ class Component extends DCLogic {
         attLabel: on ? 'Hadir' : 'Tidak hadir', attCol: on ? C.green : C.amber,
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
         toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'none' : 'checked_in'),
+        note: r.note || '', hasNote: !!r.note, saveNote: (e) => this.saveNote(r.scheduleId, r.bookingId, e && e.target ? e.target.value : '', 'register'),
       });
     }
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', participants: c.participants })) }));
@@ -1111,6 +1143,7 @@ class Component extends DCLogic {
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
         toggle: () => this.popupAttend(cpSched.schedule_id, p.booking_id, on ? 'none' : 'checked_in'),
+        note: p.note || '', saveNote: (e) => this.saveNote(cpSched.schedule_id, p.booking_id, e && e.target ? e.target.value : ''),
       };
     });
 
@@ -1122,6 +1155,7 @@ class Component extends DCLogic {
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
       hasRegister: registerGroups.length > 0, noRegister: registerGroups.length === 0,
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
+      registerCanNote: isGro, exportAttendance: () => this.exportAttendancePdf(),
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
       login: () => this.login(), logout: () => this.logout(),
       setLangEN: () => this.setLang('en'), setLangID: () => this.setLang('id'),

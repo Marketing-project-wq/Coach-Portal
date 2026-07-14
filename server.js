@@ -787,6 +787,16 @@ async function earliestYm(table, col, fallbackYm) {
   } catch (_e) { /* ignore */ }
   return fallbackYm;
 }
+// Fetch attendance rows, including the optional `note` column. If the column doesn't exist yet
+// (migration not run), transparently fall back to a select without it — so nothing breaks.
+let _attNoteOk = true;
+async function attendanceRows(whereClause) {
+  if (_attNoteOk) {
+    try { return await sb(`arena_class_attendance?select=booking_id,status,marked_by,note&${whereClause}`); }
+    catch (_e) { _attNoteOk = false; }
+  }
+  return await sb(`arena_class_attendance?select=booking_id,status,marked_by&${whereClause}`);
+}
 // Resolve a ?month=YYYY-MM (or blank = ALL data) to a [from,to] window.
 function monthWindow(ym, today) {
   if (/^\d{4}-\d{2}$/.test(ym || '')) {
@@ -817,7 +827,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
     const chunk = ids.slice(i, i + 120);
     const bk = await sbAll(`arena_class_bookings?select=id,schedule_id,full_name,phone,email,status&schedule_id=in.(${chunk.map(enc).join(',')})`);
     for (const b of bk || []) bookings.push(b);
-    const at = await sb(`arena_class_attendance?select=booking_id,status,marked_by&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    const at = await attendanceRows(`schedule_id=in.(${chunk.map(enc).join(',')})`);
     for (const a of at || []) attById[a.booking_id] = a;
   }
   const rows = bookings.filter((b) => b.status !== 'cancelled').map((b) => {
@@ -829,6 +839,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
       coach: sc.instructor || '', gro: a ? (a.marked_by || '') : '',
       participant: b.full_name || '(no name)', phone: b.phone || '', email: b.email || '',
       attendance: a ? a.status : null, // 'checked_in' | 'no_show' | null
+      note: a ? (a.note || '') : '',
       payment: b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')),
       scheduleId: b.schedule_id, bookingId: b.id,
     };
@@ -1063,8 +1074,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const canContact = isGro(s) || requireHC(s);
   const sel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email' : 'id,booking_code,full_name,status,created_at';
   const bookings = await sb(`arena_class_bookings?select=${sel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
-  const att = await sb(`arena_class_attendance?select=booking_id,status&schedule_id=eq.${enc(params.id)}`);
-  const attMap = {}; for (const a of att || []) attMap[a.booking_id] = a.status;
+  const att = await attendanceRows(`schedule_id=eq.${enc(params.id)}`);
+  const attMap = {}; const noteMap = {}; for (const a of att || []) { attMap[a.booking_id] = a.status; if (a.note) noteMap[a.booking_id] = a.note; }
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
   const started = !!sess0; const checkedOut = !!(sess0 && sess0.status === 'completed'); const canCheckout = !!(sess0 && sess0.status === 'ongoing');
   const today = todayJakarta();
@@ -1082,7 +1093,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
       classesLabel: classesLabelFor(h), menusLabel: menusLabelFor(h),
     };
-    if (canContact) { row.phone = b.phone || ''; row.email = b.email || ''; row.payment = b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')); }
+    if (canContact) { row.phone = b.phone || ''; row.email = b.email || ''; row.payment = b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')); row.note = noteMap[b.id] || ''; }
     return row;
   });
   // Class Menu (Option B) — the menu attached to this class + all menus to choose from.
@@ -1143,13 +1154,25 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
 route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   const body = await readBody(req);
   if (!body || !body.booking_id) return send(res, 400, { error: 'Invalid attendance data.' });
-  // status 'none' clears the mark entirely (un-click), so an accidental check-in can be undone.
+  // status 'none' clears the check-in (un-click). Prefer nulling status so any GRO note on the row
+  // survives; if the status column isn't nullable yet (migration not run), fall back to deleting.
   if (body.status === 'none') {
-    await sb(`arena_class_attendance?schedule_id=eq.${enc(params.id)}&booking_id=eq.${enc(body.booking_id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    const where = `arena_class_attendance?schedule_id=eq.${enc(params.id)}&booking_id=eq.${enc(body.booking_id)}`;
+    try { await sb(where, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: null }) }); }
+    catch (_e) { await sb(where, { method: 'DELETE', headers: { Prefer: 'return=minimal' } }); }
     return send(res, 200, { ok: true });
   }
   if (!['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
   await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
+  return send(res, 200, { ok: true });
+});
+// GRO writes a free-text note for a participant (shown in the detailed attendance report).
+route('POST', '/api/coach/class/:id/note', async (req, res, s, q, params) => {
+  const body = await readBody(req);
+  if (!body || !body.booking_id) return send(res, 400, { error: 'Invalid note data.' });
+  try {
+    await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, note: String(body.note || '').slice(0, 300), marked_by: s.c }) });
+  } catch (_e) { return send(res, 200, { ok: false, needsMigration: true }); }
   return send(res, 200, { ok: true });
 });
 
