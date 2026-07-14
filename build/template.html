@@ -1160,7 +1160,7 @@
         <span style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:100px;background:var(--bg);border:1px solid var(--border2);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">{{ cpQuota }}</span>
       </div>
       <sc-if value="{{ cpHasParticipants }}">
-      <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex:1;min-height:0;">
+      <div class="pop-table" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex:1;min-height:0;">
         <div style="overflow:auto;max-height:52vh;">
           <div style="min-width:920px;font-size:12.5px;">
             <div style="display:grid;grid-template-columns:150px 150px 130px 180px 100px 90px 150px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
@@ -1179,6 +1179,21 @@
             </sc-for>
           </div>
         </div>
+      </div>
+      <div class="pop-cards" style="overflow:auto;max-height:58vh;">
+        <sc-for list="{{ cpParticipants }}" as="p">
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-bottom:10px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+            <div style="min-width:0;"><div style="font-weight:800;font-size:14.5px;">{{ p.name }}</div><div style="font-size:11px;color:var(--muted2);font-family:'JetBrains Mono';margin-top:2px;">{{ p.booking }}</div></div>
+            <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;background:{{ p.statusBg }};color:{{ p.statusCol }};flex-shrink:0;">{{ p.statusLabel }}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:9px;font-family:'JetBrains Mono';line-height:1.7;">&#128222; {{ p.phone }}<br>&#9993; {{ p.email }}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;">
+            <sc-if value="{{ p.hasPayment }}"><span style="font-size:11px;font-weight:700;color:{{ p.payCol }};border:1px solid var(--border2);border-radius:100px;padding:4px 12px;">Payment: {{ p.payment }}</span></sc-if>
+            <sc-if value="{{ cpCanCheck }}"><button onclick="{{ p.toggle }}" style="border:1px solid var(--border2);background:{{ p.attBg }};color:{{ p.attFg }};border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer;">Hadir</button></sc-if>
+          </div>
+        </div>
+        </sc-for>
       </div>
       </sc-if>
       <sc-if value="{{ cpNoParticipants }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px;text-align:center;color:var(--muted);">Belum ada peserta di kelas ini.</div></sc-if>

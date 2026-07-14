@@ -1142,7 +1142,13 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
 });
 route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   const body = await readBody(req);
-  if (!body || !body.booking_id || !['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
+  if (!body || !body.booking_id) return send(res, 400, { error: 'Invalid attendance data.' });
+  // status 'none' clears the mark entirely (un-click), so an accidental check-in can be undone.
+  if (body.status === 'none') {
+    await sb(`arena_class_attendance?schedule_id=eq.${enc(params.id)}&booking_id=eq.${enc(body.booking_id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    return send(res, 200, { ok: true });
+  }
+  if (!['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
   await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
   return send(res, 200, { ok: true });
 });

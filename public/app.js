@@ -226,7 +226,7 @@ class Component extends DCLogic {
     if (!scheduleId || !bookingId) return;
     if (this.MOCK) {
       const cp = this.state.classPopup; if (!cp) return;
-      const participants = (cp.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: p.attendance === status ? null : status }) : p);
+      const participants = (cp.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: status === 'none' ? null : status }) : p);
       this.setState({ classPopup: Object.assign({}, cp, { participants }) });
       return;
     }
@@ -294,7 +294,7 @@ class Component extends DCLogic {
     if (!scheduleId || !bookingId) return;
     if (this.MOCK) {
       const cd = this.state.d.classDetail; if (!cd) return;
-      const participants = (cd.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: p.attendance === status ? null : status }) : p);
+      const participants = (cd.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: status === 'none' ? null : status }) : p);
       this.setD({ classDetail: Object.assign({}, cd, { participants }) });
       return;
     }
@@ -318,7 +318,7 @@ class Component extends DCLogic {
   registerAttend(scheduleId, bookingId, status) {
     if (!scheduleId || !bookingId) return;
     if (this.MOCK) {
-      const rows = (this.state.d.registerRows || []).map((r) => (r.scheduleId === scheduleId && r.bookingId === bookingId) ? Object.assign({}, r, { attendance: r.attendance === status ? null : status, gro: r.attendance === status ? '' : ((this.state.user && this.state.user.name) || 'GRO') }) : r);
+      const rows = (this.state.d.registerRows || []).map((r) => (r.scheduleId === scheduleId && r.bookingId === bookingId) ? Object.assign({}, r, { attendance: status === 'none' ? null : status, gro: status === 'none' ? '' : ((this.state.user && this.state.user.name) || 'GRO') }) : r);
       this.setD({ registerRows: rows });
       return;
     }
@@ -887,7 +887,7 @@ class Component extends DCLogic {
       const on = p.attendance === 'checked_in';
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
-        attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'no_show' : 'checked_in') };
+        attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'none' : 'checked_in') };
     });
     const showCheckin = isGro; // GRO checks participants in/out from the class detail
     // sub options
@@ -1089,7 +1089,7 @@ class Component extends DCLogic {
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
         attLabel: on ? 'Hadir' : (a === 'no_show' ? 'Absen' : '—'), attCol: on ? C.green : (a === 'no_show' ? C.red : C.muted2),
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
-        toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'no_show' : 'checked_in'),
+        toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'none' : 'checked_in'),
       });
     }
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', participants: c.participants })) }));
@@ -1109,7 +1109,7 @@ class Component extends DCLogic {
         statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
-        toggle: () => this.popupAttend(cpSched.schedule_id, p.booking_id, on ? 'no_show' : 'checked_in'),
+        toggle: () => this.popupAttend(cpSched.schedule_id, p.booking_id, on ? 'none' : 'checked_in'),
       };
     });
 

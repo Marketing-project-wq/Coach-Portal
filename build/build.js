@@ -101,10 +101,10 @@ const arenaCalPanel = '<sc-if value="{{ showArenaCal }}">'
       + '<div style="display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--muted);"><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt);display:inline-block;"></span>Kelas</span><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:#2B3242;display:inline-block;"></span>Venue Booking</span></div></div>'
       + '<div style="display:flex;gap:8px;"><button onclick="{{ arenaCalPrev }}" style="' + calNavBtn + '">&#8249;</button><button onclick="{{ arenaCalNext }}" style="' + calNavBtn + '">&#8250;</button></div>'
     + '</div>'
-    + '<div style="overflow-x:auto;"><div style="min-width:1040px;">'
+    + '<div style="overflow-x:auto;"><div class="arena-cal-inner" style="min-width:1040px;">'
       + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;"><sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0;">{{ d }}</div></sc-for></div>'
       + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">'
-        + '<sc-for list="{{ arenaCalCells }}" as="c"><div style="min-height:120px;border-radius:9px;background:{{ c.bg }};border:1px solid {{ c.border }};padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;">'
+        + '<sc-for list="{{ arenaCalCells }}" as="c"><div class="arena-cal-cell" style="min-height:120px;border-radius:9px;background:{{ c.bg }};border:1px solid {{ c.border }};padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;">'
           + '<sc-if value="{{ c.show }}"><div style="font-size:12px;font-weight:800;color:{{ c.numCol }};margin-bottom:1px;">{{ c.day }}</div>'
           + '<sc-for list="{{ c.events }}" as="e"><div onclick="{{ e.open }}" style="background:{{ e.bg }};color:#fff;border-radius:5px;padding:3px 6px;font-size:10px;line-height:1.25;cursor:{{ e.cursor }};display:flex;align-items:center;gap:4px;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.text }}</span><sc-if value="{{ e.hasPax }}"><span style="background:rgba(0,0,0,.28);border-radius:100px;padding:0 6px;font-weight:700;flex-shrink:0;">{{ e.pax }}</span></sc-if></div></sc-for>'
           + '</sc-if>'
@@ -410,6 +410,20 @@ const responsiveCss = `
   html, body { margin:0; padding:0; min-height:100%; background:linear-gradient(135deg,#F2E9E6 0%,#EDEBEA 46%,#E9EEF3 100%) fixed; font-family:'Manrope',system-ui,sans-serif; }
   .hamburger { display:none; }
   .menu-backdrop { display:none; }
+  .pop-cards { display:none; }
+  @media (max-width: 860px) {
+    /* Class popup: swap the wide table for stacked participant cards (Hadir toggle always reachable) */
+    .pop-table { display:none !important; }
+    .pop-cards { display:block !important; }
+    [style*="max-width:920px"][style*="max-height:88vh"] { padding:18px 15px !important; border-radius:16px !important; }
+    /* Kalender Arena: tighter cells so more of the week is visible before scrolling */
+    .arena-cal-inner { min-width:660px !important; }
+    .arena-cal-cell { min-height:92px !important; }
+  }
+  @media (max-width: 560px) {
+    .arena-cal-inner { min-width:560px !important; }
+    .arena-cal-cell { min-height:82px !important; }
+  }
   @media (max-width: 860px) {
     /* login: stack, hide the big hero, show only the form */
     [style*="grid-template-columns:1.05fr .95fr"] { grid-template-columns:minmax(0,1fr) !important; }
