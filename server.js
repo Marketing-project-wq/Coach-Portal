@@ -1324,7 +1324,7 @@ route('POST', '/api/admin/coaches', async (req, res, s) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);
   if (!body || !body.name) return send(res, 400, { error: 'Name is required.' });
-  const username = (body.username || String(body.name).replace(/^coach\s*/i, '').trim().split(/\s+/)[0]).toLowerCase();
+  const username = (body.username || String(body.name).replace(/^coach\s*/i, '').trim().split(/\s+/)[0]).toLowerCase().trim();
   const pw = body.password || genPw();
   await sb('arena_coach_users', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username, password_hash: hashPassword(pw), password_plain: pw, coach_name: body.name.replace(/^coach\s*/i, '').trim(), display_name: body.name.trim(), role: body.role || 'coach', email: body.email || (username + '@20fit.id'), phone: body.phone || null }) });
   return send(res, 200, { ok: true, username, password: pw });
