@@ -422,7 +422,7 @@ const responsiveCss = `
     /* Class popup: swap the wide table for stacked participant cards (Hadir toggle always reachable) */
     .pop-table { display:none !important; }
     .pop-cards { display:block !important; }
-    [style*="max-width:920px"][style*="max-height:88vh"] { padding:18px 15px !important; border-radius:16px !important; }
+    .pop-modal { padding:18px 15px !important; border-radius:16px !important; }
     /* Kalender Arena: tighter cells so more of the week is visible before scrolling */
     .arena-cal-inner { min-width:660px !important; }
     .arena-cal-cell { min-height:92px !important; }

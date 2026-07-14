@@ -137,7 +137,7 @@
     /* Class popup: swap the wide table for stacked participant cards (Hadir toggle always reachable) */
     .pop-table { display:none !important; }
     .pop-cards { display:block !important; }
-    [style*="max-width:920px"][style*="max-height:88vh"] { padding:18px 15px !important; border-radius:16px !important; }
+    .pop-modal { padding:18px 15px !important; border-radius:16px !important; }
     /* Kalender Arena: tighter cells so more of the week is visible before scrolling */
     .arena-cal-inner { min-width:660px !important; }
     .arena-cal-cell { min-height:92px !important; }
@@ -845,7 +845,7 @@
   <!-- ===== CLASS POPUP (GRO) ===== -->
   <sc-if value="{{ showClassPopup }}">
   <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeClassPopup }}">
-    <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:26px 28px;max-width:920px;width:100%;max-height:88vh;display:flex;flex-direction:column;">
+    <div onclick="{{ stopProp }}" class="pop-modal" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:26px 28px;max-width:1160px;width:100%;max-height:88vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
         <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;"><span style="width:20px;height:20px;border-radius:6px;background:var(--volt);margin-top:4px;flex-shrink:0;"></span><div style="min-width:0;"><div style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;letter-spacing:-.01em;text-transform:uppercase;">{{ cpTitle }}</div><div style="font-size:13px;color:var(--muted);margin-top:5px;">{{ cpSubtitle }}</div></div></div>
         <button onclick="{{ closeClassPopup }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
@@ -858,12 +858,12 @@
       <sc-if value="{{ cpHasParticipants }}">
       <div class="pop-table" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex:1;min-height:0;">
         <div style="overflow:auto;max-height:52vh;">
-          <div style="min-width:1050px;font-size:12.5px;">
-            <div style="display:grid;grid-template-columns:140px 140px 120px 160px 90px 78px 116px 200px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
+          <div style="min-width:1015px;font-size:12.5px;">
+            <div style="display:grid;grid-template-columns:118px 130px 118px 176px 86px 76px 100px 206px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
               <div style="padding:12px 14px;">BOOKING CODE</div><div style="padding:12px 14px;">NAMA</div><div style="padding:12px 14px;">TELP</div><div style="padding:12px 14px;">EMAIL</div><div style="padding:12px 14px;">STATUS</div><div style="padding:12px 14px;">PAYMENT</div><div style="padding:12px 14px;">ABSENSI</div><div style="padding:12px 14px;">NOTE</div>
             </div>
             <sc-for list="{{ cpParticipants }}" as="p">
-            <div style="display:grid;grid-template-columns:140px 140px 120px 160px 90px 78px 116px 200px;border-top:1px solid var(--border);align-items:center;">
+            <div style="display:grid;grid-template-columns:118px 130px 118px 176px 86px 76px 100px 206px;border-top:1px solid var(--border);align-items:center;">
               <div style="padding:11px 14px;font-family:'JetBrains Mono';color:var(--muted);font-size:11.5px;">{{ p.booking }}</div>
               <div style="padding:11px 14px;font-weight:700;">{{ p.name }}</div>
               <div style="padding:11px 14px;font-family:'JetBrains Mono';color:var(--muted);">{{ p.phone }}</div>
