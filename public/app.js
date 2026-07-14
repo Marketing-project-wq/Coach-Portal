@@ -46,7 +46,7 @@ class Component extends DCLogic {
     }
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, registerRows: [], registerMonths: [], registerCanCheck: false };
+    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -170,7 +170,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Failed to load.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (['gro', 'hc', 'admin'].indexOf(this.state.role) >= 0) this.loadRegister(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); }
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -283,23 +283,11 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(status === 'checked_in' ? 'Marked present' : 'Marked no-show'); this.openClass(scheduleId); })
       .catch((e) => this.toastMsg(e.message));
   }
-  loadRegister() {
+  loadArenaCalendar(ym) {
     if (this.MOCK) return;
-    this.api('/api/attendance/register?month=' + (this.state.registerYm || ''))
-      .then((r) => this.setD({ registerRows: r.rows || [], registerMonths: r.months || [], registerCanCheck: !!r.canCheck }))
+    this.api('/api/gro/calendar' + (ym ? ('?ym=' + ym) : ''))
+      .then((r) => this.setD({ arenaCalCells: r.cells || [], arenaCalLabel: r.monthLabel || '', arenaCalYm: r.ym || '', arenaCalPrevYm: r.prevYm || '', arenaCalNextYm: r.nextYm || '' }))
       .catch(() => {});
-  }
-  setRegisterMonth(e) { this.setState({ registerYm: (e && e.target ? e.target.value : '') || '' }); this.loadRegister(); }
-  registerAttend(scheduleId, bookingId, status) {
-    if (!scheduleId || !bookingId) return;
-    if (this.MOCK) {
-      const rows = (this.state.d.registerRows || []).map((r) => (r.scheduleId === scheduleId && r.bookingId === bookingId) ? Object.assign({}, r, { attendance: r.attendance === status ? null : status, gro: r.attendance === status ? '' : (this.state.user && this.state.user.name) || 'GRO' }) : r);
-      this.setD({ registerRows: rows });
-      return;
-    }
-    this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
-      .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : 'Peserta ditandai absen'); this.loadRegister(); })
-      .catch((e) => this.toastMsg(e.message));
   }
   setClassMenu(menuId) {
     const cd = this.state.d.classDetail && this.state.d.classDetail.schedule;
@@ -854,6 +842,7 @@ class Component extends DCLogic {
     const coType = co ? (co.type || 'Class') : '', coDate = co ? (co.dateLabel || '') : '';
     const coCheckin = co ? (co.checkin || '') : '', coCheckout = co ? (co.checkout || '') : '';
     const coDuration = co && co.durationMin != null ? (co.durationMin + ' min') : '', coParticipants = co && co.participants != null ? String(co.participants) : '0';
+    const coAttended = co && co.attended != null ? String(co.attended) : '0';
     const clsId = cd.schedule_id;
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => {
       const r = this.recencyLabel(p.daysSince); const v = p.visits || 0;
@@ -862,6 +851,7 @@ class Component extends DCLogic {
       const inBg = att === 'checked_in' ? C.green : 'transparent', inFg = att === 'checked_in' ? '#fff' : C.muted;
       const noBg = att === 'no_show' ? C.red : 'transparent', noFg = att === 'no_show' ? '#fff' : C.muted;
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
+        phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
         inBg, inFg, noBg, noFg, markIn: () => this.markAttend(clsId, p.booking_id, 'checked_in'), markNo: () => this.markAttend(clsId, p.booking_id, 'no_show') };
     });
     const showCheckin = isGro; // GRO checks participants in/out from the class detail
@@ -1030,23 +1020,20 @@ class Component extends DCLogic {
     const permRaw = [['View own class schedule & participants', 1, 1, 1], ['Check in to own classes', 1, 1, 1], ['Request coverage (own classes)', 1, 1, 1], ['View all coaches’ schedules', 0, 1, 1], ['Change teaching coach (any class)', 0, 1, 1], ['Approve / Cancel coverage', 0, 1, 1], ['View all coaches’ attendance', 0, 1, 1], ['Access & export all-coach reports', 0, 1, 1], ['Manage appreciation message templates', 0, 0, 1], ['Add accounts & set initial password', 0, 0, 1], ['Reset coach passwords', 0, 0, 1], ['Deactivate coach accounts', 0, 0, 1], ['Set user roles', 0, 0, 1]];
     const perms = permRaw.map((p) => ({ act: p[0], c: p[1] ? Y : N, cCol: p[1] ? C.volt : C.muted2, h: p[2] ? Y : N, hCol: p[2] ? C.volt : C.muted2, a: p[3] ? Y : N, aCol: p[3] ? C.volt : C.muted2 }));
 
-    // Attendance register (Schedule screen, below the calendar) — GRO checks in; HC/Admin read the report.
-    const showRegister = isGro || isHC;
-    const registerCanCheck = !!D.registerCanCheck && isGro;
-    const registerRows = (D.registerRows || []).map((r) => {
-      const a = r.attendance; // 'checked_in' | 'no_show' | null
-      return Object.assign({}, r, {
-        groShown: r.gro || '—', phoneShown: r.phone || '—', emailShown: r.email || '—',
-        attLabel: a === 'checked_in' ? 'Hadir' : (a === 'no_show' ? 'Absen' : '—'),
-        attCol: a === 'checked_in' ? C.green : (a === 'no_show' ? C.red : C.muted2),
-        payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
-        inBg: a === 'checked_in' ? C.green : 'transparent', inFg: a === 'checked_in' ? '#ffffff' : C.muted,
-        noBg: a === 'no_show' ? C.red : 'transparent', noFg: a === 'no_show' ? '#ffffff' : C.muted,
-        markIn: () => this.registerAttend(r.scheduleId, r.bookingId, 'checked_in'),
-        markNo: () => this.registerAttend(r.scheduleId, r.bookingId, 'no_show'),
-      });
+    // Kalender Arena (GRO Schedule screen) — a full month grid; each day lists its class bars
+    // (red, with pax + clickable to open per-class check-in) and venue bookings (dark).
+    const showArenaCal = isGro;
+    const arenaCalCells = (D.arenaCalCells || []).map((c) => {
+      if (c.blank) return { show: false, bg: 'transparent', border: 'transparent', day: '', numCol: C.muted, events: [] };
+      return {
+        show: true, day: c.day, date: c.date,
+        bg: c.isToday ? C.voltDim : 'var(--panel2)', border: c.isToday ? C.volt : 'var(--border)',
+        numCol: c.isToday ? C.volt : C.text,
+        events: (c.events || []).map((e) => e.kind === 'venue'
+          ? { text: (e.timeRange || e.time) + ' ' + e.label, bg: '#2B3242', cursor: 'default', hasPax: false, pax: '', open: () => {} }
+          : { text: e.time + ' ' + e.label, bg: C.volt, cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClass(e.scheduleId) }),
+      };
     });
-    const registerMonthOpts = D.registerMonths || [];
 
     return {
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
@@ -1076,10 +1063,9 @@ class Component extends DCLogic {
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
       venueHidden, hasVenueHidden,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
-      showDayCards: !isGro,
-      showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerRows,
-      hasRegister: registerRows.length > 0, noRegister: registerRows.length === 0,
-      registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
+      showDayCards: !isGro, showSimpleCal: !isGro,
+      showArenaCal, arenaCalCells, arenaCalLabel: D.arenaCalLabel || '',
+      arenaCalPrev: () => this.loadArenaCalendar(this.state.d.arenaCalPrevYm), arenaCalNext: () => this.loadArenaCalendar(this.state.d.arenaCalNextYm),
       showMenuNav: !isGro, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
       openMenuModal: () => this.openMenuModal(),
       showMenuModal: !!st.menuModal, menuModalTitle: (mb && mb.id) ? 'Edit Menu' : 'Add Menu',
@@ -1116,7 +1102,7 @@ class Component extends DCLogic {
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
-      coType, coDate, coCheckin, coCheckout, coDuration, coParticipants,
+      coType, coDate, coCheckin, coCheckout, coDuration, coParticipants, coAttended,
       submitSub: () => this.submitSub(), submitAddCoach: () => this.submitAddCoach(), goAddCoach: () => this.go('addcoach'), exportToast: () => this.exportToast(),
       exportCSV: () => this.exportCSV(), exportPDF: () => this.exportPDF(), randomPw: () => this.randomPw(), addTemplate: () => this.addTemplate(),
       showReset: !!st.reset, resetName: st.reset || '', resetPwd: st.resetPwd, closeReset: () => this.setState({ reset: null }), confirmReset: () => this.confirmReset(),
@@ -1162,13 +1148,17 @@ class Component extends DCLogic {
       { rank: 3, name: 'Corporate Group', count: 4, lastLabel: '5 Jul' }, { rank: 4, name: 'Andra Wijaya', count: 3, lastLabel: '3 Jul' },
       { rank: 5, name: 'Woro Liana', count: 2, lastLabel: '1 Jul' },
     ];
-    d.registerMonths = d.memberMonths;
-    d.registerCanCheck = true;
-    d.registerRows = [
-      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '07:00', className: 'HYROX Complete', coach: 'Nando', gro: 'GRO Arena', participant: 'Andra Wijaya', phone: '0812-3456-7890', email: 'andra@email.com', attendance: 'checked_in', payment: 'Lunas', scheduleId: 'sch1', bookingId: 'b1' },
-      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '07:00', className: 'HYROX Complete', coach: 'Nando', gro: '', participant: 'Sari Putri', phone: '0813-1111-2222', email: 'sari@email.com', attendance: null, payment: 'Belum', scheduleId: 'sch1', bookingId: 'b2' },
-      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '17:00', className: 'HYROX Foundation', coach: 'Elsen', gro: 'GRO Arena', participant: 'Woro Liana', phone: '0857-9999-0000', email: 'woro@email.com', attendance: 'no_show', payment: 'Lunas', scheduleId: 'sch2', bookingId: 'b3' },
-    ];
+    d.arenaCalLabel = 'July 2026'; d.arenaCalYm = '2026-07'; d.arenaCalPrevYm = '2026-06'; d.arenaCalNextYm = '2026-08';
+    d.arenaCalCells = (() => {
+      const cells = [{ blank: true }, { blank: true }]; // July 1 2026 = Wednesday (Mon-first offset 2)
+      const ev = {
+        1: [{ kind: 'class', time: '07:00', label: '20FIT Arena HYROX Complete Class', pax: 12, scheduleId: 'sch1' }, { kind: 'class', time: '18:30', label: '20FIT Arena HYROX Foundation Class', pax: 8, scheduleId: 'sch2' }],
+        5: [{ kind: 'class', time: '08:00', label: '20FIT Arena HYROX Complete Class', pax: 9, scheduleId: 'sch3' }, { kind: 'class', time: '10:00', label: '20FIT Arena HYROX Complete Class', pax: 13, scheduleId: 'sch4' }, { kind: 'venue', timeRange: '11:00-15:00', label: 'manda (Brand Mond)' }],
+        14: [{ kind: 'class', time: '18:30', label: '20FIT Special Class', pax: 6, scheduleId: 'sch5' }, { kind: 'class', time: '19:30', label: '20FIT Arena HYROX Foundation Class', pax: 0, scheduleId: 'sch6' }],
+      };
+      for (let dd = 1; dd <= 31; dd++) cells.push({ blank: false, day: dd, date: '2026-07-' + String(dd).padStart(2, '0'), isToday: dd === 14, events: ev[dd] || [] });
+      return cells;
+    })();
     d.reviewAvg = 4.6; d.reviewCount = 2;
     d.reviewCats = [{ label: 'Clear Instructions', avg: '4.8' }, { label: 'Technique Correction', avg: '4.5' }, { label: 'Member Support', avg: '4.9' }, { label: 'Professionalism', avg: '4.7' }, { label: 'Class Management', avg: '4.6' }];
     d.reviews = [{ coach: 'Rheza', cls: 'HYROX Complete', name: 'Andra Wijaya', rating: 5, stars: '★★★★★', comment: 'The coach is patient & clear, the class is fun!', tags: ['Clear instructions', 'Patient & supportive', 'Fun class'], date: '1 Jul' }, { coach: 'Brian', cls: 'HYROX Foundation', name: 'Sari Putri', rating: 4, stars: '★★★★☆', comment: 'External coach, solid session.', tags: ['On time', 'Motivating'], date: '28 Jun' }];
@@ -1186,7 +1176,7 @@ class Component extends DCLogic {
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
     const amrapContent = JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [{ label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski' }, { amount: '150', unit: 'meter', name: 'row' }, { amount: '1', unit: 'lap', name: 'run' }] }] });
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Confirmed', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', phone: '0812-3456-7890', email: 'andra@email.com', payment: 'Lunas', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Confirmed', phone: '0813-1111-2222', email: 'sari@email.com', payment: 'Belum', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
       menuOptions: [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation', content: 'Warm up + technique drills' }],
       linkedMenu: { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent } };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];

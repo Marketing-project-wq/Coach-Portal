@@ -519,6 +519,47 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
   });
 });
 
+// ===== GRO/HC: full-month "Kalender Arena" — each day lists its class bars (with pax) + venue bookings =====
+route('GET', '/api/gro/calendar', async (req, res, s, q) => {
+  if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Not available for this role.' });
+  const today = todayJakarta();
+  const ym = (q.ym && /^\d{4}-\d{2}$/.test(q.ym)) ? q.ym : today.slice(0, 7);
+  const year = parseInt(ym.slice(0, 4), 10); const month = parseInt(ym.slice(5, 7), 10);
+  const lastDay = new Date(year, month, 0).getDate();
+  const mStart = `${ym}-01`; const mEnd = `${ym}-${String(lastDay).padStart(2, '0')}`;
+  const types = await classTypes();
+  const scheds = await allSchedules(mStart, mEnd);
+  const counts = await bookingCounts(scheds.map((x) => x.id));
+  const byDay = {};
+  for (const sc of scheds) {
+    (byDay[sc.schedule_date] = byDay[sc.schedule_date] || []).push({
+      kind: 'class', time: hhmm(sc.start_time), sort: hhmm(sc.start_time),
+      label: (types[sc.class_type_id] || {}).name || 'Class',
+      pax: (counts[sc.id] || {}).confirmed || 0, scheduleId: sc.id,
+    });
+  }
+  const vb = (await sbAll(`arena_bookings?select=full_name,booking_date,start_time,end_time,status&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
+  for (const b of vb) {
+    if (String(b.status || '').toLowerCase() === 'cancelled') continue;
+    (byDay[b.booking_date] = byDay[b.booking_date] || []).push({
+      kind: 'venue', time: hhmm(b.start_time), sort: hhmm(b.start_time),
+      timeRange: hhmm(b.start_time) + (b.end_time ? ('-' + hhmm(b.end_time)) : ''),
+      label: b.full_name || 'Venue booking',
+    });
+  }
+  for (const d in byDay) byDay[d].sort((a, b) => a.sort.localeCompare(b.sort));
+  const firstDow = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Monday-first
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push({ blank: true });
+  for (let d = 1; d <= lastDay; d++) { const ds = `${ym}-${String(d).padStart(2, '0')}`; cells.push({ blank: false, day: d, date: ds, isToday: ds === today, events: byDay[ds] || [] }); }
+  const pm = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
+  const nm = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  return send(res, 200, {
+    ym, monthLabel: `${MON_FULL[month - 1]} ${year}`, cells,
+    prevYm: `${pm.y}-${String(pm.m).padStart(2, '0')}`, nextYm: `${nm.y}-${String(nm.m).padStart(2, '0')}`,
+  });
+});
+
 // ===== VENUE BOOKING — sourced from the Admin Hub `arena_bookings` table =====
 // Coaches that can be assigned (all coaches + head coaches, external included; excludes admin).
 async function assignableCoaches() {
@@ -1017,9 +1058,11 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'This is not your class.' });
   const types = await classTypes();
   const t = types[sc.class_type_id] || {};
-  // Note: participant contact (phone/email) is intentionally NOT selected/returned —
-  // coaches and head coaches must not see customer contact details.
-  const bookings = await sb(`arena_class_bookings?select=id,booking_code,full_name,status,created_at&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
+  // Participant contact (phone/email) + payment status are exposed only to GRO / HC / Admin
+  // (for check-in); regular coaches must not see customer contact details.
+  const canContact = isGro(s) || requireHC(s);
+  const sel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email' : 'id,booking_code,full_name,status,created_at';
+  const bookings = await sb(`arena_class_bookings?select=${sel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
   const att = await sb(`arena_class_attendance?select=booking_id,status&schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; for (const a of att || []) attMap[a.booking_id] = a.status;
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
@@ -1028,16 +1071,19 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // For co-taught classes use the logged-in coach's own history; HC/admin keep the class instructor.
   const histCoach = s.r === 'coach' ? s.c : sc.instructor;
   const attHist = await coachAttendanceMap(histCoach, today); // visit history for this class's coach
-  // Class bookings that are still pending payment are excluded (only confirmed count as participants).
-  const participants = (bookings || []).filter((b) => b.status !== 'cancelled' && b.status !== 'pending_payment').map((b) => {
+  // Coaches see only confirmed (paid) participants; GRO/HC also see pending-payment guests so they
+  // can check them in and read the payment column.
+  const participants = (bookings || []).filter((b) => b.status !== 'cancelled' && (canContact || b.status !== 'pending_payment')).map((b) => {
     const h = attHist[String(b.full_name || '').trim().toLowerCase()] || null;
-    return {
+    const row = {
       booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)',
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
       classesLabel: classesLabelFor(h), menusLabel: menusLabelFor(h),
     };
+    if (canContact) { row.phone = b.phone || ''; row.email = b.email || ''; row.payment = b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')); }
+    return row;
   });
   // Class Menu (Option B) — the menu attached to this class + all menus to choose from.
   const linkedMenuId = await classMenuLink(params.id);
@@ -1085,12 +1131,14 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
   if (!sess) return send(res, 400, { error: 'Check in first before you can check out.' });
   await sb(`arena_class_sessions?schedule_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'completed' }) });
   const participants = await sbCount(`arena_class_bookings?select=id&status=eq.confirmed&schedule_id=eq.${enc(params.id)}`);
+  // Attendance the GRO recorded for this class — the count of guests actually present.
+  const attended = await sbCount(`arena_class_attendance?select=booking_id&status=eq.checked_in&schedule_id=eq.${enc(params.id)}`);
   const types = await classTypes();
   const nowIso = new Date().toISOString();
   const checkinIso = sess.created_at || nowIso;
   const durationMin = Math.max(0, Math.round((new Date(nowIso) - new Date(checkinIso)) / 60000));
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
-  return send(res, 200, { ok: true, recap: { type: shortType((types[sc.class_type_id] || {}).name), dateLabel: dLabel(sc.schedule_date), checkin: hm(checkinIso), checkout: hm(nowIso), durationMin, participants } });
+  return send(res, 200, { ok: true, recap: { type: shortType((types[sc.class_type_id] || {}).name), dateLabel: dLabel(sc.schedule_date), checkin: hm(checkinIso), checkout: hm(nowIso), durationMin, participants, attended } });
 });
 route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   const body = await readBody(req);

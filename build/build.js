@@ -90,9 +90,32 @@ const calPanel = '<div style="background:var(--panel);border:1px solid var(--bor
   + '</div>'
   + '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--muted);"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt-dim);border:1px solid rgba(214,255,61,.3);display:inline-block;"></span>Has a class · click a date to see its schedule</div>'
   + '</div>';
-// Calendar stays for everyone; the per-day class cards below it are hidden for GRO
-// (they work from the Absensi table instead) — open the wrapper right after the calendar.
-template = template.replace(jadwalHead, calPanel + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
+// "Kalender Arena" — a full-month grid where each day lists its class bars (red, with pax,
+// clickable to open per-class check-in) and venue bookings (dark). Shown for GRO in place of
+// the simple month calendar.
+const calNavBtn = 'background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;';
+const arenaCalPanel = '<sc-if value="{{ showArenaCal }}">'
+  + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:22px;">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
+      + '<div><div style="font-family:\'Archivo\';font-weight:900;font-size:20px;letter-spacing:-.01em;">Kalender Arena &#183; {{ arenaCalLabel }}</div>'
+      + '<div style="display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--muted);"><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt);display:inline-block;"></span>Kelas</span><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:#2B3242;display:inline-block;"></span>Venue Booking</span></div></div>'
+      + '<div style="display:flex;gap:8px;"><button onclick="{{ arenaCalPrev }}" style="' + calNavBtn + '">&#8249;</button><button onclick="{{ arenaCalNext }}" style="' + calNavBtn + '">&#8250;</button></div>'
+    + '</div>'
+    + '<div style="overflow-x:auto;"><div style="min-width:1040px;">'
+      + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;"><sc-for list="{{ calDow }}" as="d"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0;">{{ d }}</div></sc-for></div>'
+      + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">'
+        + '<sc-for list="{{ arenaCalCells }}" as="c"><div style="min-height:120px;border-radius:9px;background:{{ c.bg }};border:1px solid {{ c.border }};padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;">'
+          + '<sc-if value="{{ c.show }}"><div style="font-size:12px;font-weight:800;color:{{ c.numCol }};margin-bottom:1px;">{{ c.day }}</div>'
+          + '<sc-for list="{{ c.events }}" as="e"><div onclick="{{ e.open }}" style="background:{{ e.bg }};color:#fff;border-radius:5px;padding:3px 6px;font-size:10px;line-height:1.25;cursor:{{ e.cursor }};display:flex;align-items:center;gap:4px;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.text }}</span><sc-if value="{{ e.hasPax }}"><span style="background:rgba(0,0,0,.28);border-radius:100px;padding:0 6px;font-weight:700;flex-shrink:0;">{{ e.pax }}</span></sc-if></div></sc-for>'
+          + '</sc-if>'
+        + '</div></sc-for>'
+      + '</div>'
+    + '</div></div>'
+  + '</div>'
+  + '</sc-if>';
+// Simple month calendar stays for coach/HC/admin; GRO gets the Kalender Arena above instead.
+// The per-day class cards below are hidden for GRO — open that wrapper right after the calendars.
+template = template.replace(jadwalHead, '<sc-if value="{{ showSimpleCal }}">' + calPanel + '</sc-if>' + arenaCalPanel + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
 // Empty state when the selected day has no classes
 const noClassBox = '<sc-if value="{{ noClasses }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px 24px;text-align:center;color:var(--muted);">No classes on this date.</div></sc-if>';
 template = template.replace(jadwalHead, jadwalHead + noClassBox);
