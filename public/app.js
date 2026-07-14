@@ -170,7 +170,7 @@ class Component extends DCLogic {
   }
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Failed to load.'); };
-    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); if (['gro', 'hc', 'admin'].indexOf(this.state.role) >= 0) this.loadRegister(); }
+    if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); if (['hc', 'admin'].indexOf(this.state.role) >= 0) this.loadRegister(); }
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -1102,10 +1102,10 @@ class Component extends DCLogic {
       };
     });
 
-    // Rekap Absensi (below the calendar) — the flat register rows grouped by date → class.
-    // GRO can check in inline; HC/Admin see it read-only.
-    const showRegister = isGro || isHC;
-    const registerCanCheck = !!D.registerCanCheck && isGro;
+    // Rekap Absensi (below the calendar) — the attendance report, grouped by date → class.
+    // Shown to Head Coach / Admin only (read-only report). GRO does the input via the class popup.
+    const showRegister = isHC;
+    const registerCanCheck = false;
     const _byDate = []; const _dIdx = {};
     for (const r of (D.registerRows || [])) {
       if (!(r.date in _dIdx)) { _dIdx[r.date] = _byDate.length; _byDate.push({ dateLabel: r.dateLabel, _c: {}, classes: [] }); }

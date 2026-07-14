@@ -1163,12 +1163,12 @@
       <sc-if value="{{ cpHasParticipants }}">
       <div class="pop-table" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex:1;min-height:0;">
         <div style="overflow:auto;max-height:52vh;">
-          <div style="min-width:920px;font-size:12.5px;">
-            <div style="display:grid;grid-template-columns:150px 150px 130px 180px 100px 90px 150px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
-              <div style="padding:12px 14px;">BOOKING CODE</div><div style="padding:12px 14px;">NAMA</div><div style="padding:12px 14px;">TELP</div><div style="padding:12px 14px;">EMAIL</div><div style="padding:12px 14px;">STATUS</div><div style="padding:12px 14px;">PAYMENT</div><div style="padding:12px 14px;">ABSENSI</div>
+          <div style="min-width:1050px;font-size:12.5px;">
+            <div style="display:grid;grid-template-columns:140px 140px 120px 160px 90px 78px 116px 200px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
+              <div style="padding:12px 14px;">BOOKING CODE</div><div style="padding:12px 14px;">NAMA</div><div style="padding:12px 14px;">TELP</div><div style="padding:12px 14px;">EMAIL</div><div style="padding:12px 14px;">STATUS</div><div style="padding:12px 14px;">PAYMENT</div><div style="padding:12px 14px;">ABSENSI</div><div style="padding:12px 14px;">NOTE</div>
             </div>
             <sc-for list="{{ cpParticipants }}" as="p">
-            <div style="display:grid;grid-template-columns:150px 150px 130px 180px 100px 90px 150px;border-top:1px solid var(--border);align-items:center;">
+            <div style="display:grid;grid-template-columns:140px 140px 120px 160px 90px 78px 116px 200px;border-top:1px solid var(--border);align-items:center;">
               <div style="padding:11px 14px;font-family:'JetBrains Mono';color:var(--muted);font-size:11.5px;">{{ p.booking }}</div>
               <div style="padding:11px 14px;font-weight:700;">{{ p.name }}</div>
               <div style="padding:11px 14px;font-family:'JetBrains Mono';color:var(--muted);">{{ p.phone }}</div>
@@ -1176,6 +1176,7 @@
               <div style="padding:11px 14px;"><span style="font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:100px;background:{{ p.statusBg }};color:{{ p.statusCol }};">{{ p.statusLabel }}</span></div>
               <div style="padding:11px 14px;font-weight:700;color:{{ p.payCol }};">{{ p.payment }}</div>
               <div style="padding:11px 14px;"><sc-if value="{{ cpCanCheck }}"><button onclick="{{ p.toggle }}" style="border:1px solid var(--border2);background:{{ p.attBg }};color:{{ p.attFg }};border-radius:7px;padding:6px 18px;font-size:11.5px;font-weight:700;cursor:pointer;">Hadir</button></sc-if></div>
+              <div style="padding:9px 14px;"><sc-if value="{{ cpCanCheck }}"><input value="{{ p.note }}" onchange="{{ p.saveNote }}" placeholder="Catatan…" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:6px 9px;color:var(--text);font-family:'Hanken Grotesk';font-size:11.5px;outline:0;"></sc-if></div>
             </div>
             </sc-for>
           </div>
@@ -1193,6 +1194,7 @@
             <sc-if value="{{ p.hasPayment }}"><span style="font-size:11px;font-weight:700;color:{{ p.payCol }};border:1px solid var(--border2);border-radius:100px;padding:4px 12px;">Payment: {{ p.payment }}</span></sc-if>
             <sc-if value="{{ cpCanCheck }}"><button onclick="{{ p.toggle }}" style="border:1px solid var(--border2);background:{{ p.attBg }};color:{{ p.attFg }};border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer;">Hadir</button></sc-if>
           </div>
+          <sc-if value="{{ cpCanCheck }}"><input value="{{ p.note }}" onchange="{{ p.saveNote }}" placeholder="Catatan (mis. izin, datang telat)…" style="width:100%;box-sizing:border-box;margin-top:10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Hanken Grotesk';font-size:12px;outline:0;"></sc-if>
         </div>
         </sc-for>
       </div>
