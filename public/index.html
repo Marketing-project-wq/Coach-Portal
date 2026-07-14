@@ -703,6 +703,7 @@
               <span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};display:inline-flex;align-items:center;gap:5px;"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.statusCol }};"></span>{{ c.status }}</span>
               <button onclick="{{ c.reset }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--cyan);color:var(--cyan);">Reset Password</button>
               <button onclick="{{ c.toggle }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">{{ c.toggleLabel }}</button>
+              <button onclick="{{ c.remove }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Hapus</button>
             </div>
             </sc-for>
           </div>
@@ -853,9 +854,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=ac154007"></script>
-<script src="sc-runtime.js?v=ac154007"></script>
-<script src="app.js?v=ac154007"></script>
+<script src="i18n.js?v=9af62da0"></script>
+<script src="sc-runtime.js?v=9af62da0"></script>
+<script src="app.js?v=9af62da0"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

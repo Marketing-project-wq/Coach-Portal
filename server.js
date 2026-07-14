@@ -1343,6 +1343,11 @@ route('POST', '/api/admin/coaches/:id/toggle', async (req, res, s, q, params) =>
   await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ is_active: !cur, updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true, is_active: !cur });
 });
+route('POST', '/api/admin/coaches/:id/delete', async (req, res, s, q, params) => {
+  if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
+  await sb(`arena_coach_users?id=eq.${enc(params.id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  return send(res, 200, { ok: true });
+});
 route('POST', '/api/admin/coaches/:id/role', async (req, res, s, q, params) => {
   if (!requireAdmin(s)) return send(res, 403, { error: 'Admin access required.' });
   const body = await readBody(req);

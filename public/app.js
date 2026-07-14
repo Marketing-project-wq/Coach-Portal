@@ -466,6 +466,12 @@ class Component extends DCLogic {
     this.api('/api/admin/coaches/' + encodeURIComponent(c.id) + '/toggle', { method: 'POST' })
       .then(() => { this.toastMsg('Status of ' + c.name + ' updated'); this.loadScreen('accounts'); }).catch((e) => this.toastMsg(e.message));
   }
+  removeCoach(c) {
+    if (!window.confirm('Hapus akun "' + c.name + '" secara permanen? Tindakan ini tidak bisa dibatalkan.')) return;
+    if (this.MOCK) return this.toastMsg('Akun ' + c.name + ' dihapus');
+    this.api('/api/admin/coaches/' + encodeURIComponent(c.id) + '/delete', { method: 'POST' })
+      .then(() => { this.toastMsg('Akun ' + c.name + ' dihapus'); this.loadScreen('accounts'); }).catch((e) => this.toastMsg(e.message));
+  }
   submitAddCoach() {
     const byPh = (ph) => { const els = document.querySelectorAll('#app input'); for (const e of els) if ((e.placeholder || '').indexOf(ph) >= 0) return e.value; return ''; };
     const name = byPh('Dimas') || byPh('Coach');
@@ -882,7 +888,7 @@ class Component extends DCLogic {
     const coaches = (D.coaches || []).map((c) => {
       const av = this.avatar(c.id); const rc = roleColor(c.role);
       const cls = c.classes || 0, att = c.attended != null ? c.attended : cls;
-      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), attended: att, attPct: cls ? (c.punctual + '%') : '—', attCol: !cls ? C.muted2 : (c.punctual >= 90 ? C.green : (c.punctual >= 50 ? C.amber : C.red)), toggleLabel: c.status === 'Active' ? 'Deactivate' : 'Activate', open: () => { this.setState({ selCoachName: c.name, statYm: '', screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c) });
+      return Object.assign({}, c, { initials: this.ini(c.name), avBg: av[0], avFg: av[1], hasPhoto: !!c.photo, passwordShown: c.password || '—', roleCol: c.role === 'Head Coach' ? C.volt : C.muted, roleBg: rc.bg, statusCol: c.status === 'Active' ? C.green : C.red, statusBg: c.status === 'Active' ? 'rgba(28,138,75,.12)' : 'rgba(228,0,43,.12)', punctCol: c.punctual >= 93 ? C.green : (c.punctual >= 90 ? C.text : C.amber), attended: att, attPct: cls ? (c.punctual + '%') : '—', attCol: !cls ? C.muted2 : (c.punctual >= 90 ? C.green : (c.punctual >= 50 ? C.amber : C.red)), toggleLabel: c.status === 'Active' ? 'Deactivate' : 'Activate', open: () => { this.setState({ selCoachName: c.name, statYm: '', screen: 'stats' }); if (!this.MOCK) this.loadScreen('stats'); }, reset: () => this.openReset(c), toggle: () => this.toggleCoach(c), remove: () => this.removeCoach(c) });
     });
     // sortable coach report — key maps to a coach field; click a header to sort, again to flip.
     const reportSort = st.reportSort || '', reportSortDir = st.reportSortDir || 'desc';
