@@ -827,6 +827,47 @@
   </div>
   </sc-if>
 
+  <!-- ===== CLASS POPUP (GRO) ===== -->
+  <sc-if value="{{ showClassPopup }}">
+  <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeClassPopup }}">
+    <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:26px 28px;max-width:920px;width:100%;max-height:88vh;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;"><span style="width:20px;height:20px;border-radius:6px;background:var(--volt);margin-top:4px;flex-shrink:0;"></span><div style="min-width:0;"><div style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;letter-spacing:-.01em;text-transform:uppercase;">{{ cpTitle }}</div><div style="font-size:13px;color:var(--muted);margin-top:5px;">{{ cpSubtitle }}</div></div></div>
+        <button onclick="{{ closeClassPopup }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
+      </div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 18px;">
+        <span style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:100px;background:rgba(28,138,75,.12);color:var(--green);text-transform:uppercase;letter-spacing:.03em;">{{ cpConfirmed }}</span>
+        <span style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:100px;background:rgba(199,122,0,.12);color:var(--amber);text-transform:uppercase;letter-spacing:.03em;">{{ cpPending }}</span>
+        <span style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:100px;background:var(--bg);border:1px solid var(--border2);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">{{ cpQuota }}</span>
+      </div>
+      <sc-if value="{{ cpHasParticipants }}">
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex:1;min-height:0;">
+        <div style="overflow:auto;max-height:52vh;">
+          <div style="min-width:920px;font-size:12.5px;">
+            <div style="display:grid;grid-template-columns:150px 150px 130px 180px 100px 90px 150px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
+              <div style="padding:12px 14px;">BOOKING CODE</div><div style="padding:12px 14px;">NAMA</div><div style="padding:12px 14px;">TELP</div><div style="padding:12px 14px;">EMAIL</div><div style="padding:12px 14px;">STATUS</div><div style="padding:12px 14px;">PAYMENT</div><div style="padding:12px 14px;">ABSENSI</div>
+            </div>
+            <sc-for list="{{ cpParticipants }}" as="p">
+            <div style="display:grid;grid-template-columns:150px 150px 130px 180px 100px 90px 150px;border-top:1px solid var(--border);align-items:center;">
+              <div style="padding:11px 14px;font-family:'JetBrains Mono';color:var(--muted);font-size:11.5px;">{{ p.booking }}</div>
+              <div style="padding:11px 14px;font-weight:700;">{{ p.name }}</div>
+              <div style="padding:11px 14px;font-family:'JetBrains Mono';color:var(--muted);">{{ p.phone }}</div>
+              <div style="padding:11px 14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;">{{ p.email }}</div>
+              <div style="padding:11px 14px;"><span style="font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:100px;background:{{ p.statusBg }};color:{{ p.statusCol }};">{{ p.statusLabel }}</span></div>
+              <div style="padding:11px 14px;font-weight:700;color:{{ p.payCol }};">{{ p.payment }}</div>
+              <div style="padding:11px 14px;"><sc-if value="{{ cpCanCheck }}"><div style="display:flex;gap:6px;"><button onclick="{{ p.markIn }}" style="border:1px solid var(--border2);background:{{ p.inBg }};color:{{ p.inFg }};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">Hadir</button><button onclick="{{ p.markNo }}" style="border:1px solid var(--border2);background:{{ p.noBg }};color:{{ p.noFg }};border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">Absen</button></div></sc-if></div>
+            </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ cpNoParticipants }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px;text-align:center;color:var(--muted);">Belum ada peserta di kelas ini.</div></sc-if>
+      <button onclick="{{ closeClassPopup }}" style="align-self:flex-end;margin-top:18px;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 26px;font-family:'Barlow Condensed';font-weight:800;font-size:13px;cursor:pointer;text-transform:uppercase;">Tutup</button>
+    </div>
+  </div>
+  </sc-if>
+
   <!-- ===== RESET MODAL ===== -->
   <sc-if value="{{ showReset }}" hint-placeholder-val="{{ false }}">
   <div style="position:fixed;inset:0;z-index:50;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeReset }}">
@@ -856,9 +897,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=249af22a"></script>
-<script src="sc-runtime.js?v=249af22a"></script>
-<script src="app.js?v=249af22a"></script>
+<script src="i18n.js?v=db7bdc67"></script>
+<script src="sc-runtime.js?v=db7bdc67"></script>
+<script src="app.js?v=db7bdc67"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

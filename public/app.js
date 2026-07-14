@@ -46,7 +46,7 @@ class Component extends DCLogic {
     }
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false };
+    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null };
   }
   boot() {
     if (this.MOCK) {
@@ -214,6 +214,25 @@ class Component extends DCLogic {
   openClass(id) {
     if (this.MOCK) return this.go('detail');
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => { this.setState({ currentClass: d, screen: 'detail' }); this.setD({ classDetail: d }); }).catch((e) => this.toastMsg(e.message));
+  }
+  // Popup (modal) class view for GRO — click a class in the calendar → participant list + check-in.
+  openClassPopup(id) {
+    if (!id) return;
+    if (this.MOCK) { this.setState({ classPopup: this.state.d.classDetail }); return; }
+    this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => this.setState({ classPopup: d })).catch((e) => this.toastMsg(e.message));
+  }
+  closeClassPopup() { this.setState({ classPopup: null }); }
+  popupAttend(scheduleId, bookingId, status) {
+    if (!scheduleId || !bookingId) return;
+    if (this.MOCK) {
+      const cp = this.state.classPopup; if (!cp) return;
+      const participants = (cp.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: p.attendance === status ? null : status }) : p);
+      this.setState({ classPopup: Object.assign({}, cp, { participants }) });
+      return;
+    }
+    this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
+      .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : 'Peserta ditandai absen'); this.openClassPopup(scheduleId); this.loadRegister(); })
+      .catch((e) => this.toastMsg(e.message));
   }
   openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
   openVenueAbsen(v) { this.setState({ absen: true, absenClass: { venueId: v.id, type: 'Arena + Coach · ' + (v.customer || 'Arena booking'), time: v.time || '' } }); }
@@ -1049,7 +1068,7 @@ class Component extends DCLogic {
         numCol: c.isToday ? C.volt : C.text,
         events: (c.events || []).map((e) => e.kind === 'venue'
           ? { text: (e.timeRange || e.time) + ' ' + e.label, bg: '#2B3242', cursor: 'default', hasPax: false, pax: '', open: () => {} }
-          : { text: e.time + ' ' + e.label, bg: C.volt, cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClass(e.scheduleId) }),
+          : { text: e.time + ' ' + e.label, bg: C.volt, cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId) }),
       };
     });
 
@@ -1078,7 +1097,30 @@ class Component extends DCLogic {
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', participants: c.participants })) }));
     const registerMonthOpts = D.registerMonths || [];
 
+    // Class popup (modal) — opened by clicking a class in the Kalender Arena.
+    const cp = st.classPopup;
+    const cpSched = cp ? (cp.schedule || {}) : {};
+    const cpParts = cp ? (cp.participants || []) : [];
+    const cpConfirmed = cpParts.filter((p) => p.bookingStatus === 'confirmed').length;
+    const cpPending = cpParts.filter((p) => p.bookingStatus === 'pending_payment').length;
+    const cpParticipants = cpParts.map((p, i) => {
+      const a = p.attendance;
+      return {
+        n: i + 1, booking: p.booking || '—', name: p.name, phone: p.phone || '—', email: p.email || '—',
+        payment: p.payment || '', hasPayment: !!p.payment, payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted),
+        statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
+        statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
+        inBg: a === 'checked_in' ? C.green : 'transparent', inFg: a === 'checked_in' ? '#fff' : C.muted,
+        noBg: a === 'no_show' ? C.red : 'transparent', noFg: a === 'no_show' ? '#fff' : C.muted,
+        markIn: () => this.popupAttend(cpSched.schedule_id, p.booking_id, 'checked_in'), markNo: () => this.popupAttend(cpSched.schedule_id, p.booking_id, 'no_show'),
+      };
+    });
+
     return {
+      showClassPopup: !!cp, closeClassPopup: () => this.closeClassPopup(),
+      cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
+      cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',
+      cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
       hasRegister: registerGroups.length > 0, noRegister: registerGroups.length === 0,
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
@@ -1230,7 +1272,7 @@ class Component extends DCLogic {
     d.recent = [{ type: 'HYROX Complete', date: '28 Jun', time: '07:00', peserta: 14 }, { type: 'HYROX Foundation', date: '27 Jun', time: '17:00', peserta: 9 }];
     d.month = { classes: 18, peserta: 162 };
     const amrapContent = JSON.stringify({ fmt: 'menu1', note: '10 min amrap / 2 min rest', blocks: [{ label: 'A', items: [{ amount: '150', unit: 'meter', name: 'ski' }, { amount: '150', unit: 'meter', name: 'row' }, { amount: '1', unit: 'lap', name: 'run' }] }] });
-    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', phone: '0812-3456-7890', email: 'andra@email.com', payment: 'Lunas', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Confirmed', phone: '0813-1111-2222', email: 'sari@email.com', payment: 'Belum', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
+    d.classDetail = { schedule: { schedule_id: 'x1', type: 'HYROX Complete', fullType: '20FIT Arena HYROX Complete Class', coach: 'Nando', dateLabel: 'Sat, 11 Jul', quota: 40, time: '07:00', end: '08:00', date: '2026-07-11' }, participants: [{ name: 'Andra Wijaya', booking_id: 'b1', booking: 'CL-0001', attendance: 'checked_in', status: 'Confirmed', bookingStatus: 'confirmed', phone: '0812-3456-7890', email: 'andra@email.com', payment: 'Lunas', visits: 7, lastVisit: '30 Jun', daysSince: 2, classesLabel: 'HYROX Complete, HYROX Foundation', menusLabel: 'AMRAP Circuit, HYROX Simulation' }, { name: 'Sari Putri', booking_id: 'b2', booking: 'CL-0002', attendance: null, status: 'Pending', bookingStatus: 'pending_payment', phone: '0813-1111-2222', email: 'sari@email.com', payment: 'Belum', visits: 0, lastVisit: '', daysSince: null, classesLabel: '', menusLabel: '' }],
       menuOptions: [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete', content: '8 stations · 1 km run each station' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation', content: 'Warm up + technique drills' }],
       linkedMenu: { id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete', content: amrapContent } };
     d.subOptions = [{ name: 'Calysta', role: 'coach', spec: 'HYROX Complete', disabled: false, photo: LPH + 'calysta-1778032200529.png' }, { name: 'Elsen', role: 'coach', spec: 'HYROX Foundation', disabled: false }, { name: 'Gilang', role: 'coach', spec: 'HYROX Complete', disabled: false }];

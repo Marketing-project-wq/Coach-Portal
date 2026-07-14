@@ -1091,7 +1091,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const menuOptions = menuRows.map((m) => ({ id: m.id, title: m.title, category: m.category || '' }));
   const lm = linkedMenuId ? menuRows.find((m) => m.id === linkedMenuId) : null;
   const linkedMenu = lm ? { id: lm.id, title: lm.title, category: lm.category || '', content: lm.content || '' } : null;
-  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, started, checkedOut, canCheckout }, started, participants, menuOptions, linkedMenu });
+  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, started, checkedOut, canCheckout }, started, participants, menuOptions, linkedMenu });
 });
 // Attach / change / clear the menu for a class (Option B). No-op-safe if the link table is missing.
 route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
