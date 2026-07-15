@@ -7,10 +7,14 @@
 body{ background:radial-gradient(1200px 640px at 50% -10%, color-mix(in srgb,var(--red) 8%, var(--ground)), var(--ground) 62%); color:var(--ink); font-family:'Hanken Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif; -webkit-font-smoothing:antialiased; line-height:1.5; }
 .app{ min-height:100%; display:flex; flex-direction:column; }
 .bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px 0; }
-.brand{ display:flex; align-items:center; gap:9px; }
-.brand .wm{ font-family:ui-sans-serif,system-ui,'Segoe UI',Arial,sans-serif; font-weight:900; font-size:18px; letter-spacing:-.02em; }
+.brand{ display:flex; align-items:center; gap:10px; }
+.brand picture{ display:block; line-height:0; }
+.brand .blogo{ height:28px; width:auto; display:block; }
+.brand .wm{ display:none; font-family:ui-sans-serif,system-ui,'Segoe UI',Arial,sans-serif; font-weight:900; font-size:18px; letter-spacing:-.02em; }
 .brand .wm i{ color:var(--red); font-style:normal; }
-.brand .tag2{ font-size:10px; font-weight:800; letter-spacing:.16em; color:var(--faint); padding-left:9px; border-left:1.5px solid var(--line); }
+.brand.nologo picture{ display:none; }
+.brand.nologo .wm{ display:inline-flex; }
+.brand .tag2{ font-size:10px; font-weight:800; letter-spacing:.16em; color:var(--faint); padding-left:10px; border-left:1.5px solid var(--line); }
 .counter{ font-size:12.5px; color:var(--muted); font-weight:800; font-variant-numeric:tabular-nums; }
 .prog{ height:5px; background:var(--line); border-radius:100px; overflow:hidden; margin:12px 20px 0; }
 .prog span{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--red2),var(--red)); border-radius:100px; transition:width .4s cubic-bezier(.4,0,.2,1); }
@@ -65,13 +69,14 @@ var STEPS=[{"type":"start"},{"img":"login","W":520,"H":520,"spot":[40,365,380,52
 var TOTAL=15;
 var CHIP={"label":"COACH INTERNAL","dot":"var(--good)","style":"background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good);"};var H1="Panduan Coach Internal";var INTRO="Coba pakai Coach Workspace langsung — ketuk tiap bagian yang menyala, dari login sampai selesai, seperti memakai akun sendiri.";var RECAP=["Login &amp; membaca jadwal di kalender","Buka Class Detail, lihat peserta &amp; pasang Class Menu","Check In saat mulai &amp; Check Out saat selesai","Review, Leaderboard &amp; Monitoring","Minta Coverage bila berhalangan","Akses lewat HP"];
 var i=0, app=document.getElementById('app');
+function __noLogo(im){var b=im&&im.closest('.brand');if(b)b.classList.add('nologo');}
 function esc(s){return s;}
 function toast(msg){var t=document.getElementById('tst');t.textContent=msg;t.classList.add('on');clearTimeout(window.__tt);window.__tt=setTimeout(function(){t.classList.remove('on');},1400);}
 function stepIndexOf(idx){var n=0;for(var k=1;k<=idx;k++){if(STEPS[k].img)n++;}return n;}
 function render(){
   var s=STEPS[i];
   var prog=Math.round(i/(STEPS.length-1)*100);
-  var head='<div class="bar"><div class="brand"><span class="wm">20<i>\u2022</i>FIT</span><span class="tag2">COACH WORKSPACE</span></div>'
+  var head='<div class="bar"><div class="brand"><picture><source srcset="https://media.20fit.id/wp-content/uploads/2026/05/Copy-of-new-logo-20fit-putih-3.png" media="(prefers-color-scheme: dark)"><img class="blogo" src="https://media.20fit.id/wp-content/uploads/2026/05/Logo-20fit.png" alt="20FIT" onerror="__noLogo(this)"></picture><span class="wm">20<i>\u2022</i>FIT</span><span class="tag2">COACH WORKSPACE</span></div>'
     +'<span class="counter">'+(s.img?('Langkah '+stepIndexOf(i)+' / '+TOTAL):(i===0?'Mulai':'Selesai'))+'</span></div>'
     +'<div class="prog"><span style="width:'+prog+'%"></span></div>';
   if(s.type==='start'){
