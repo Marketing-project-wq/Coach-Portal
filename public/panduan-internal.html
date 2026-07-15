@@ -34,7 +34,8 @@ body{ background:radial-gradient(1200px 640px at 50% -10%, color-mix(in srgb,var
 .botbar{ max-width:640px; margin:0 auto; padding:4px 20px 22px; width:100%; }
 .bcard{ display:flex; flex-direction:column; align-items:flex-start; gap:11px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 18px; box-shadow:0 14px 34px -24px rgba(40,20,25,.5); }
 .num{ flex-shrink:0; width:42px; height:42px; border-radius:13px; background:linear-gradient(140deg,var(--red),var(--red2)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; font-variant-numeric:tabular-nums; box-shadow:var(--shadow2); }
-.btext h2{ font-family:ui-sans-serif,system-ui,'Segoe UI',Arial,sans-serif; font-weight:800; letter-spacing:-.01em; font-size:17px; margin:2px 0 4px; }
+.btext h2{ font-family:ui-sans-serif,system-ui,'Segoe UI',Arial,sans-serif; font-weight:800; letter-spacing:-.01em; font-size:17px; margin:2px 0 6px; display:flex; align-items:center; gap:9px; }
+.btext h2 .sno{ flex-shrink:0; width:26px; height:26px; border-radius:50%; background:linear-gradient(140deg,var(--red),var(--red2)); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:900; font-variant-numeric:tabular-nums; box-shadow:var(--shadow2); }
 .btext p{ margin:0; font-size:14px; color:var(--muted); } .btext .hi{ color:var(--ink); font-weight:700; }
 .hint{ text-align:center; font-size:12.5px; color:var(--faint); margin:12px 0 0; font-weight:600; }
 .hint b{ color:var(--red); }
@@ -106,7 +107,7 @@ function render(){
   var wide = (s.W/s.H) > 1.3;
   app.innerHTML=head
     +'<div class="banner top"><div class="bcard">'
-      +'<div class="btext"><h2>'+s.t+'</h2><p>'+s.d+'</p></div></div>'
+      +'<div class="btext"><h2><span class="sno">'+stepIndexOf(i)+'</span>'+s.t+'</h2><p>'+s.d+'</p></div></div>'
       +'<p class="hint">Ketuk area yang <b>menyala</b> di bawah untuk lanjut</p></div>'
     +'<div class="stage"><div class="scroller" id="scroller"><div id="screen">'
       +'<img id="shot" class="'+(wide?'wide':'')+'" alt="" src="'+IMG[s.img]+'">'
