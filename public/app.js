@@ -1244,6 +1244,7 @@ class Component extends DCLogic {
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       boardSortPax: seg(boardSort === 'pax'), boardSortRating: seg(boardSort === 'rating'), sortByPax: () => this.setBoardSort('pax'), sortByRating: () => this.setBoardSort('rating'),
       showVenueNav: true, goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
+      showGuide: !isGro, goGuide: () => { if (this.MOCK) return this.toastMsg('Membuka panduan…'); window.open(this.isExternal ? '/panduan-freelance.html' : '/panduan-internal.html', '_blank'); },
       venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts,
       venueOwn, noVenueOwn, hasVenueOwn: !noVenueOwn,
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
