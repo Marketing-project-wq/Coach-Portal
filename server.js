@@ -1201,7 +1201,9 @@ route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
     return send(res, 200, { ok: true });
   }
   if (!['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
-  await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
+  // on_conflict targets the (schedule_id, booking_id) unique constraint so merge-duplicates
+  // does an UPDATE instead of hitting a duplicate-key error when a row already exists.
+  await sb('arena_class_attendance?on_conflict=schedule_id,booking_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
   return send(res, 200, { ok: true });
 });
 // GRO uploads a single group attendance photo for the class (shown in the report + PDF).
@@ -1226,7 +1228,7 @@ route('POST', '/api/coach/class/:id/note', async (req, res, s, q, params) => {
   const body = await readBody(req);
   if (!body || !body.booking_id) return send(res, 400, { error: 'Invalid note data.' });
   try {
-    await sb('arena_class_attendance', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, note: String(body.note || '').slice(0, 300), marked_by: s.c }) });
+    await sb('arena_class_attendance?on_conflict=schedule_id,booking_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, note: String(body.note || '').slice(0, 300), marked_by: s.c }) });
   } catch (_e) { return send(res, 200, { ok: false, needsMigration: true }); }
   return send(res, 200, { ok: true });
 });

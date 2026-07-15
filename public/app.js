@@ -224,15 +224,16 @@ class Component extends DCLogic {
   closeClassPopup() { this.setState({ classPopup: null }); }
   popupAttend(scheduleId, bookingId, status) {
     if (!scheduleId || !bookingId) return;
-    if (this.MOCK) {
-      const cp = this.state.classPopup; if (!cp) return;
-      const participants = (cp.participants || []).map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: status === 'none' ? null : status }) : p);
-      this.setState({ classPopup: Object.assign({}, cp, { participants }) });
-      return;
-    }
+    const cp = this.state.classPopup; if (!cp) return;
+    // Optimistic: reflect the tap instantly, then persist in the background. No refetch —
+    // the local update already shows the new state, so the button responds with no lag.
+    const prev = cp.participants || [];
+    const participants = prev.map((p) => p.booking_id === bookingId ? Object.assign({}, p, { attendance: status === 'none' ? null : status }) : p);
+    this.setState({ classPopup: Object.assign({}, cp, { participants }) });
+    if (this.MOCK) return;
     this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
-      .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : 'Peserta ditandai absen'); this.openClassPopup(scheduleId); this.loadRegister(); })
-      .catch((e) => this.toastMsg(e.message));
+      .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : status === 'no_show' ? 'Peserta ditandai absen' : 'Absensi dibatalkan'); })
+      .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Gagal menyimpan absensi'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
   _compressImage(file, maxDim, quality) {
@@ -904,7 +905,9 @@ class Component extends DCLogic {
     // Two separate screens:
     //  • "Venue Booking" (own) → bookings assigned to me. HC gets D.venueMine; a coach's whole list IS their own.
     //  • "Assign Venue" (dispatch, HC/admin only) → all upcoming bookings with the coach dropdown.
-    const venueOwn = (venueIsHC ? (D.venueMine || []) : (D.venueBookings || [])).map((b) => mapVenueBooking(b, 'coach'));
+    // GRO isn't assigned venues but must see every arena booking (to check guests in), so show
+    // the full list rather than "assigned to me". HC keeps their own list; a coach's list is theirs.
+    const venueOwn = ((venueIsHC && !isGro) ? (D.venueMine || []) : (D.venueBookings || [])).map((b) => mapVenueBooking(b, 'coach'));
     const noVenueOwn = venueOwn.length === 0;
     const venueAllHC = venueIsHC ? (D.venueBookings || []) : [];
     // Bookings marked "no coach needed" (e.g. clubs with their own trainer) are hidden from dispatch.
