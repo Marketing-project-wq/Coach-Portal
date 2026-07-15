@@ -30,6 +30,8 @@ body{ background:radial-gradient(1200px 640px at 50% -10%, color-mix(in srgb,var
 .ktap.above{ bottom:calc(100% + 8px); } .ktap.below{ top:calc(100% + 8px); }
 @keyframes bob{ 0%,100%{ transform:translateX(-50%) translateY(0);} 50%{ transform:translateX(-50%) translateY(-3px);} }
 .banner{ max-width:640px; margin:0 auto; padding:2px 20px 26px; width:100%; }
+.banner.top{ padding:14px 20px 4px; }
+.botbar{ max-width:640px; margin:0 auto; padding:4px 20px 22px; width:100%; }
 .bcard{ display:flex; flex-direction:column; align-items:flex-start; gap:11px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 18px; box-shadow:0 14px 34px -24px rgba(40,20,25,.5); }
 .num{ flex-shrink:0; width:42px; height:42px; border-radius:13px; background:linear-gradient(140deg,var(--red),var(--red2)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; font-variant-numeric:tabular-nums; box-shadow:var(--shadow2); }
 .btext h2{ font-family:ui-sans-serif,system-ui,'Segoe UI',Arial,sans-serif; font-weight:800; letter-spacing:-.01em; font-size:17px; margin:2px 0 4px; }
@@ -103,16 +105,16 @@ function render(){
   var above = (ly+lh)>88;
   var wide = (s.W/s.H) > 1.3;
   app.innerHTML=head
+    +'<div class="banner top"><div class="bcard">'
+      +'<div class="btext"><h2>'+s.t+'</h2><p>'+s.d+'</p></div></div>'
+      +'<p class="hint">Ketuk area yang <b>menyala</b> di bawah untuk lanjut</p></div>'
     +'<div class="stage"><div class="scroller" id="scroller"><div id="screen">'
       +'<img id="shot" class="'+(wide?'wide':'')+'" alt="" src="'+IMG[s.img]+'">'
       +'<div id="hot" role="button" tabindex="0" aria-label="'+s.t+'" style="left:'+lx+'%;top:'+ly+'%;width:'+lw+'%;height:'+lh+'%;">'
         +'<span class="ktap '+(above?'above':'below')+'">\uD83D\uDC46 Ketuk</span>'
       +'</div>'
     +'</div></div></div>'
-    +'<div class="banner"><div class="bcard">'
-      +'<div class="btext"><h2>'+s.t+'</h2><p>'+s.d+'</p></div></div>'
-      +'<p class="hint">Ketuk area yang <b>menyala</b> untuk lanjut</p>'
-      +'<div class="foot"><button class="lnk" id="back" '+(i<=1?'disabled':'')+'>\u2039 Kembali</button>'
+    +'<div class="botbar"><div class="foot"><button class="lnk" id="back" '+(i<=1?'disabled':'')+'>\u2039 Kembali</button>'
         +'<button class="lnk" id="skip">Lewati tutorial</button></div></div>';
   var hot=document.getElementById('hot');
   hot.onclick=function(e){e.stopPropagation();next();};
