@@ -382,8 +382,17 @@ route('POST', '/api/auth/login', async (req, res) => {
   const body = await readBody(req);
   if (!body || !body.username || !body.password) return send(res, 400, { error: 'Username & password are required.' });
   const uname = String(body.username).toLowerCase().trim();
-  const rows = await sb(`arena_coach_users?select=*&username=eq.${enc(uname)}&limit=1`);
-  const u = rows && rows[0];
+  const unorm = uname.replace(/\s+/g, '');
+  // Fast path: exact username, preferring the active row if duplicates exist.
+  let rows = await sb(`arena_coach_users?select=*&username=eq.${enc(uname)}&order=is_active.desc&limit=1`);
+  let u = rows && rows[0];
+  // Forgiving fallback: match ignoring spaces/case (e.g. "GRO Arena" typed as "groarena"),
+  // still preferring an active account. The user table is small, so scanning it is cheap.
+  if (!u) {
+    const all = await sb('arena_coach_users?select=*');
+    const cand = (all || []).filter((x) => String(x.username || '').toLowerCase().replace(/\s+/g, '') === unorm);
+    u = cand.find((x) => x.is_active) || cand[0];
+  }
   if (!u || !u.is_active || !verifyPassword(body.password, u.password_hash)) return send(res, 401, { error: 'Incorrect username or password.' });
   sb(`arena_coach_users?id=eq.${enc(u.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ last_login: new Date().toISOString() }) }).catch(() => {});
   const token = signToken({ u: u.username, c: u.coach_name, d: u.display_name || u.coach_name, r: u.role || 'coach' });
