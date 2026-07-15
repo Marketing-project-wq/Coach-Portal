@@ -349,6 +349,8 @@ function serveStatic(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
   if (p === '/review') p = '/review.html';
+  // Coach guide landing (pick Internal / Freelance) — shareable as <domain>/tutorial.
+  if (p === '/tutorial' || p === '/tutorial/') p = '/tutorial.html';
   const fp = path.normalize(path.join(PUBLIC_DIR, p));
   if (!fp.startsWith(PUBLIC_DIR)) return send(res, 403, 'Forbidden');
   // HTML/JS must never be cached (by browser or CDN) so a new deploy shows immediately;
