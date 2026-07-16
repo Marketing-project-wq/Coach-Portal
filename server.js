@@ -156,6 +156,20 @@ async function sessionStatusMap(ids) {
   for (const r of rows || []) m[r.schedule_id] = r.status || 'ongoing';
   return m;
 }
+// checkout_at may not exist yet (migration not run). Flip this false the first time a query
+// referencing it errors, so the rest of the app keeps working without the column.
+let _checkoutAtOk = true;
+// schedule_id -> { status, created_at (check-in), checkout_at }. Basis for the monthly session report.
+async function sessionsFull(ids) {
+  const m = {};
+  if (!ids.length) return m;
+  const sel = 'schedule_id,status,created_at' + (_checkoutAtOk ? ',checkout_at' : '');
+  let rows;
+  try { rows = await sb(`arena_class_sessions?select=${sel}&schedule_id=in.(${ids.map(enc).join(',')})`); }
+  catch (_e) { _checkoutAtOk = false; rows = await sb(`arena_class_sessions?select=schedule_id,status,created_at&schedule_id=in.(${ids.map(enc).join(',')})`); }
+  for (const r of rows || []) m[r.schedule_id] = r;
+  return m;
+}
 
 // Admin Hub sometimes stores co-taught classes as combined names,
 // e.g. "Cindy Lauw & Rheza" or "Elsen & Ade Midhun". Split into individual
@@ -442,7 +456,15 @@ route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
     const t = types[x.class_type_id] || {};
     return { type: shortType(t.name), date: fmtDMon(x.schedule_date), time: hhmm(x.start_time), peserta: (counts[x.id] || {}).confirmed || 0 };
   });
-  return send(res, 200, { today: todayList, week, recent, month: { classes: monthClasses, peserta: monthPeserta }, todayLabel, weekRange: wk.range, weekStart: wk.start });
+  // Overdue check-outs: classes the coach checked into but never checked out, and the class has
+  // already ended. Surfaced as a dashboard reminder so the coach remembers — we never auto-close.
+  const pastIds = pastOrToday.map((x) => x.id);
+  const stMap = await sessionStatusMap(pastIds);
+  const nowHM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const pendingCheckout = pastOrToday
+    .filter((x) => stMap[x.id] === 'ongoing' && (x.schedule_date < today || hhmm(x.end_time) <= nowHM))
+    .map((x) => { const t = types[x.class_type_id] || {}; return { schedule_id: x.id, type: shortType(t.name), dateLabel: fmtDMon(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time) }; });
+  return send(res, 200, { today: todayList, week, recent, month: { classes: monthClasses, peserta: monthPeserta }, todayLabel, weekRange: wk.range, weekStart: wk.start, pendingCheckout });
 });
 
 // Navigable weekly calendar (browse forward to December, etc.)
@@ -1180,12 +1202,19 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
   if (s.r === 'coach' && !instructorHasCoach(sc.instructor, s.c)) return send(res, 403, { error: 'This is not your class.' });
   const sess = (await sb(`arena_class_sessions?select=status,created_at&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
   if (!sess) return send(res, 400, { error: 'Check in first before you can check out.' });
-  await sb(`arena_class_sessions?schedule_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'completed' }) });
+  const nowIso = new Date().toISOString();
+  // Persist the check-out time so the monthly report can total actual teaching hours.
+  const where = `arena_class_sessions?schedule_id=eq.${enc(params.id)}`;
+  try {
+    await sb(where, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(_checkoutAtOk ? { status: 'completed', checkout_at: nowIso } : { status: 'completed' }) });
+  } catch (_e) {
+    _checkoutAtOk = false;
+    await sb(where, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'completed' }) });
+  }
   const participants = await sbCount(`arena_class_bookings?select=id&status=eq.confirmed&schedule_id=eq.${enc(params.id)}`);
   // Attendance the GRO recorded for this class — the count of guests actually present.
   const attended = await sbCount(`arena_class_attendance?select=booking_id&status=eq.checked_in&schedule_id=eq.${enc(params.id)}`);
   const types = await classTypes();
-  const nowIso = new Date().toISOString();
   const checkinIso = sess.created_at || nowIso;
   const durationMin = Math.max(0, Math.round((new Date(nowIso) - new Date(checkinIso)) / 60000));
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
@@ -1442,6 +1471,52 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
     };
   });
   return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal, insights: { classes: topClasses, days: topDays }, classList });
+});
+// ===== HC/Admin: monthly coach-session report — actual conduct from check-in / check-out =====
+route('GET', '/api/hc/coach-sessions', async (req, res, s, q) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
+  const today = todayJakarta();
+  const curYm = today.slice(0, 7);
+  // Month options from the season start up to the current month.
+  const months = [];
+  { let [yy, mm] = LEADERBOARD_SINCE.slice(0, 7).split('-').map(Number);
+    const [cy, cm] = curYm.split('-').map(Number);
+    while (yy < cy || (yy === cy && mm <= cm)) { months.push(`${yy}-${String(mm).padStart(2, '0')}`); if (++mm > 12) { mm = 1; yy++; } } }
+  const ym = (q.ym && months.includes(q.ym)) ? q.ym : curYm;
+  const [Y, M] = ym.split('-').map(Number);
+  const mStart = `${ym}-01`;
+  const mEnd = `${ym}-${String(new Date(Y, M, 0).getDate()).padStart(2, '0')}`;
+  const upto = mEnd < today ? mEnd : today; // classes that haven't happened yet can't be conducted
+  const users = await sb('arena_coach_users?select=coach_name,role,is_active&role=neq.admin&order=role.desc,coach_name.asc');
+  const scheds = (await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id,start_time,end_time&is_cancelled=eq.false&schedule_date=gte.${mStart}&schedule_date=lte.${upto}&order=schedule_date.asc,start_time.asc`)) || [];
+  const ids = scheds.map((x) => x.id);
+  const sess = await sessionsFull(ids);
+  const types = await classTypes();
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  const durMin = (r) => (r && r.created_at && r.checkout_at) ? Math.max(0, Math.round((new Date(r.checkout_at) - new Date(r.created_at)) / 60000)) : null;
+  const hLabel = (min) => { if (min == null) return '—'; const h = Math.floor(min / 60), m = min % 60; return (h ? h + 'j ' : '') + m + 'm'; };
+  const monLabelOf = (m) => { const [yy, mm] = m.split('-'); return `${MON[Number(mm) - 1]} ${yy}`; };
+  const sessions = [];
+  const rows = (users || []).map((u) => {
+    const my = scheds.filter((sc) => instructorHasCoach(sc.instructor, u.coach_name));
+    let conducted = 0, completed = 0, minutes = 0, pending = 0;
+    for (const sc of my) {
+      const r = sess[sc.id]; if (!r) continue;
+      conducted++;
+      const done = r.status === 'completed';
+      const dm = durMin(r);
+      if (done) { completed++; if (dm != null) minutes += dm; } else { pending++; }
+      sessions.push({ coach: u.coach_name, date: fmtDMon(sc.schedule_date), dateISO: sc.schedule_date, time: hhmm(sc.start_time), cls: shortType((types[sc.class_type_id] || {}).name), checkin: r.created_at ? hm(r.created_at) : '—', checkout: r.checkout_at ? hm(r.checkout_at) : (done ? '—' : 'belum'), dur: hLabel(dm), done });
+    }
+    const scheduled = my.length;
+    return { name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', scheduled, conducted, completed, pending, minutes,
+      hours: _checkoutAtOk ? hLabel(completed ? minutes : (conducted ? 0 : null)) : '—',
+      note: pending > 0 ? `${pending} belum check-out` : (scheduled > conducted ? `${scheduled - conducted} belum conduct` : 'Lengkap'),
+      ok: pending === 0 && scheduled === conducted && conducted > 0 };
+  }).filter((r) => r.scheduled > 0 || r.conducted > 0);
+  sessions.sort((a, b) => a.dateISO < b.dateISO ? -1 : a.dateISO > b.dateISO ? 1 : (a.coach < b.coach ? -1 : 1));
+  const totals = rows.reduce((t, r) => ({ scheduled: t.scheduled + r.scheduled, conducted: t.conducted + r.conducted, completed: t.completed + r.completed, minutes: t.minutes + r.minutes }), { scheduled: 0, conducted: 0, completed: 0, minutes: 0 });
+  return send(res, 200, { rows, sessions, totals: { ...totals, hours: _checkoutAtOk ? hLabel(totals.minutes) : '—' }, months: months.map((m) => ({ ym: m, label: monLabelOf(m), picked: m === ym })).reverse(), ym, monthLabel: `${MON_FULL[M - 1]} ${Y}`, hoursAvailable: _checkoutAtOk });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });

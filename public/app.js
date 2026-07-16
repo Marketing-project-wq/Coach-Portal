@@ -46,7 +46,7 @@ class Component extends DCLogic {
     }
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null };
+    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [] };
   }
   boot() {
     if (this.MOCK) {
@@ -184,7 +184,7 @@ class Component extends DCLogic {
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
-    else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); }
+    else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
@@ -407,6 +407,46 @@ class Component extends DCLogic {
       setTimeout(finish, 8000);
     };
     setTimeout(settle, 100);
+  }
+  loadCoachSessions() {
+    if (this.MOCK) { this.setD({ coachSess: this._mockCoachSess() }); return; }
+    this.api('/api/hc/coach-sessions?ym=' + (this.state.coachSessYm || '')).then((r) => this.setD({ coachSess: r })).catch(() => {});
+  }
+  setCoachSessMonth(e) { this.setState({ coachSessYm: (e && e.target ? e.target.value : '') || '' }); this.loadCoachSessions(); }
+  _mockCoachSess() {
+    return { monthLabel: 'July 2026', hoursAvailable: true,
+      months: [{ ym: '2026-07', label: 'Jul 2026', picked: true }, { ym: '2026-06', label: 'Jun 2026', picked: false }],
+      rows: [
+        { name: 'Rheza', role: 'Coach', scheduled: 20, conducted: 18, completed: 17, pending: 1, minutes: 1025, hours: '17j 05m', note: '1 belum check-out', ok: false },
+        { name: 'Elsen', role: 'Coach', scheduled: 12, conducted: 12, completed: 12, pending: 0, minutes: 700, hours: '11j 40m', note: 'Lengkap', ok: true },
+      ],
+      sessions: [
+        { coach: 'Rheza', date: '1 Jul', time: '07:00', cls: 'HYROX Complete', checkin: '07:02', checkout: '08:00', dur: '58m', done: true },
+        { coach: 'Rheza', date: '2 Jul', time: '17:00', cls: 'HYROX Foundation', checkin: '17:03', checkout: 'belum', dur: '—', done: false },
+      ],
+      totals: { scheduled: 32, conducted: 30, completed: 29, minutes: 1725, hours: '28j 45m' } };
+  }
+  exportCoachSessionsPdf() {
+    const cs = this.state.d.coachSess || {}; const rows = cs.rows || [];
+    if (!rows.length) return this.toastMsg('Belum ada data untuk di-export.');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const sumHead = ['Coach', 'Terjadwal', 'Conduct (check-in)', 'Selesai (check-out)', 'Total jam', 'Status'];
+    const sumRows = rows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('');
+    const t = cs.totals || {};
+    const sumFoot = '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
+    const detHead = ['Tanggal', 'Jam', 'Kelas', 'Coach', 'Check-in', 'Check-out', 'Durasi', 'Status'];
+    const detRows = (cs.sessions || []).map((d) => '<tr><td>' + esc(d.date) + '</td><td>' + esc(d.time) + '</td><td>' + esc(d.cls) + '</td><td>' + esc(d.coach) + '</td><td>' + esc(d.checkin) + '</td><td class="' + (d.done ? '' : 'warn') + '">' + esc(d.checkout) + '</td><td>' + esc(d.dur) + '</td><td class="' + (d.done ? 'ok' : 'warn') + '">' + (d.done ? 'Selesai' : 'Belum check-out') + '</td></tr>').join('');
+    const title = 'Rekap Sesi Coach · ' + (cs.monthLabel || '');
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>'
+      + '@page{margin:12mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:18px;}h1{font-size:17px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:16px;}h2{font-size:13px;margin:18px 0 7px;}'
+      + 'table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px;}th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.c{text-align:center;}td.hi{color:#C1121F;font-weight:700;}td.ok{color:#1C8A4B;font-weight:700;}td.warn{color:#C77A00;font-weight:700;}tr.tot td{font-weight:800;background:#fafafa;}.tag{font-size:8px;background:#eee;border-radius:6px;padding:1px 5px;color:#666;}@media print{body{padding:0;}}</style>'
+      + '</head><body><h1>20FIT Arena — Rekap Sesi Coach</h1><div class="sub">' + esc(cs.monthLabel || '') + '</div>'
+      + '<table><thead><tr>' + sumHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + sumRows + sumFoot + '</tbody></table>'
+      + (detRows ? ('<h2>Detail per sesi</h2><table><thead><tr>' + detHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + detRows + '</tbody></table>') : '')
+      + '</body></html>';
+    const ifr = document.createElement('iframe'); ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'); document.body.appendChild(ifr);
+    const win = ifr.contentWindow; const doc = win.document; doc.open(); doc.write(html); doc.close();
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); }, 300);
   }
   setRegisterMonth(e) { this.setState({ registerYm: (e && e.target ? e.target.value : '') || '' }); this.loadRegister(); }
   registerAttend(scheduleId, bookingId, status) {
@@ -1193,6 +1233,16 @@ class Component extends DCLogic {
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', participants: c.participants })) }));
     const registerMonthOpts = D.registerMonths || [];
 
+    // Monthly coach-session report (conduct/check-out/hours) + dashboard check-out reminders.
+    const _cs = D.coachSess || {};
+    const coachSessRows = (_cs.rows || []).map((r) => Object.assign({}, r, {
+      roleTag: r.role === 'Head Coach' ? '· HC' : '',
+      statusBg: r.ok ? 'rgba(28,138,75,.14)' : 'rgba(176,113,10,.16)',
+      statusCol: r.ok ? 'var(--green)' : 'var(--amber)',
+    }));
+    const pendingCheckout = (D.pendingCheckout || []).map((p) => Object.assign({}, p, {
+      checkout: () => this.openCheckout({ schedule_id: p.schedule_id, type: p.type, dateLabel: p.dateLabel }),
+    }));
     // Class popup (modal) — opened by clicking a class in the Kalender Arena.
     const cp = st.classPopup;
     const cpSched = cp ? (cp.schedule || {}) : {};
@@ -1222,6 +1272,10 @@ class Component extends DCLogic {
       cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
       onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
+      showCoachSess: showRegister, coachSessRows, noCoachSess: coachSessRows.length === 0,
+      coachSessMonths: _cs.months || [], coachSessMonthLabel: _cs.monthLabel || '', coachSessHoursOff: _cs.hoursAvailable === false,
+      setCoachSessMonth: (e) => this.setCoachSessMonth(e), exportCoachSess: () => this.exportCoachSessionsPdf(),
+      hasPendingCheckout: pendingCheckout.length > 0, pendingCheckout,
       hasRegister: registerGroups.length > 0, noRegister: registerGroups.length === 0,
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
       registerCanNote: isGro, exportAttendance: () => this.exportAttendancePdf(),
@@ -1304,6 +1358,8 @@ class Component extends DCLogic {
   // ---------- mock sample data (for ?mock=1 render tests) ----------
   mockData() {
     const d = this.emptyData();
+    d.coachSess = this._mockCoachSess();
+    d.pendingCheckout = [{ schedule_id: 'x2', type: 'HYROX Foundation', dateLabel: 'Thu 2 Jul', time: '17:00', end: '18:00' }];
     d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', coach: 'Nando', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, canCheckout: false, checkedOut: false, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', coach: 'Elsen & Brian', peserta: 8, cap: 12, started: true, accent: '#D6FF3D', status: 'In Progress', canAbsen: false, canCheckout: true, checkedOut: false, dateLabel: 'Thu 2 Jul' }, { schedule_id: 'x3', time: '19:00', end: '– 20:00', type: 'HYROX Complete', coach: 'Rheza', peserta: 10, cap: 14, started: true, accent: '#3ED598', status: 'Finished', canAbsen: false, canCheckout: false, checkedOut: true, dateLabel: 'Thu 2 Jul' }];
     d.today[0].menuId = 'm0';
     d.menuOptions = [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete' }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation' }];

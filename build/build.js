@@ -150,6 +150,48 @@ const registerRecap = '<sc-if value="{{ showRegister }}">'
 // Simple month calendar stays for coach/HC/admin; GRO gets the Kalender Arena above instead.
 // The per-day class cards below are hidden for GRO — open that wrapper right after the calendars.
 template = template.replace(jadwalHead, '<sc-if value="{{ showSimpleCal }}">' + calPanel + '</sc-if>' + arenaCalPanel + '<sc-if value="{{ showDayCards }}">' + jadwalHead);
+// ---- Check-out reminder banner on the coach dashboard (we never auto check-out) ----
+const checkoutReminder = '<sc-if value="{{ hasPendingCheckout }}">'
+  + '<div style="background:rgba(176,113,10,.12);border:1px solid var(--amber);border-radius:14px;padding:14px 16px;margin-bottom:18px;">'
+    + '<div style="font-weight:800;font-size:14px;color:var(--amber);">&#9200; Jangan lupa Check Out</div>'
+    + '<div style="font-size:12.5px;color:var(--muted);margin:4px 0 10px;">Kelas ini sudah selesai tapi belum kamu check out:</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;">'
+      + '<sc-for list="{{ pendingCheckout }}" as="p"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 12px;">'
+        + '<div style="min-width:0;"><div style="font-weight:700;font-size:13px;">{{ p.type }}</div><div style="font-size:11.5px;color:var(--muted);">{{ p.dateLabel }} &#183; {{ p.time }}&#8211;{{ p.end }}</div></div>'
+        + '<button onclick="{{ p.checkout }}" style="background:var(--green);border:0;color:#fff;border-radius:9px;padding:8px 15px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Check Out</button>'
+      + '</div></sc-for>'
+    + '</div>'
+  + '</div></sc-if>';
+template = template.replace('<sc-if value="{{ showSimpleCal }}">', checkoutReminder + '<sc-if value="{{ showSimpleCal }}">');
+
+// ---- Monthly coach-session report (conduct/check-out/hours) on the Reports screen ----
+const coachSessPanel = '<sc-if value="{{ showCoachSess }}">'
+  + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 20px;margin-bottom:16px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">'
+      + '<div style="font-family:\'Archivo\';font-weight:800;font-size:18px;">Rekap Sesi Coach &#183; {{ coachSessMonthLabel }}</div>'
+      + '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">'
+        + '<select onchange="{{ setCoachSessMonth }}" style="' + rcSel + '"><sc-for list="{{ coachSessMonths }}" as="o"><option value="{{ o.ym }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
+        + '<button onclick="{{ exportCoachSess }}" style="background:var(--volt);border:0;color:#fff;border-radius:10px;padding:9px 15px;font-family:\'Archivo\';font-weight:800;font-size:12.5px;cursor:pointer;">&#128196; Cetak PDF</button>'
+      + '</div>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Conduct = coach check-in &#183; Selesai = check-out. Terhitung otomatis dari kehadiran coach.</div>'
+    + '<sc-if value="{{ coachSessHoursOff }}"><div style="background:rgba(176,113,10,.14);border:1px solid var(--amber);border-radius:10px;padding:9px 13px;font-size:12px;color:var(--amber);margin-bottom:12px;">Kolom &#8220;Total jam&#8221; aktif setelah migrasi DB (checkout_at) dijalankan.</div></sc-if>'
+    + '<div style="overflow-x:auto;"><div style="min-width:680px;">'
+      + '<div style="display:grid;grid-template-columns:1.5fr .8fr .8fr .8fr .9fr 1.2fr;gap:8px;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--border);">'
+        + '<div>Coach</div><div style="text-align:center;">Terjadwal</div><div style="text-align:center;">Conduct</div><div style="text-align:center;">Selesai</div><div style="text-align:center;">Total jam</div><div>Status</div>'
+      + '</div>'
+      + '<sc-for list="{{ coachSessRows }}" as="r"><div style="display:grid;grid-template-columns:1.5fr .8fr .8fr .8fr .9fr 1.2fr;gap:8px;padding:11px 10px;font-size:13px;border-bottom:1px solid var(--border);align-items:center;">'
+        + '<div style="font-weight:700;">{{ r.name }} <span style="color:var(--muted);font-weight:400;font-size:11px;">{{ r.roleTag }}</span></div>'
+        + '<div style="text-align:center;font-variant-numeric:tabular-nums;">{{ r.scheduled }}</div>'
+        + '<div style="text-align:center;font-weight:800;color:var(--volt);font-variant-numeric:tabular-nums;">{{ r.conducted }}</div>'
+        + '<div style="text-align:center;font-variant-numeric:tabular-nums;">{{ r.completed }}</div>'
+        + '<div style="text-align:center;font-variant-numeric:tabular-nums;font-weight:700;">{{ r.hours }}</div>'
+        + '<div><span style="background:{{ r.statusBg }};color:{{ r.statusCol }};border-radius:100px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap;">{{ r.note }}</span></div>'
+      + '</div></sc-for>'
+      + '<sc-if value="{{ noCoachSess }}"><div style="padding:30px;text-align:center;color:var(--muted);">Belum ada sesi tercatat di bulan ini.</div></sc-if>'
+    + '</div></div>'
+  + '</div></sc-if>';
+template = template.replace('<!-- REPORTS-RECAP -->', coachSessPanel + '<!-- REPORTS-RECAP -->');
 // The attendance recap lives on the Reports screen (Head Coach / Admin), not the Schedule screen.
 template = template.replace('<!-- REPORTS-RECAP -->', registerRecap);
 // Empty state when the selected day has no classes
