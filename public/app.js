@@ -414,7 +414,7 @@ class Component extends DCLogic {
     if (this.MOCK) { this.setD({ coachSess: this._mockCoachSess() }); return; }
     this.api('/api/hc/coach-sessions?ym=' + (this.state.coachSessYm || '')).then((r) => this.setD({ coachSess: r })).catch(() => {});
   }
-  setCoachSessMonth(e) { this.setState({ coachSessYm: (e && e.target ? e.target.value : '') || '' }); this.loadCoachSessions(); }
+  setCoachSessMonth(e) { const ym = (e && e.target ? e.target.value : '') || ''; this.setState({ coachSessYm: ym, registerYm: ym }); this.loadCoachSessions(); this.loadRegister(); }
   _mockCoachSess() {
     return { monthLabel: 'July 2026', hoursAvailable: true,
       months: [{ ym: '2026-07', label: 'Jul 2026', picked: true }, { ym: '2026-06', label: 'Jun 2026', picked: false }],
@@ -450,7 +450,47 @@ class Component extends DCLogic {
     const win = ifr.contentWindow; const doc = win.document; doc.open(); doc.write(html); doc.close();
     setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); }, 300);
   }
-  setRegisterMonth(e) { this.setState({ registerYm: (e && e.target ? e.target.value : '') || '' }); this.loadRegister(); }
+  setRegisterMonth(e) { const ym = (e && e.target ? e.target.value : '') || ''; this.setState({ registerYm: ym, coachSessYm: ym }); this.loadRegister(); this.loadCoachSessions(); }
+  // One combined monthly PDF — coach session summary + attendance + teaching totals — so there's
+  // no back-and-forth between two separate exports.
+  exportMonthlyPdf() {
+    const cs = this.state.d.coachSess || {}; const csRows = cs.rows || [];
+    const regRows = this.state.d.registerRows || []; const totals = this.state.d.coachTotals || [];
+    if (!csRows.length && !regRows.length) return this.toastMsg('Belum ada data untuk di-export.');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+    const monthLbl = cs.monthLabel || ((this.state.d.registerMonths || []).find((m) => m.picked) || {}).label || '';
+    // Section 1 — Rekap Sesi Coach (summary)
+    const t = cs.totals || {};
+    const sumHead = ['Coach', 'Terjadwal', 'Conduct', 'Selesai', 'Total jam', 'Status'];
+    const sumBody = csRows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('')
+      + '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
+    const sec1 = csRows.length ? ('<h2>1 · Rekap Sesi Coach</h2><table><thead><tr>' + sumHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + sumBody + '</tbody></table>') : '';
+    // Section 2 — Rekap Absensi (per class, with coach check-in/out)
+    const order = []; const by = {};
+    for (const r of regRows) {
+      const k = r.scheduleId || (r.date + r.time + r.className);
+      if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }; order.push(k); }
+      const g = by[k]; if (!g.gro && r.gro) g.gro = r.gro;
+      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+    }
+    const attHead = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
+    const attBlocks = order.map((k) => { const g = by[k];
+      const ci = g.coachIn ? '&#10003; ' + esc(g.coachIn) : 'belum'; const co = g.coachOut ? '&#10003; ' + esc(g.coachOut) : 'belum';
+      const head = '<div class="clshead"><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + ci + ' &middot; check-out: ' + co + '</div></div>';
+      const tb = g.rows.map((rr) => '<tr>' + rr.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'ok' : 'warn') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
+      return '<div class="clsblock">' + head + '<table><thead><tr>' + attHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + tb + '</tbody></table></div>';
+    }).join('');
+    const sec2 = regRows.length ? ('<h2>2 · Rekap Absensi</h2>' + attBlocks) : '';
+    // Section 3 — Total Mengajar Coach
+    const sec3 = totals.length ? ('<h2>3 · Total Mengajar Coach</h2><table><thead><tr><th>Coach</th><th>Sesi Selesai</th><th>Total Jam</th></tr></thead><tbody>' + totals.map((tt) => '<tr><td>' + esc(tt.coach) + '</td><td>' + esc((tt.completed || 0) + ' / ' + (tt.sessions || 0)) + '</td><td>' + esc(tt.hours || '—') + '</td></tr>').join('') + '</tbody></table>') : '';
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>Laporan Bulanan · ' + esc(monthLbl) + '</title><style>'
+      + '@page{margin:12mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:18px;}h1{font-size:18px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:14px;}h2{font-size:14px;margin:22px 0 8px;border-bottom:2px solid #E4002B;padding-bottom:4px;}'
+      + 'table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px;}th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.c{text-align:center;}td.hi{color:#C1121F;font-weight:700;}td.ok{color:#1C8A4B;font-weight:700;}td.warn{color:#C77A00;font-weight:700;}tr.tot td{font-weight:800;background:#fafafa;}.tag{font-size:8px;background:#eee;border-radius:6px;padding:1px 5px;color:#666;}.clsblock{break-inside:avoid;margin-bottom:14px;}.clshead{margin:0 0 6px;}.clstitle{font-weight:800;font-size:12.5px;}.clssub{color:#666;font-size:10.5px;margin-top:2px;}@media print{body{padding:0;}}</style>'
+      + '</head><body><h1>20FIT Arena — Laporan Bulanan Coach</h1><div class="sub">' + esc(monthLbl) + '</div>' + sec1 + sec2 + sec3 + '</body></html>';
+    const ifr = document.createElement('iframe'); ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'); document.body.appendChild(ifr);
+    const win = ifr.contentWindow; const doc = win.document; doc.open(); doc.write(html); doc.close();
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); }, 300);
+  }
   registerAttend(scheduleId, bookingId, status) {
     if (!scheduleId || !bookingId) return;
     if (this.MOCK) {
@@ -1284,7 +1324,7 @@ class Component extends DCLogic {
       registerCoachTotals, hasRegisterTotals: registerCoachTotals.length > 0, registerHoursOff: D.registerHoursAvail === false,
       showCoachSess: showRegister, coachSessRows, noCoachSess: coachSessRows.length === 0,
       coachSessMonths: _cs.months || [], coachSessMonthLabel: _cs.monthLabel || '', coachSessHoursOff: _cs.hoursAvailable === false,
-      setCoachSessMonth: (e) => this.setCoachSessMonth(e), exportCoachSess: () => this.exportCoachSessionsPdf(),
+      setCoachSessMonth: (e) => this.setCoachSessMonth(e), exportCoachSess: () => this.exportCoachSessionsPdf(), exportMonthly: () => this.exportMonthlyPdf(),
       hasPendingCheckout: pendingCheckout.length > 0, pendingCheckout,
       hasRegister: registerGroups.length > 0, noRegister: registerGroups.length === 0,
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
