@@ -171,6 +171,35 @@ async function sessionsFull(ids) {
   return m;
 }
 
+// ---------- Check-in welcome email ----------
+// Sent to a participant when they are marked "Hadir". Delivery goes through a transactional
+// email provider (Resend by default) — set RESEND_API_KEY + MAIL_FROM env to enable. Without a
+// key it is a safe no-op, so the app runs fine before the email service is configured.
+const CHECKIN_SUBJECT = "You're checked in — Welcome to HYROX at 20FIT Arena";
+let _checkinTpl = null;
+function checkinHtml(name) {
+  if (_checkinTpl == null) { try { _checkinTpl = fs.readFileSync(path.join(__dirname, 'email-templates', 'checkin.html'), 'utf8'); } catch (_e) { _checkinTpl = ''; } }
+  let html = _checkinTpl;
+  const first = String(name || '').trim().split(/\s+/)[0];
+  if (first) html = html.replace('Hi there,', 'Hi ' + first + ',');
+  return html;
+}
+async function sendCheckinEmail(to, name) {
+  const KEY = process.env.RESEND_API_KEY;
+  const FROM = process.env.MAIL_FROM || '20FIT Arena <arena@20fit.id>';
+  if (!KEY) return; // email disabled until a provider key is configured
+  const html = checkinHtml(name);
+  if (!html) return;
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [to], subject: CHECKIN_SUBJECT, html }),
+    });
+    if (!r.ok) console.warn('[checkin-email] send failed', r.status);
+  } catch (e) { console.warn('[checkin-email] error', e.message); }
+}
+
 // Admin Hub sometimes stores co-taught classes as combined names,
 // e.g. "Cindy Lauw & Rheza" or "Elsen & Ade Midhun". Split into individual
 // instructor tokens so such a class shows up for each real coach involved.
@@ -1252,10 +1281,23 @@ route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
     return send(res, 200, { ok: true });
   }
   if (!['checked_in', 'no_show'].includes(body.status)) return send(res, 400, { error: 'Invalid attendance data.' });
+  // Was this participant already checked in? (so we email only on the FIRST Hadir, not re-clicks).
+  let wasCheckedIn = false;
+  if (body.status === 'checked_in') {
+    const prev = await sb(`arena_class_attendance?select=status&schedule_id=eq.${enc(params.id)}&booking_id=eq.${enc(body.booking_id)}&limit=1`).catch(() => null);
+    wasCheckedIn = !!(prev && prev[0] && prev[0].status === 'checked_in');
+  }
   // on_conflict targets the (schedule_id, booking_id) unique constraint so merge-duplicates
   // does an UPDATE instead of hitting a duplicate-key error when a row already exists.
   await sb('arena_class_attendance?on_conflict=schedule_id,booking_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, booking_id: body.booking_id, status: body.status, marked_by: s.c }) });
-  return send(res, 200, { ok: true });
+  send(res, 200, { ok: true });
+  // First time marked Hadir → send the participant the welcome/voucher email (fire-and-forget).
+  if (body.status === 'checked_in' && !wasCheckedIn) {
+    sb(`arena_class_bookings?select=full_name,email&id=eq.${enc(body.booking_id)}&limit=1`)
+      .then((bk) => { const b0 = bk && bk[0]; if (b0 && b0.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b0.email)) return sendCheckinEmail(b0.email, b0.full_name); })
+      .catch(() => {});
+  }
+  return;
 });
 // GRO uploads a single group attendance photo for the class (shown in the report + PDF).
 route('POST', '/api/coach/class/:id/photo', async (req, res, s, q, params) => {
