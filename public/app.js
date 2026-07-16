@@ -380,7 +380,7 @@ class Component extends DCLogic {
     const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
     const blocks = groups.map((g) => {
       const photo = g.photo ? '<img class="ph" src="' + esc(g.photo) + '">' : '';
-      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + esc(g.coachIn || '—') + ' &middot; check-out: ' + esc(g.coachOut || 'belum') + '</div></div></div>';
+      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + (g.coachIn ? '&#10003; ' + esc(g.coachIn) : 'belum') + ' &middot; check-out: ' + (g.coachOut ? '&#10003; ' + esc(g.coachOut) : 'belum') + '</div></div></div>';
       const tbody = g.rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
       return '<div class="clsblock">' + head + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div>';
     }).join('');
@@ -1233,8 +1233,11 @@ class Component extends DCLogic {
       });
     }
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => {
-      const cSess = c.coachIn ? ('Check-in ' + c.coachIn + (c.coachOut ? ' · Check-out ' + c.coachOut : ' · belum check-out')) : 'Coach belum check-in';
-      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', coachSess: cSess, coachSessCol: c.coachOut ? C.green : C.amber, participants: c.participants };
+      const ciDone = !!c.coachIn, coDone = !!c.coachOut;
+      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir',
+        ciIcon: ciDone ? '✓' : '○', ciText: 'Check-in ' + (ciDone ? c.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted,
+        coIcon: coDone ? '✓' : '○', coText: 'Check-out ' + (coDone ? c.coachOut : 'belum'), coCol: coDone ? C.green : C.amber,
+        participants: c.participants };
     }) }));
     const registerCoachTotals = (D.coachTotals || []).map((t) => ({ coach: t.coach, sessions: t.sessions, completed: t.completed, hours: t.hours }));
     const registerMonthOpts = D.registerMonths || [];
@@ -1412,10 +1415,10 @@ class Component extends DCLogic {
     d.registerCanCheck = true;
     const GRPPH = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='120' height='120' fill='%23c9d9e8'/><circle cx='60' cy='44' r='20' fill='%237f97b0'/><rect x='24' y='70' width='72' height='42' rx='20' fill='%237f97b0'/></svg>";
     d.registerRows = [
-      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: 'GRO Arena', participant: 'Andra Wijaya', phone: '0812-3456-7890', email: 'andra@email.com', attendance: 'checked_in', payment: 'Lunas', classPhoto: GRPPH, scheduleId: 'sch5', bookingId: 'b1' },
-      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: '', participant: 'Sari Putri', phone: '0813-1111-2222', email: 'sari@email.com', attendance: null, payment: 'Belum', classPhoto: GRPPH, scheduleId: 'sch5', bookingId: 'b2' },
-      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '19:30', className: '20FIT Arena HYROX Foundation Class', coach: 'YoKae', gro: 'GRO Arena', participant: 'Woro Liana', phone: '0857-9999-0000', email: 'woro@email.com', attendance: 'no_show', payment: 'Lunas', classPhoto: '', scheduleId: 'sch6', bookingId: 'b3' },
-      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '07:00', className: '20FIT Arena HYROX Complete Class', coach: 'Nando', gro: 'GRO Arena', participant: 'Budi Santoso', phone: '0811-2222-3333', email: 'budi@email.com', attendance: 'checked_in', payment: 'Lunas', classPhoto: GRPPH, scheduleId: 'sch1', bookingId: 'b4' },
+      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: 'GRO Arena', coachIn: '18:33', coachOut: '19:30', coachStatus: 'completed', participant: 'Andra Wijaya', phone: '0812-3456-7890', email: 'andra@email.com', attendance: 'checked_in', payment: 'Lunas', classPhoto: GRPPH, scheduleId: 'sch5', bookingId: 'b1' },
+      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '18:30', className: '20FIT Special Class', coach: 'Rheza & Tedy', gro: '', coachIn: '18:33', coachOut: '19:30', coachStatus: 'completed', participant: 'Sari Putri', phone: '0813-1111-2222', email: 'sari@email.com', attendance: null, payment: 'Belum', classPhoto: GRPPH, scheduleId: 'sch5', bookingId: 'b2' },
+      { date: '2026-07-14', dateLabel: 'Tue 14 Jul', time: '19:30', className: '20FIT Arena HYROX Foundation Class', coach: 'YoKae', gro: 'GRO Arena', coachIn: '19:32', coachOut: '', coachStatus: 'ongoing', participant: 'Woro Liana', phone: '0857-9999-0000', email: 'woro@email.com', attendance: 'no_show', payment: 'Lunas', classPhoto: '', scheduleId: 'sch6', bookingId: 'b3' },
+      { date: '2026-07-11', dateLabel: 'Sat 11 Jul', time: '07:00', className: '20FIT Arena HYROX Complete Class', coach: 'Nando', gro: 'GRO Arena', coachIn: '', coachOut: '', coachStatus: '', participant: 'Budi Santoso', phone: '0811-2222-3333', email: 'budi@email.com', attendance: 'checked_in', payment: 'Lunas', classPhoto: GRPPH, scheduleId: 'sch1', bookingId: 'b4' },
     ];
     d.arenaCalLabel = 'July 2026'; d.arenaCalYm = '2026-07'; d.arenaCalPrevYm = '2026-06'; d.arenaCalNextYm = '2026-08';
     d.arenaCalCells = (() => {
