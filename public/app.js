@@ -349,7 +349,7 @@ class Component extends DCLogic {
   loadRegister() {
     if (this.MOCK) return;
     this.api('/api/attendance/register?month=' + (this.state.registerYm || ''))
-      .then((r) => this.setD({ registerRows: r.rows || [], registerMonths: r.months || [], registerCanCheck: !!r.canCheck }))
+      .then((r) => this.setD({ registerRows: r.rows || [], registerMonths: r.months || [], registerCanCheck: !!r.canCheck, coachTotals: r.coachTotals || [], registerHoursAvail: r.hoursAvailable !== false }))
       .catch(() => {});
   }
   saveNote(scheduleId, bookingId, note, refresh) {
@@ -367,20 +367,20 @@ class Component extends DCLogic {
     const order = []; const by = {};
     for (const r of rows) {
       const k = r.scheduleId || (r.date + r.time + r.className);
-      if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', photo: r.classPhoto || '', rows: [] }; order.push(k); }
+      if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', photo: r.classPhoto || '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }; order.push(k); }
       const g = by[k];
       if (!g.gro && r.gro) g.gro = r.gro;
       g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
     }
-    this._printAttendanceGrouped(title, order.map((k) => by[k]));
+    this._printAttendanceGrouped(title, order.map((k) => by[k]), this.state.d.coachTotals || []);
   }
-  _printAttendanceGrouped(title, groups) {
+  _printAttendanceGrouped(title, groups, totals) {
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
     const headers = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
     const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
     const blocks = groups.map((g) => {
       const photo = g.photo ? '<img class="ph" src="' + esc(g.photo) + '">' : '';
-      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div></div></div>';
+      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + esc(g.coachIn || '—') + ' &middot; check-out: ' + esc(g.coachOut || 'belum') + '</div></div></div>';
       const tbody = g.rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
       return '<div class="clsblock">' + head + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div>';
     }).join('');
@@ -389,7 +389,9 @@ class Component extends DCLogic {
       + '.clsblock{break-inside:avoid;margin-bottom:18px;}.clshead{display:flex;align-items:center;gap:12px;margin:0 0 7px;}.ph{width:70px;height:70px;object-fit:cover;border-radius:7px;border:1px solid #ccc;}.nophoto{width:70px;height:70px;border:1px dashed #ccc;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;text-align:center;}'
       + '.clstitle{font-weight:800;font-size:13px;}.clssub{color:#666;font-size:11px;margin-top:2px;}'
       + 'table{border-collapse:collapse;width:100%;font-size:11px;}th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.hadir{color:#1C8A4B;font-weight:700;}td.absen{color:#C77A00;font-weight:700;}@media print{body{padding:0;}}</style>'
-      + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>' + blocks + '</body></html>';
+      + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>' + blocks
+      + ((totals && totals.length) ? ('<div class="clsblock"><div class="clstitle" style="margin-bottom:6px;">Total Mengajar Coach — bulan ini</div><table><thead><tr><th>Coach</th><th>Sesi Selesai</th><th>Total Jam</th></tr></thead><tbody>' + totals.map((t) => '<tr><td>' + esc(t.coach) + '</td><td>' + esc((t.completed || 0) + ' / ' + (t.sessions || 0)) + '</td><td>' + esc(t.hours || '—') + '</td></tr>').join('') + '</tbody></table></div>') : '')
+      + '</body></html>';
     const ifr = document.createElement('iframe');
     ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
     document.body.appendChild(ifr);
@@ -1216,7 +1218,7 @@ class Component extends DCLogic {
       if (!(r.date in _dIdx)) { _dIdx[r.date] = _byDate.length; _byDate.push({ dateLabel: r.dateLabel, _c: {}, classes: [] }); }
       const dg = _byDate[_dIdx[r.date]];
       const ckey = r.scheduleId || (r.time + r.className);
-      if (!(ckey in dg._c)) { dg._c[ckey] = dg.classes.length; dg.classes.push({ time: r.time, className: r.className, coach: r.coach || '—', scheduleId: r.scheduleId, photo: r.classPhoto || '', pax: 0, attended: 0, participants: [] }); }
+      if (!(ckey in dg._c)) { dg._c[ckey] = dg.classes.length; dg.classes.push({ time: r.time, className: r.className, coach: r.coach || '—', coachIn: r.coachIn || '', coachOut: r.coachOut || '', coachStatus: r.coachStatus || '', scheduleId: r.scheduleId, photo: r.classPhoto || '', pax: 0, attended: 0, participants: [] }); }
       const cg = dg.classes[dg._c[ckey]];
       const a = r.attendance;
       cg.pax++; if (a === 'checked_in') cg.attended++;
@@ -1230,7 +1232,11 @@ class Component extends DCLogic {
         note: r.note || '', hasNote: !!r.note, saveNote: (e) => this.saveNote(r.scheduleId, r.bookingId, e && e.target ? e.target.value : '', 'register'),
       });
     }
-    const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => ({ time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', participants: c.participants })) }));
+    const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => {
+      const cSess = c.coachIn ? ('Check-in ' + c.coachIn + (c.coachOut ? ' · Check-out ' + c.coachOut : ' · belum check-out')) : 'Coach belum check-in';
+      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', coachSess: cSess, coachSessCol: c.coachOut ? C.green : C.amber, participants: c.participants };
+    }) }));
+    const registerCoachTotals = (D.coachTotals || []).map((t) => ({ coach: t.coach, sessions: t.sessions, completed: t.completed, hours: t.hours }));
     const registerMonthOpts = D.registerMonths || [];
 
     // Monthly coach-session report (conduct/check-out/hours) + dashboard check-out reminders.
@@ -1272,6 +1278,7 @@ class Component extends DCLogic {
       cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
       onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
+      registerCoachTotals, hasRegisterTotals: registerCoachTotals.length > 0, registerHoursOff: D.registerHoursAvail === false,
       showCoachSess: showRegister, coachSessRows, noCoachSess: coachSessRows.length === 0,
       coachSessMonths: _cs.months || [], coachSessMonthLabel: _cs.monthLabel || '', coachSessHoursOff: _cs.hoursAvailable === false,
       setCoachSessMonth: (e) => this.setCoachSessMonth(e), exportCoachSess: () => this.exportCoachSessionsPdf(),
@@ -1360,6 +1367,13 @@ class Component extends DCLogic {
     const d = this.emptyData();
     d.coachSess = this._mockCoachSess();
     d.pendingCheckout = [{ schedule_id: 'x2', type: 'HYROX Foundation', dateLabel: 'Thu 2 Jul', time: '17:00', end: '18:00' }];
+    d.registerRows = [
+      { date: '2026-07-01', dateLabel: 'Selasa, 1 Jul 2026', time: '07:00', className: 'HYROX Complete', coach: 'Rheza', gro: 'GRO Arena', coachIn: '07:02', coachOut: '08:00', coachStatus: 'completed', participant: 'Andra Wijaya', phone: '0812xxxx', email: 'andra@x.com', attendance: 'checked_in', note: '', payment: 'Lunas', scheduleId: 'x1', bookingId: 'b1' },
+      { date: '2026-07-01', dateLabel: 'Selasa, 1 Jul 2026', time: '07:00', className: 'HYROX Complete', coach: 'Rheza', gro: 'GRO Arena', coachIn: '07:02', coachOut: '08:00', coachStatus: 'completed', participant: 'Sari Putri', phone: '0813xxxx', email: 'sari@x.com', attendance: 'no_show', note: 'Izin', payment: 'Belum', scheduleId: 'x1', bookingId: 'b2' },
+    ];
+    d.registerMonths = [{ ym: '2026-07', label: 'July 2026', picked: true }];
+    d.coachTotals = [{ coach: 'Rheza', sessions: 18, completed: 17, hours: '17j 05m' }, { coach: 'Elsen', sessions: 12, completed: 12, hours: '11j 40m' }];
+    d.registerHoursAvail = true;
     d.today = [{ schedule_id: 'x1', time: '07:00', end: '– 08:00', type: 'HYROX Complete', coach: 'Nando', peserta: 12, cap: 16, started: false, accent: '#0068C9', status: 'Upcoming', canAbsen: true, canCheckout: false, checkedOut: false, dateLabel: 'Wed 1 Jul' }, { schedule_id: 'x2', time: '17:00', end: '– 18:00', type: 'HYROX Foundation', coach: 'Elsen & Brian', peserta: 8, cap: 12, started: true, accent: '#D6FF3D', status: 'In Progress', canAbsen: false, canCheckout: true, checkedOut: false, dateLabel: 'Thu 2 Jul' }, { schedule_id: 'x3', time: '19:00', end: '– 20:00', type: 'HYROX Complete', coach: 'Rheza', peserta: 10, cap: 14, started: true, accent: '#3ED598', status: 'Finished', canAbsen: false, canCheckout: false, checkedOut: true, dateLabel: 'Thu 2 Jul' }];
     d.today[0].menuId = 'm0';
     d.menuOptions = [{ id: 'm0', title: 'AMRAP Circuit', category: 'HYROX Complete' }, { id: 'm1', title: 'Full Simulation', category: 'HYROX Complete' }, { id: 'm2', title: 'Basic Technique', category: 'HYROX Foundation' }];

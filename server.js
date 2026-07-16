@@ -891,13 +891,22 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
     for (const a of at || []) attById[a.booking_id] = a;
   }
   const photoMap = await classPhotoMap(ids);
+  // Coach session times per class (check-in / check-out) so the report shows when the coach
+  // actually started and ended, next to the guests who attended.
+  const sess = await sessionsFull(ids);
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  const durMin = (r) => (r && r.created_at && r.checkout_at) ? Math.max(0, Math.round((new Date(r.checkout_at) - new Date(r.created_at)) / 60000)) : null;
+  const hLabel = (min) => { if (min == null) return '—'; const h = Math.floor(min / 60), m = min % 60; return (h ? h + 'j ' : '') + m + 'm'; };
   const rows = bookings.filter((b) => b.status !== 'cancelled').map((b) => {
     const sc = schedById[b.schedule_id] || {};
     const a = attById[b.id];
+    const ss = sess[b.schedule_id];
     return {
       date: sc.schedule_date || '', dateLabel: sc.schedule_date ? dLabel(sc.schedule_date) : '',
       time: hhmm(sc.start_time), className: shortType((types[sc.class_type_id] || {}).name),
       coach: sc.instructor || '', gro: a ? (a.marked_by || '') : '',
+      coachIn: ss && ss.created_at ? hm(ss.created_at) : '', coachOut: ss && ss.checkout_at ? hm(ss.checkout_at) : '',
+      coachStatus: ss ? ss.status : '', // '' (no check-in) | 'ongoing' | 'completed'
       participant: b.full_name || '(no name)', phone: b.phone || '', email: b.email || '',
       attendance: a ? a.status : null, // 'checked_in' | 'no_show' | null
       note: a ? (a.note || '') : '', classPhoto: photoMap[b.schedule_id] || '',
@@ -906,7 +915,18 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
     };
   });
   rows.sort((x, y) => (x.date + x.time + x.className + x.participant).localeCompare(y.date + y.time + y.className + y.participant));
-  return send(res, 200, { rows, months: monthOptions(today, floorYm).map((o) => ({ ...o, picked: o.ym === ym })), month: ym, canCheck: isGro(s) });
+  // Per-coach teaching total for the selected month (end-of-report summary).
+  const totBy = {};
+  for (const sc of scheds) {
+    const ss = sess[sc.id]; if (!ss) continue;
+    const coach = sc.instructor || '—';
+    if (!totBy[coach]) totBy[coach] = { coach, sessions: 0, completed: 0, minutes: 0 };
+    totBy[coach].sessions++;
+    if (ss.status === 'completed') { totBy[coach].completed++; const dm = durMin(ss); if (dm != null) totBy[coach].minutes += dm; }
+  }
+  const coachTotals = Object.values(totBy).sort((a, b) => b.minutes - a.minutes || b.sessions - a.sessions)
+    .map((t) => ({ coach: t.coach, sessions: t.sessions, completed: t.completed, hours: _checkoutAtOk ? hLabel(t.minutes) : '—' }));
+  return send(res, 200, { rows, coachTotals, hoursAvailable: _checkoutAtOk, months: monthOptions(today, floorYm).map((o) => ({ ...o, picked: o.ym === ym })), month: ym, canCheck: isGro(s) });
 });
 
 // ===== COACH: participants — leaderboard by class attendance (team-wide for HC), month-filterable =====
