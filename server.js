@@ -171,34 +171,33 @@ async function sessionsFull(ids) {
   return m;
 }
 
-// ---------- Check-in welcome email ----------
-// Sent to a participant when they are marked "Hadir". Delivery goes through a transactional
-// email provider (Resend by default) — set RESEND_API_KEY + MAIL_FROM env to enable. Without a
-// key it is a safe no-op, so the app runs fine before the email service is configured.
-const CHECKIN_SUBJECT = "You're checked in — Welcome to HYROX at 20FIT Arena";
-let _checkinTpl = null;
-function checkinHtml(name) {
-  if (_checkinTpl == null) { try { _checkinTpl = fs.readFileSync(path.join(__dirname, 'email-templates', 'checkin.html'), 'utf8'); } catch (_e) { _checkinTpl = ''; } }
-  let html = _checkinTpl;
+// ---------- Participant emails (check-in welcome, check-out thank-you) ----------
+// Sent via a transactional email provider (Resend) — set RESEND_API_KEY + MAIL_FROM env to enable.
+// Without a key it is a safe no-op, so the app runs fine before the email service is configured.
+const _tplCache = {};
+function emailTpl(file, name) {
+  if (!(file in _tplCache)) { try { _tplCache[file] = fs.readFileSync(path.join(__dirname, 'email-templates', file), 'utf8'); } catch (_e) { _tplCache[file] = ''; } }
+  let html = _tplCache[file];
   const first = String(name || '').trim().split(/\s+/)[0];
-  if (first) html = html.replace('Hi there,', 'Hi ' + first + ',');
+  if (first && html) html = html.replace('Hi there,', 'Hi ' + first + ',');
   return html;
 }
-async function sendCheckinEmail(to, name) {
+async function sendEmail(to, subject, html) {
   const KEY = process.env.RESEND_API_KEY;
   const FROM = process.env.MAIL_FROM || '20FIT Arena <arena@20fit.id>';
-  if (!KEY) return; // email disabled until a provider key is configured
-  const html = checkinHtml(name);
-  if (!html) return;
+  if (!KEY || !html || !to) return; // disabled until configured
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [to], subject: CHECKIN_SUBJECT, html }),
+      body: JSON.stringify({ from: FROM, to: [to], subject, html }),
     });
-    if (!r.ok) console.warn('[checkin-email] send failed', r.status);
-  } catch (e) { console.warn('[checkin-email] error', e.message); }
+    if (!r.ok) console.warn('[email] send failed', r.status);
+  } catch (e) { console.warn('[email] error', e.message); }
 }
+const isEmail = (e) => typeof e === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+function sendCheckinEmail(to, name) { return sendEmail(to, "You're checked in — Welcome to HYROX at 20FIT Arena", emailTpl('checkin.html', name)); }
+function sendCheckoutEmail(to, name) { return sendEmail(to, 'Thank you for training at 20FIT Arena — your recovery voucher', emailTpl('checkout.html', name)); }
 
 // Admin Hub sometimes stores co-taught classes as combined names,
 // e.g. "Cindy Lauw & Rheza" or "Elsen & Ade Midhun". Split into individual
@@ -1267,7 +1266,19 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
   const checkinIso = sess.created_at || nowIso;
   const durationMin = Math.max(0, Math.round((new Date(nowIso) - new Date(checkinIso)) / 60000));
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
-  return send(res, 200, { ok: true, recap: { type: shortType((types[sc.class_type_id] || {}).name), dateLabel: dLabel(sc.schedule_date), checkin: hm(checkinIso), checkout: hm(nowIso), durationMin, participants, attended } });
+  send(res, 200, { ok: true, recap: { type: shortType((types[sc.class_type_id] || {}).name), dateLabel: dLabel(sc.schedule_date), checkin: hm(checkinIso), checkout: hm(nowIso), durationMin, participants, attended } });
+  // First check-out of this class → email the "thank you + recovery voucher" to everyone who
+  // actually attended (was marked Hadir). Skip if the session was already completed (no re-send).
+  if (sess.status !== 'completed') {
+    (async () => {
+      const att = await sb(`arena_class_attendance?select=booking_id&status=eq.checked_in&schedule_id=eq.${enc(params.id)}`).catch(() => null);
+      const ids = (att || []).map((a) => a.booking_id).filter(Boolean);
+      if (!ids.length) return;
+      const bks = await sb(`arena_class_bookings?select=full_name,email&id=in.(${ids.map(enc).join(',')})`).catch(() => null);
+      for (const b of bks || []) { if (isEmail(b.email)) await sendCheckoutEmail(b.email, b.full_name); }
+    })().catch(() => {});
+  }
+  return;
 });
 route('POST', '/api/coach/class/:id/attend', async (req, res, s, q, params) => {
   const body = await readBody(req);
