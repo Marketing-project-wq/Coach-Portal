@@ -465,27 +465,35 @@ class Component extends DCLogic {
     const sumBody = csRows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('')
       + '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
     const sec1 = csRows.length ? ('<h2>1 · Rekap Sesi Coach</h2><table><thead><tr>' + sumHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + sumBody + '</tbody></table>') : '';
-    // Section 2 — Rekap Absensi (per class, with coach check-in/out)
-    const order = []; const by = {};
+    // Section 2 — Rekap Absensi, grouped by DAY, with jadwal + on-time/late tag per class
+    const toMin = (tt) => { const m = /^(\d{1,2}):(\d{2})/.exec(tt || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+    const lateTag = (sched, act) => { const sm = toMin(sched), am = toMin(act); if (sm == null || am == null) return ''; const dd = am - sm; if (dd <= 5) return ' <span class="ok">(tepat waktu)</span>'; const h = Math.floor(dd / 60), mm = dd % 60; return ' <span class="warn">(telat ' + (h ? h + 'j ' : '') + mm + 'm)</span>'; };
+    const days = []; const dIdx = {};
     for (const r of regRows) {
-      const k = r.scheduleId || (r.date + r.time + r.className);
-      if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }; order.push(k); }
-      const g = by[k]; if (!g.gro && r.gro) g.gro = r.gro;
+      if (!(r.date in dIdx)) { dIdx[r.date] = days.length; days.push({ dateLabel: r.dateLabel, cls: [], _c: {} }); }
+      const dg = days[dIdx[r.date]];
+      const k = r.scheduleId || (r.time + r.className);
+      if (!(k in dg._c)) { dg._c[k] = dg.cls.length; dg.cls.push({ time: r.time, className: r.className, coach: r.coach, gro: '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }); }
+      const g = dg.cls[dg._c[k]]; if (!g.gro && r.gro) g.gro = r.gro;
       g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
     }
     const attHead = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
-    const attBlocks = order.map((k) => { const g = by[k];
-      const ci = g.coachIn ? '&#10003; ' + esc(g.coachIn) : 'belum'; const co = g.coachOut ? '&#10003; ' + esc(g.coachOut) : 'belum';
-      const head = '<div class="clshead"><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + ci + ' &middot; check-out: ' + co + '</div></div>';
-      const tb = g.rows.map((rr) => '<tr>' + rr.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'ok' : 'warn') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
-      return '<div class="clsblock">' + head + '<table><thead><tr>' + attHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + tb + '</tbody></table></div>';
+    const attBlocks = days.map((dg) => {
+      const blocks = dg.cls.map((g) => {
+        const ci = g.coachIn ? ('&#10003; ' + esc(g.coachIn) + lateTag(g.time, g.coachIn)) : '<span class="warn">belum</span>';
+        const co = g.coachOut ? ('&#10003; ' + esc(g.coachOut)) : '<span class="warn">belum</span>';
+        const head = '<div class="clshead"><div class="clstitle">' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Jadwal ' + esc(g.time) + ' &middot; Check-in: ' + ci + ' &middot; Check-out: ' + co + '</div></div>';
+        const tb = g.rows.map((rr) => '<tr>' + rr.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'ok' : 'warn') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
+        return '<div class="clsblock">' + head + '<table><thead><tr>' + attHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + tb + '</tbody></table></div>';
+      }).join('');
+      return '<div class="dayblock"><div class="dayhead">' + esc(dg.dateLabel) + '</div>' + blocks + '</div>';
     }).join('');
     const sec2 = regRows.length ? ('<h2>2 · Rekap Absensi</h2>' + attBlocks) : '';
     // Section 3 — Total Mengajar Coach
     const sec3 = totals.length ? ('<h2>3 · Total Mengajar Coach</h2><table><thead><tr><th>Coach</th><th>Sesi Selesai</th><th>Total Jam</th></tr></thead><tbody>' + totals.map((tt) => '<tr><td>' + esc(tt.coach) + '</td><td>' + esc((tt.completed || 0) + ' / ' + (tt.sessions || 0)) + '</td><td>' + esc(tt.hours || '—') + '</td></tr>').join('') + '</tbody></table>') : '';
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>Laporan Bulanan · ' + esc(monthLbl) + '</title><style>'
       + '@page{margin:12mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:18px;}h1{font-size:18px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:14px;}h2{font-size:14px;margin:22px 0 8px;border-bottom:2px solid #E4002B;padding-bottom:4px;}'
-      + 'table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px;}th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.c{text-align:center;}td.hi{color:#C1121F;font-weight:700;}td.ok{color:#1C8A4B;font-weight:700;}td.warn{color:#C77A00;font-weight:700;}tr.tot td{font-weight:800;background:#fafafa;}.tag{font-size:8px;background:#eee;border-radius:6px;padding:1px 5px;color:#666;}.clsblock{break-inside:avoid;margin-bottom:14px;}.clshead{margin:0 0 6px;}.clstitle{font-weight:800;font-size:12.5px;}.clssub{color:#666;font-size:10.5px;margin-top:2px;}@media print{body{padding:0;}}</style>'
+      + 'table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px;}th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;vertical-align:top;}th{background:#f4f4f4;font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#555;}td.c{text-align:center;}td.hi{color:#C1121F;font-weight:700;}td.ok{color:#1C8A4B;font-weight:700;}td.warn{color:#C77A00;font-weight:700;}tr.tot td{font-weight:800;background:#fafafa;}.tag{font-size:8px;background:#eee;border-radius:6px;padding:1px 5px;color:#666;}.clsblock{break-inside:avoid;margin-bottom:12px;}.clshead{margin:0 0 6px;}.clstitle{font-weight:800;font-size:12.5px;}.clssub{color:#666;font-size:10.5px;margin-top:2px;}.dayhead{font-weight:800;font-size:12.5px;color:#222;background:#eee;padding:5px 9px;border-radius:5px;margin:16px 0 8px;}.dayblock{margin-bottom:4px;}span.ok{color:#1C8A4B;font-weight:700;}span.warn{color:#C77A00;font-weight:700;}@media print{body{padding:0;}}</style>'
       + '</head><body><h1>20FIT Arena — Laporan Bulanan Coach</h1><div class="sub">' + esc(monthLbl) + '</div>' + sec1 + sec2 + sec3 + '</body></html>';
     const ifr = document.createElement('iframe'); ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'); document.body.appendChild(ifr);
     const win = ifr.contentWindow; const doc = win.document; doc.open(); doc.write(html); doc.close();
@@ -1272,10 +1280,13 @@ class Component extends DCLogic {
         note: r.note || '', hasNote: !!r.note, saveNote: (e) => this.saveNote(r.scheduleId, r.bookingId, e && e.target ? e.target.value : '', 'register'),
       });
     }
+    const _toMin = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+    const _lateInfo = (sched, act) => { const sm = _toMin(sched), am = _toMin(act); if (sm == null || am == null) return { text: '', col: C.muted }; const dd = am - sm; if (dd <= 5) return { text: 'tepat waktu', col: C.green }; const h = Math.floor(dd / 60), mm = dd % 60; return { text: 'telat ' + (h ? h + 'j ' : '') + mm + 'm', col: C.amber }; };
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => {
       const ciDone = !!c.coachIn, coDone = !!c.coachOut;
-      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir',
-        ciIcon: ciDone ? '✓' : '○', ciText: 'Check-in ' + (ciDone ? c.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted,
+      const lt = ciDone ? _lateInfo(c.time, c.coachIn) : { text: '', col: C.muted };
+      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', schedTime: c.time,
+        ciIcon: ciDone ? '✓' : '○', ciText: 'Check-in ' + (ciDone ? c.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciTag: lt.text, ciTagCol: lt.col,
         coIcon: coDone ? '✓' : '○', coText: 'Check-out ' + (coDone ? c.coachOut : 'belum'), coCol: coDone ? C.green : C.amber,
         participants: c.participants };
     }) }));
