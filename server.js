@@ -148,6 +148,17 @@ async function startedSet(ids) {
   for (const r of rows || []) s.add(r.schedule_id);
   return s;
 }
+// Count participants marked "Hadir" (checked_in) across the given schedule ids.
+// Paginated + chunked so a large all-time window can't hit the row cap or blow the URL.
+async function checkedInCount(ids) {
+  let n = 0;
+  for (let i = 0; i < ids.length; i += 120) {
+    const chunk = ids.slice(i, i + 120);
+    const rows = await sbAll(`arena_class_attendance?select=booking_id&status=eq.checked_in&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    n += (rows || []).length;
+  }
+  return n;
+}
 // schedule_id -> session status ('ongoing' after check-in, 'completed' after check-out).
 async function sessionStatusMap(ids) {
   const m = {};
@@ -1517,6 +1528,11 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   });
   const totalClasses = (scheds || []).length;
   const totalPax = list.reduce((a, c) => a + c.peserta, 0);
+  // Participant attendance for the range: how many booked, how many actually
+  // showed up (marked Hadir), and how many didn't. booked = came + no-show.
+  const bookedTotal = Object.values(counts).reduce((a, c) => a + (c.confirmed || 0), 0);
+  const attendedTotal = await checkedInCount(allIds);
+  const noShowTotal = Math.max(0, bookedTotal - attendedTotal);
   // "Busiest" insights — which class type and which weekday drew the most participants.
   const types = await classTypes();
   const byType = {}, byDay = {};
@@ -1543,7 +1559,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
       pax: (counts[x.id] || {}).confirmed || 0,
     };
   });
-  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, coverage: coverageTotal, insights: { classes: topClasses, days: topDays }, classList });
+  return send(res, 200, { coaches: list, range, periodLabel, totalClasses, totalPax, bookedTotal, attendedTotal, noShowTotal, coverage: coverageTotal, insights: { classes: topClasses, days: topDays }, classList });
 });
 // ===== HC/Admin: monthly coach-session report — actual conduct from check-in / check-out =====
 route('GET', '/api/hc/coach-sessions', async (req, res, s, q) => {
