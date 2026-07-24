@@ -184,7 +184,7 @@ class Component extends DCLogic {
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
-    else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
+    else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
@@ -768,7 +768,7 @@ class Component extends DCLogic {
     this.state.reportRange = range;
     if (this.MOCK) {
       const wk = range === 'week';
-      return this.setD({ reportPeriod: wk ? '6–12 Jul' : 'July 2026', reportTotalClasses: wk ? 24 : 100, reportTotalPax: wk ? 286 : 1177, reportCoverage: wk ? 1 : 5 });
+      return this.setD({ reportPeriod: wk ? '6–12 Jul' : 'July 2026', reportTotalClasses: wk ? 24 : 100, reportTotalPax: wk ? 286 : 1177, reportBooked: wk ? 286 : 1177, reportAttended: wk ? 251 : 1032, reportNoShow: wk ? 35 : 145, reportCoverage: wk ? 1 : 5 });
     }
     this.setState({ reportRange: range });
     this.loadScreen('reports');
@@ -1225,6 +1225,18 @@ class Component extends DCLogic {
     const reportTotalPax = D.reportTotalPax != null ? this.fmtNum(D.reportTotalPax) : '—';
     const reportCoverage = D.reportCoverage != null ? String(D.reportCoverage) : '—';
     const reportCoverageLabel = reportRange === 'week' ? 'Coverage This Week' : 'Coverage This Month';
+    // Participant attendance breakdown: total booked = came (Hadir) + didn't come.
+    // Captions are built here in the active language (toggle is login-only, so lang is fixed by now).
+    const isID = (st.lang === 'id');
+    const reportBooked = D.reportBooked != null ? this.fmtNum(D.reportBooked) : '—';
+    const reportAttended = D.reportAttended != null ? this.fmtNum(D.reportAttended) : '—';
+    const reportNoShow = D.reportNoShow != null ? this.fmtNum(D.reportNoShow) : '—';
+    const bookedN = D.reportBooked || 0;
+    const attPctN = bookedN ? Math.round((D.reportAttended / bookedN) * 100) : 0;
+    const nsPctN = bookedN ? 100 - attPctN : 0;
+    const reportBookedCap = isID ? 'peserta yang booking' : 'participants who booked';
+    const reportAttendedCap = bookedN ? (isID ? attPctN + '% datang' : attPctN + '% came') : (isID ? 'belum ada data' : 'no data yet');
+    const reportNoShowCap = bookedN ? (isID ? nsPctN + '% tidak datang' : nsPctN + '% didn\'t come') : (isID ? 'belum ada data' : 'no data yet');
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 0, attended: 0, attPct: '—', attCol: C.muted2, subs: 0, photo: '', hasPhoto: false };
     // Per-Class Breakdown sort: by date (default), most participants, or least.
     const statRowSort = st.statRowSort || 'date';
@@ -1394,6 +1406,7 @@ class Component extends DCLogic {
       srDate, srMost, srLeast, sortStatDate: () => this.setStatRowSort('date'), sortStatMost: () => this.setStatRowSort('pax_desc'), sortStatLeast: () => this.setStatRowSort('pax_asc'),
       statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
       reportTitle, reportPeriod, reportTotalClasses, reportTotalPax, reportCoverage, reportCoverageLabel, rrMonth, rrWeek,
+      reportBooked, reportAttended, reportNoShow, reportBookedCap, reportAttendedCap, reportNoShowCap,
       setReportMonth: () => this.setReportRange('month'), setReportWeek: () => this.setReportRange('week'),
       rsCoach, rsClasses, rsPax, rsCovered,
       sortReportName: () => this.setReportSort('name'), sortReportClasses: () => this.setReportSort('classes'), sortReportPax: () => this.setReportSort('pax'), sortReportCovered: () => this.setReportSort('covered'),
@@ -1522,6 +1535,9 @@ class Component extends DCLogic {
     d.reportPeriod = (this.state.reportRange === 'week') ? '6–12 Jul' : 'July 2026';
     d.reportTotalClasses = (this.state.reportRange === 'week') ? 24 : 100;
     d.reportTotalPax = (this.state.reportRange === 'week') ? 286 : 1177;
+    d.reportBooked = (this.state.reportRange === 'week') ? 286 : 1177;
+    d.reportAttended = (this.state.reportRange === 'week') ? 251 : 1032;
+    d.reportNoShow = (this.state.reportRange === 'week') ? 35 : 145;
     d.reportCoverage = (this.state.reportRange === 'week') ? 1 : 5;
     d.reportInsights = { classes: [{ name: 'HYROX Complete', classes: 42, pax: 520 }, { name: 'HYROX Foundation', classes: 30, pax: 360 }, { name: 'Strength', classes: 18, pax: 190 }, { name: 'Running Club', classes: 10, pax: 107 }], days: [{ day: 'Saturday', classes: 24, pax: 300 }, { day: 'Monday', classes: 20, pax: 250 }, { day: 'Wednesday', classes: 18, pax: 220 }, { day: 'Friday', classes: 16, pax: 207 }, { day: 'Sunday', classes: 12, pax: 120 }] };
     d.reportClassList = [

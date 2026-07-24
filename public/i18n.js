@@ -80,6 +80,7 @@ window.__I18N = (function () {
     'exercise (e.g. Wallballs)': 'exercise (mis. Wallballs)', 'kg (opt)': 'kg (ops)',
     // ---- reports ----
     'This Month': 'Bulan Ini', 'This Week': 'Minggu Ini', 'Total Classes (team)': 'Total Kelas (tim)',
+    'Participant Attendance': 'Kehadiran Peserta', 'Total Bookings': 'Total Booking', 'Attended': 'Hadir',
     // ---- accounts / add coach ----
     'Passwords are created & shared manually by the Admin (format: name + number).': 'Password dibuat & dibagikan manual oleh Admin (format: nama + angka).',
     'Reset Password': 'Reset Password', 'Deactivate': 'Nonaktifkan', 'Activate': 'Aktifkan',
