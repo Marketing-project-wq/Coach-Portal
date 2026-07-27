@@ -322,11 +322,11 @@
                 <span style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};">{{ c.status }}</span>
               </div>
               <div style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;letter-spacing:-.01em;">{{ c.type }}</div>
-              <sc-if value="{{ showCoachName }}"><div style="font-size:12.5px;color:var(--muted);margin-top:3px;">👤 {{ c.coach }}</div></sc-if>
+              <sc-if value="{{ showCoachName }}"><div style="font-size:12.5px;color:var(--muted);margin-top:3px;">👤 {{ c.coach }} · <span style="color:{{ c.groCheckCol }};font-weight:700;">{{ c.groCheckLabel }}</span></div></sc-if>
               <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;margin-top:3px;"><span style="font-weight:700;color:var(--text);">{{ c.peserta }}</span> pax</div>
               <sc-if value="{{ canOpenClass || c.canAbsen || c.canCheckout || c.checkedOut }}"><div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
                 <sc-if value="{{ canOpenClass }}"><button onclick="{{ c.openClass }}" style="flex:1;background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:9px;font-weight:700;font-size:12.5px;cursor:pointer;" style-hover="border-color:var(--muted);">Class Detail</button></sc-if>
-                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ c.openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#ffffff;border-radius:9px;padding:9px;font-family:'Barlow Condensed';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check In</button></sc-if>
+                <sc-if value="{{ c.canAbsen }}" hint-placeholder-val="{{ true }}"><button onclick="{{ c.openAbsen }}" style="flex:1;background:var(--volt);border:0;color:#ffffff;border-radius:9px;padding:9px;font-family:'Barlow Condensed';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">{{ c.checkinLabel }}</button></sc-if>
                 <sc-if value="{{ c.canCheckout }}"><button onclick="{{ c.checkOut }}" style="flex:1;background:var(--green);border:0;color:#ffffff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check Out</button></sc-if>
                 <sc-if value="{{ c.checkedOut }}"><span style="flex:1;text-align:center;background:rgba(28,138,75,.12);color:var(--green);border-radius:10px;padding:11px;font-weight:800;font-size:12.5px;">✓ Finished</span></sc-if>
               </div></sc-if>
@@ -389,10 +389,11 @@
             <div>
               <div style="display:flex;align-items:center;gap:12px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--volt);">{{ detailTime }}</span><h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;margin:0;">{{ detailType }}</h2></div>
               <div style="color:var(--muted);font-size:14px;margin-top:6px;">{{ detailDate }} · {{ detailTimeRange }}</div>
+              <sc-if value="{{ showGroCheck }}"><div style="font-size:13px;font-weight:700;margin-top:8px;color:{{ detailGroCheckCol }};">{{ detailGroCheckLabel }}</div></sc-if>
             </div>
             <div style="display:flex;gap:10px;">
               <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Coverage</button>
-              <sc-if value="{{ detailCanCheckin }}"><button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:12px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check In</button></sc-if>
+              <sc-if value="{{ detailCanCheckin }}"><button onclick="{{ openAbsen }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:11px;padding:12px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">{{ detailCheckinLabel }}</button></sc-if>
               <sc-if value="{{ detailCanCheckout }}"><button onclick="{{ detailCheckOut }}" style="background:var(--green);border:0;color:#ffffff;border-radius:11px;padding:12px 20px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check Out</button></sc-if>
               <sc-if value="{{ detailCheckedOut }}"><span style="background:rgba(28,138,75,.12);color:var(--green);border-radius:11px;padding:12px 20px;font-weight:800;font-size:13px;">✓ Finished</span></sc-if>
             </div>

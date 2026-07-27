@@ -1242,14 +1242,23 @@ route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
 });
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   const body = (await readBody(req)) || {};
-  // GPS lock: if an arena location is configured, the coach must be within its radius.
-  const loc = await arenaLocation();
-  if (loc) {
-    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Enable location access on your phone to start the class.', needLocation: true });
-    const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
-    if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
+  // The GRO can check a coach in on their behalf (from the front desk): the session is
+  // attributed to the class's real instructor, and the coach's GPS lock is skipped.
+  let coachName = s.c;
+  if (isGro(s)) {
+    const scs = await sb(`arena_class_schedules?select=instructor&id=eq.${enc(params.id)}&limit=1`);
+    const sc = scs && scs[0];
+    if (sc && sc.instructor) coachName = sc.instructor;
+  } else {
+    // GPS lock: if an arena location is configured, the coach must be within its radius.
+    const loc = await arenaLocation();
+    if (loc) {
+      if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Enable location access on your phone to start the class.', needLocation: true });
+      const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
+      if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
+    }
   }
-  await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: s.c, status: 'ongoing' }) });
+  await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: coachName, status: 'ongoing' }) });
   return send(res, 200, { ok: true, started: true });
 });
 // Check out — the coach ends the class. Records completion, counts participants NOW (so late
