@@ -373,7 +373,7 @@ class Component extends DCLogic {
       if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', photo: r.classPhoto || '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }; order.push(k); }
       const g = by[k];
       if (!g.gro && r.gro) g.gro = r.gro;
-      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', (r.payment || '—') + (r.latePaid ? ' · ' + (r.latePaidLabel || 'bayar setelah kelas') : ''), r.note || '']);
     }
     this._printAttendanceGrouped(title, order.map((k) => by[k]), this.state.d.coachTotals || []);
   }
@@ -478,7 +478,7 @@ class Component extends DCLogic {
       const k = r.scheduleId || (r.time + r.className);
       if (!(k in dg._c)) { dg._c[k] = dg.cls.length; dg.cls.push({ time: r.time, className: r.className, coach: r.coach, gro: '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }); }
       const g = dg.cls[dg._c[k]]; if (!g.gro && r.gro) g.gro = r.gro;
-      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', (r.payment || '—') + (r.latePaid ? ' · ' + (r.latePaidLabel || 'bayar setelah kelas') : ''), r.note || '']);
     }
     const attHead = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
     const attBlocks = days.map((dg) => {
@@ -1090,6 +1090,7 @@ class Component extends DCLogic {
       const on = p.attendance === 'checked_in';
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
+        latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'none' : 'checked_in') };
     });
     const showCheckin = isGro; // GRO checks participants in/out from the class detail
@@ -1302,6 +1303,7 @@ class Component extends DCLogic {
       cg.participants.push({
         name: r.participant, phone: r.phone || '—', email: r.email || '—',
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
+        latePaid: !!r.latePaid, latePaidLabel: r.latePaidLabel || '',
         attLabel: on ? 'Hadir' : 'Tidak hadir', attCol: on ? C.green : C.amber,
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
         toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'none' : 'checked_in'),
@@ -1342,6 +1344,7 @@ class Component extends DCLogic {
       return {
         n: i + 1, booking: p.booking || '—', name: p.name, phone: p.phone || '—', email: p.email || '—',
         payment: p.payment || '', hasPayment: !!p.payment, payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted),
+        latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
         hadirBg: isHadir ? C.green : 'transparent', hadirFg: isHadir ? '#fff' : C.muted,
@@ -1357,6 +1360,7 @@ class Component extends DCLogic {
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
       cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',
       cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
+      cpHasLatePaid: (cpSched.latePaidCount || 0) > 0, cpLatePaidNote: (cpSched.latePaidCount || 0) + ' peserta bayar setelah kelas',
       cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
       onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
@@ -1434,6 +1438,7 @@ class Component extends DCLogic {
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
+      detailHasLatePaid: (cd.latePaidCount || 0) > 0, detailLatePaidNote: (cd.latePaidCount || 0) + ' peserta bayar setelah kelas berjalan',
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants, coAttended, coAbsent,
