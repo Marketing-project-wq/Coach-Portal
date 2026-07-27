@@ -182,6 +182,24 @@ async function sessionsFull(ids) {
   return m;
 }
 
+// Late payment: a booking is paid & valid, but the payment (paid_at) only landed AFTER the
+// booked class had already ended. The guest still belongs to that class (by schedule_id, not by
+// pay date) — this just surfaces the late timing so GRO/Coach can reconcile it in the recap.
+// Jakarta (WIB) is a fixed UTC+7 with no DST, so a +07:00 offset on the class end is exact.
+function latePaidInfo(paidAt, scheduleDate, endTime) {
+  if (!paidAt || !scheduleDate || !endTime) return null;
+  const et = String(endTime).length === 5 ? String(endTime) + ':00' : String(endTime);
+  const end = new Date(`${scheduleDate}T${et}+07:00`);
+  const paid = new Date(paidAt);
+  if (isNaN(end) || isNaN(paid) || !(paid.getTime() > end.getTime())) return null;
+  const mins = Math.round((paid.getTime() - end.getTime()) / 60000);
+  const days = Math.floor(mins / 1440);
+  const label = days >= 1 ? `bayar +${days} hari setelah kelas`
+    : mins >= 60 ? `bayar +${Math.round(mins / 60)} jam setelah kelas`
+      : 'bayar setelah kelas selesai';
+  return { late: true, mins, label };
+}
+
 // ---------- Participant emails (check-in welcome, check-out thank-you) ----------
 // Sent via a transactional email provider (Resend) — set RESEND_API_KEY + MAIL_FROM env to enable.
 // Without a key it is a safe no-op, so the app runs fine before the email service is configured.
@@ -924,7 +942,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
   const bookings = []; const attById = {};
   for (let i = 0; i < ids.length; i += 120) {
     const chunk = ids.slice(i, i + 120);
-    const bk = await sbAll(`arena_class_bookings?select=id,schedule_id,full_name,phone,email,status&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    const bk = await sbAll(`arena_class_bookings?select=id,schedule_id,full_name,phone,email,status,paid_at&schedule_id=in.(${chunk.map(enc).join(',')})`);
     for (const b of bk || []) bookings.push(b);
     const at = await attendanceRows(`schedule_id=in.(${chunk.map(enc).join(',')})`);
     for (const a of at || []) attById[a.booking_id] = a;
@@ -936,10 +954,15 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
   const durMin = (r) => (r && r.created_at && r.checkout_at) ? Math.max(0, Math.round((new Date(r.checkout_at) - new Date(r.created_at)) / 60000)) : null;
   const hLabel = (min) => { if (min == null) return '—'; const h = Math.floor(min / 60), m = min % 60; return (h ? h + 'j ' : '') + m + 'm'; };
+  let latePaidCount = 0;
   const rows = bookings.filter((b) => b.status !== 'cancelled').map((b) => {
     const sc = schedById[b.schedule_id] || {};
     const a = attById[b.id];
     const ss = sess[b.schedule_id];
+    // Confirmed guest whose payment only cleared after the class ended — flag it, attached to
+    // this (the booked) class. Never changes the count or the payment status itself.
+    const lp = b.status === 'confirmed' ? latePaidInfo(b.paid_at, sc.schedule_date, sc.end_time) : null;
+    if (lp) latePaidCount++;
     return {
       date: sc.schedule_date || '', dateLabel: sc.schedule_date ? dLabel(sc.schedule_date) : '',
       time: hhmm(sc.start_time), className: shortType((types[sc.class_type_id] || {}).name),
@@ -950,6 +973,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
       attendance: a ? a.status : null, // 'checked_in' | 'no_show' | null
       note: a ? (a.note || '') : '', classPhoto: photoMap[b.schedule_id] || '',
       payment: b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')),
+      latePaid: !!lp, latePaidLabel: lp ? lp.label : '',
       scheduleId: b.schedule_id, bookingId: b.id,
     };
   });
@@ -965,7 +989,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
   }
   const coachTotals = Object.values(totBy).sort((a, b) => b.minutes - a.minutes || b.sessions - a.sessions)
     .map((t) => ({ coach: t.coach, sessions: t.sessions, completed: t.completed, hours: _checkoutAtOk ? hLabel(t.minutes) : '—' }));
-  return send(res, 200, { rows, coachTotals, hoursAvailable: _checkoutAtOk, months: monthOptions(today, floorYm).map((o) => ({ ...o, picked: o.ym === ym })), month: ym, canCheck: isGro(s) });
+  return send(res, 200, { rows, coachTotals, latePaidCount, hoursAvailable: _checkoutAtOk, months: monthOptions(today, floorYm).map((o) => ({ ...o, picked: o.ym === ym })), month: ym, canCheck: isGro(s) });
 });
 
 // ===== COACH: participants — leaderboard by class attendance (team-wide for HC), month-filterable =====
@@ -1192,7 +1216,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // Participant contact (phone/email) + payment status are exposed only to GRO / HC / Admin
   // (for check-in); regular coaches must not see customer contact details.
   const canContact = isGro(s) || requireHC(s);
-  const sel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email' : 'id,booking_code,full_name,status,created_at';
+  const sel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,status,created_at,paid_at';
   const bookings = await sb(`arena_class_bookings?select=${sel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
   const att = await attendanceRows(`schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; const noteMap = {}; for (const a of att || []) { attMap[a.booking_id] = a.status; if (a.note) noteMap[a.booking_id] = a.note; }
@@ -1204,14 +1228,20 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const attHist = await coachAttendanceMap(histCoach, today); // visit history for this class's coach
   // Coaches see only confirmed (paid) participants; GRO/HC also see pending-payment guests so they
   // can check them in and read the payment column.
+  let latePaidCount = 0;
   const participants = (bookings || []).filter((b) => b.status !== 'cancelled' && (canContact || b.status !== 'pending_payment')).map((b) => {
     const h = attHist[String(b.full_name || '').trim().toLowerCase()] || null;
+    // Confirmed guest whose payment cleared only after this class ended — surfaced so GRO/Coach
+    // can reconcile a late-paid attendee against the class they actually booked.
+    const lp = b.status === 'confirmed' ? latePaidInfo(b.paid_at, sc.schedule_date, sc.end_time) : null;
+    if (lp) latePaidCount++;
     const row = {
       booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)',
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
       classesLabel: classesLabelFor(h), menusLabel: menusLabelFor(h),
+      latePaid: !!lp, latePaidLabel: lp ? lp.label : '',
     };
     if (canContact) { row.phone = b.phone || ''; row.email = b.email || ''; row.payment = b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')); row.note = noteMap[b.id] || ''; }
     return row;
@@ -1223,7 +1253,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const lm = linkedMenuId ? menuRows.find((m) => m.id === linkedMenuId) : null;
   const linkedMenu = lm ? { id: lm.id, title: lm.title, category: lm.category || '', content: lm.content || '' } : null;
   const photoMap = canContact ? await classPhotoMap([params.id]) : {};
-  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, photo: photoMap[params.id] || '', started, checkedOut, canCheckout }, started, participants, menuOptions, linkedMenu });
+  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, photo: photoMap[params.id] || '', started, checkedOut, canCheckout, latePaidCount }, started, participants, menuOptions, linkedMenu });
 });
 // Attach / change / clear the menu for a class (Option B). No-op-safe if the link table is missing.
 route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
@@ -1242,14 +1272,23 @@ route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
 });
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   const body = (await readBody(req)) || {};
-  // GPS lock: if an arena location is configured, the coach must be within its radius.
-  const loc = await arenaLocation();
-  if (loc) {
-    if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Enable location access on your phone to start the class.', needLocation: true });
-    const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
-    if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
+  // The GRO can check a coach in on their behalf (from the front desk): the session is
+  // attributed to the class's real instructor, and the coach's GPS lock is skipped.
+  let coachName = s.c;
+  if (isGro(s)) {
+    const scs = await sb(`arena_class_schedules?select=instructor&id=eq.${enc(params.id)}&limit=1`);
+    const sc = scs && scs[0];
+    if (sc && sc.instructor) coachName = sc.instructor;
+  } else {
+    // GPS lock: if an arena location is configured, the coach must be within its radius.
+    const loc = await arenaLocation();
+    if (loc) {
+      if (body.lat == null || body.lng == null) return send(res, 403, { error: 'Enable location access on your phone to start the class.', needLocation: true });
+      const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
+      if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
+    }
   }
-  await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: s.c, status: 'ongoing' }) });
+  await sb('arena_class_sessions', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ schedule_id: params.id, coach_name: coachName, status: 'ongoing' }) });
   return send(res, 200, { ok: true, started: true });
 });
 // Check out — the coach ends the class. Records completion, counts participants NOW (so late

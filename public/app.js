@@ -278,11 +278,14 @@ class Component extends DCLogic {
     const cls = this.state.absenClass; const id = cls && cls.schedule_id; const venueId = cls && cls.venueId;
     if (this.MOCK || (!id && !venueId)) { this.setState({ absen: false }); return this.toastMsg('Checked in · attendance recorded'); }
     const path = venueId ? ('/api/venue/bookings/' + encodeURIComponent(venueId) + '/start') : ('/api/coach/class/' + encodeURIComponent(id) + '/start');
+    const groOnBehalf = this.state.role === 'gro';
     const start = (coords) => {
       this.api(path, { method: 'POST', body: JSON.stringify(coords || {}) })
-        .then(() => { this.setState({ absen: false }); this.toastMsg('Checked in · attendance recorded'); if (id && this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
+        .then(() => { this.setState({ absen: false }); this.toastMsg(groOnBehalf ? 'Coach checked in' : 'Checked in · attendance recorded'); if (id && this.state.screen === 'detail') this.openClass(id); else this.loadScreen('dash'); })
         .catch((e) => { this.setState({ absen: false }); this.toastMsg(e.message); });
     };
+    // The GRO checks a coach in on their behalf — no coach GPS lock, so skip the location step.
+    if (groOnBehalf) return start(null);
     // Attach current GPS so the server can verify the coach is at the arena (when the lock is on).
     if (navigator.geolocation) {
       this.toastMsg('Checking your location…');
@@ -370,7 +373,7 @@ class Component extends DCLogic {
       if (!(k in by)) { by[k] = { date: r.dateLabel, time: r.time, className: r.className, coach: r.coach, gro: '', photo: r.classPhoto || '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }; order.push(k); }
       const g = by[k];
       if (!g.gro && r.gro) g.gro = r.gro;
-      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', (r.payment || '—') + (r.latePaid ? ' · ' + (r.latePaidLabel || 'bayar setelah kelas') : ''), r.note || '']);
     }
     this._printAttendanceGrouped(title, order.map((k) => by[k]), this.state.d.coachTotals || []);
   }
@@ -475,7 +478,7 @@ class Component extends DCLogic {
       const k = r.scheduleId || (r.time + r.className);
       if (!(k in dg._c)) { dg._c[k] = dg.cls.length; dg.cls.push({ time: r.time, className: r.className, coach: r.coach, gro: '', coachIn: r.coachIn || '', coachOut: r.coachOut || '', rows: [] }); }
       const g = dg.cls[dg._c[k]]; if (!g.gro && r.gro) g.gro = r.gro;
-      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', r.payment || '—', r.note || '']);
+      g.rows.push([r.participant, r.phone || '—', r.email || '—', r.attendance === 'checked_in' ? 'Hadir' : 'Tidak hadir', (r.payment || '—') + (r.latePaid ? ' · ' + (r.latePaidLabel || 'bayar setelah kelas') : ''), r.note || '']);
     }
     const attHead = ['Nama Peserta', 'No. Handphone', 'Email', 'Absensi', 'Payment', 'Note'];
     const attBlocks = days.map((dg) => {
@@ -911,7 +914,14 @@ class Component extends DCLogic {
     const coachToday = (D.today || []).map((c) => {
       const p = this.statusPill(c.status);
       const menuOpts = (D.menuOptions || []).map((m) => ({ id: m.id, label: m.title + (m.category ? ' · ' + m.category : ''), picked: c.menuId === m.id }));
-      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : ''), addCal: () => this.addToCalendar({ id: c.schedule_id, date: c.date, start: c.time, end: c.end, title: c.type }) });
+      // For the GRO: an at-a-glance line showing whether the coach has checked in for this class,
+      // and a clearer label on the button they use to check the coach in on their behalf.
+      const groCheck = c.checkedOut ? { label: 'Coach sudah check-out', col: 'var(--green)' }
+        : c.started ? { label: 'Coach sudah check-in', col: 'var(--green)' }
+          : { label: 'Coach belum check-in', col: 'var(--amber)' };
+      const checkinLabel = isGro ? 'Check In Coach' : 'Check In';
+      const checkoutLabel = isGro ? 'Check Out Coach' : 'Check Out';
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, groCheckLabel: groCheck.label, groCheckCol: groCheck.col, checkinLabel, checkoutLabel, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : ''), addCal: () => this.addToCalendar({ id: c.schedule_id, date: c.date, start: c.time, end: c.end, title: c.type }) });
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(228,0,43,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
@@ -1051,6 +1061,14 @@ class Component extends DCLogic {
     // check-out modal + class-detail check-in/out states.
     // External coaches never see participant data or check-in on the detail — only Coverage + Back.
     const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut && !this.isExternal, detailCanCheckout = !!cd.canCheckout && !this.isExternal, detailCanCheckin = !detailStarted && !this.isExternal;
+    // GRO drills into a class from the Arena calendar: label the check-in action and show the
+    // coach's check-in status explicitly so the GRO can see, and act, at a glance.
+    const detailCheckinLabel = isGro ? 'Check In Coach' : 'Check In';
+    const detailCheckoutLabel = isGro ? 'Check Out Coach' : 'Check Out';
+    const detailGroCheck = detailCheckedOut ? { label: 'Coach sudah check-out', col: 'var(--green)' }
+      : detailStarted ? { label: 'Coach sudah check-in', col: 'var(--green)' }
+        : { label: 'Coach belum check-in', col: 'var(--amber)' };
+    const showGroCheck = isGro;
     const showParticipantList = !this.isExternal;
     // Class Menu attached to this class (Option B) — internal/HC only (external don't see the detail)
     const cdLinkedMenu = (D.classDetail && D.classDetail.linkedMenu) || null;
@@ -1074,6 +1092,7 @@ class Component extends DCLogic {
       const on = p.attendance === 'checked_in';
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
+        latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'none' : 'checked_in') };
     });
     const showCheckin = isGro; // GRO checks participants in/out from the class detail
@@ -1286,6 +1305,7 @@ class Component extends DCLogic {
       cg.participants.push({
         name: r.participant, phone: r.phone || '—', email: r.email || '—',
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
+        latePaid: !!r.latePaid, latePaidLabel: r.latePaidLabel || '',
         attLabel: on ? 'Hadir' : 'Tidak hadir', attCol: on ? C.green : C.amber,
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
         toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'none' : 'checked_in'),
@@ -1326,6 +1346,7 @@ class Component extends DCLogic {
       return {
         n: i + 1, booking: p.booking || '—', name: p.name, phone: p.phone || '—', email: p.email || '—',
         payment: p.payment || '', hasPayment: !!p.payment, payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted),
+        latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
         hadirBg: isHadir ? C.green : 'transparent', hadirFg: isHadir ? '#fff' : C.muted,
@@ -1341,6 +1362,7 @@ class Component extends DCLogic {
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
       cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',
       cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
+      cpHasLatePaid: (cpSched.latePaidCount || 0) > 0, cpLatePaidNote: (cpSched.latePaidCount || 0) + ' peserta bayar setelah kelas',
       cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
       onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
@@ -1380,7 +1402,7 @@ class Component extends DCLogic {
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
       venueHidden, hasVenueHidden,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
-      showDayCards: !isGro, showSimpleCal: !isGro,
+      showDayCards: true, showSimpleCal: !isGro,
       showArenaCal, arenaCalCells, arenaCalLabel: D.arenaCalLabel || '',
       arenaCalPrev: () => this.loadArenaCalendar(this.state.d.arenaCalPrevYm), arenaCalNext: () => this.loadArenaCalendar(this.state.d.arenaCalNextYm),
       showMenuNav: !isGro, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
@@ -1417,7 +1439,8 @@ class Component extends DCLogic {
       cdRangeOpts, cdCoachOpts, setCdRange: (e) => this.setMonitorRange(e && e.target ? e.target.value : 'month'), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
-      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
+      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailCheckoutLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
+      detailHasLatePaid: (cd.latePaidCount || 0) > 0, detailLatePaidNote: (cd.latePaidCount || 0) + ' peserta bayar setelah kelas berjalan',
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants, coAttended, coAbsent,
