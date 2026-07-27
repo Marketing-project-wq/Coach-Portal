@@ -222,6 +222,22 @@ class Component extends DCLogic {
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => this.setState({ classPopup: d })).catch((e) => this.toastMsg(e.message));
   }
   closeClassPopup() { this.setState({ classPopup: null }); }
+  // GRO checks the coach in/out on their behalf straight from the Kalender Arena popup (helps when
+  // the coach forgets). Server attributes it to the real instructor and skips the coach GPS lock.
+  popupCoachCheckin() {
+    const cp = this.state.classPopup; const sid = cp && cp.schedule && cp.schedule.schedule_id; if (!sid) return;
+    if (this.MOCK) { return this.toastMsg('Coach checked in'); }
+    this.api('/api/coach/class/' + encodeURIComponent(sid) + '/start', { method: 'POST', body: JSON.stringify({}) })
+      .then(() => { this.toastMsg('Coach checked in'); this.openClassPopup(sid); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  popupCoachCheckout() {
+    const cp = this.state.classPopup; const sid = cp && cp.schedule && cp.schedule.schedule_id; if (!sid) return;
+    if (this.MOCK) { return this.toastMsg('Coach checked out'); }
+    this.api('/api/coach/class/' + encodeURIComponent(sid) + '/checkout', { method: 'POST' })
+      .then(() => { this.toastMsg('Coach checked out'); this.openClassPopup(sid); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   popupAttend(scheduleId, bookingId, status) {
     if (!scheduleId || !bookingId) return;
     const cp = this.state.classPopup; if (!cp) return;
@@ -1338,6 +1354,10 @@ class Component extends DCLogic {
     // Class popup (modal) — opened by clicking a class in the Kalender Arena.
     const cp = st.classPopup;
     const cpSched = cp ? (cp.schedule || {}) : {};
+    const cpStarted = !!cpSched.started, cpCheckedOut = !!cpSched.checkedOut, cpCanCheckout = !!cpSched.canCheckout;
+    const cpCoachStatus = cpCheckedOut ? { label: 'Coach sudah check-out', col: C.green }
+      : cpStarted ? { label: 'Coach sudah check-in', col: C.green }
+        : { label: 'Coach belum check-in', col: C.amber };
     const cpParts = cp ? (cp.participants || []) : [];
     const cpConfirmed = cpParts.filter((p) => p.bookingStatus === 'confirmed').length;
     const cpPending = cpParts.filter((p) => p.bookingStatus === 'pending_payment').length;
@@ -1363,6 +1383,9 @@ class Component extends DCLogic {
       cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',
       cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
       cpHasLatePaid: (cpSched.latePaidCount || 0) > 0, cpLatePaidNote: (cpSched.latePaidCount || 0) + ' peserta bayar setelah kelas',
+      cpCanManageCoach: isGro, cpCoachStatusLabel: cpCoachStatus.label, cpCoachStatusCol: cpCoachStatus.col,
+      cpCoachCanCheckin: isGro && !cpStarted, cpCoachCanCheckout: isGro && cpCanCheckout, cpCoachCheckedOut: cpCheckedOut,
+      popupCoachCheckin: () => this.popupCoachCheckin(), popupCoachCheckout: () => this.popupCoachCheckout(),
       cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
       onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
