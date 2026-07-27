@@ -920,7 +920,8 @@ class Component extends DCLogic {
         : c.started ? { label: 'Coach sudah check-in', col: 'var(--green)' }
           : { label: 'Coach belum check-in', col: 'var(--amber)' };
       const checkinLabel = isGro ? 'Check In Coach' : 'Check In';
-      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, groCheckLabel: groCheck.label, groCheckCol: groCheck.col, checkinLabel, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : ''), addCal: () => this.addToCalendar({ id: c.schedule_id, date: c.date, start: c.time, end: c.end, title: c.type }) });
+      const checkoutLabel = isGro ? 'Check Out Coach' : 'Check Out';
+      return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, groCheckLabel: groCheck.label, groCheckCol: groCheck.col, checkinLabel, checkoutLabel, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : ''), addCal: () => this.addToCalendar({ id: c.schedule_id, date: c.date, start: c.time, end: c.end, title: c.type }) });
     });
     // week
     const week = (D.week || []).map((d) => Object.assign({}, d, { bg: d.isToday ? 'var(--volt-dim)' : 'transparent', border: d.isToday ? 'rgba(228,0,43,.3)' : 'var(--border)', numCol: d.isToday ? 'var(--volt)' : (d.label === '—' ? 'var(--muted2)' : 'var(--text)'), pick: () => this.showDay(d.date) }));
@@ -1063,6 +1064,7 @@ class Component extends DCLogic {
     // GRO drills into a class from the Arena calendar: label the check-in action and show the
     // coach's check-in status explicitly so the GRO can see, and act, at a glance.
     const detailCheckinLabel = isGro ? 'Check In Coach' : 'Check In';
+    const detailCheckoutLabel = isGro ? 'Check Out Coach' : 'Check Out';
     const detailGroCheck = detailCheckedOut ? { label: 'Coach sudah check-out', col: 'var(--green)' }
       : detailStarted ? { label: 'Coach sudah check-in', col: 'var(--green)' }
         : { label: 'Coach belum check-in', col: 'var(--amber)' };
@@ -1437,7 +1439,7 @@ class Component extends DCLogic {
       cdRangeOpts, cdCoachOpts, setCdRange: (e) => this.setMonitorRange(e && e.target ? e.target.value : 'month'), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
-      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
+      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailCheckoutLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
       detailHasLatePaid: (cd.latePaidCount || 0) > 0, detailLatePaidNote: (cd.latePaidCount || 0) + ' peserta bayar setelah kelas berjalan',
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
