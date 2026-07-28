@@ -1425,7 +1425,7 @@ class Component extends DCLogic {
       venueDispatch, noVenueDispatch, hasVenueDispatch: !noVenueDispatch,
       venueHidden, hasVenueHidden,
       venueUnassignedCount, hasVenueUnassigned: venueUnassignedCount > 0, scheduleVenues, hasScheduleVenues,
-      showDayCards: true, showSimpleCal: !isGro,
+      showDayCards: !isGro, showSimpleCal: !isGro,
       showArenaCal, arenaCalCells, arenaCalLabel: D.arenaCalLabel || '',
       arenaCalPrev: () => this.loadArenaCalendar(this.state.d.arenaCalPrevYm), arenaCalNext: () => this.loadArenaCalendar(this.state.d.arenaCalNextYm),
       showMenuNav: !isGro, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
