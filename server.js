@@ -459,11 +459,17 @@ route('POST', '/api/auth/login', async (req, res) => {
   // Fast path: exact username, preferring the active row if duplicates exist.
   let rows = await sb(`arena_coach_users?select=*&username=eq.${enc(uname)}&order=is_active.desc&limit=1`);
   let u = rows && rows[0];
-  // Forgiving fallback: match ignoring spaces/case (e.g. "GRO Arena" typed as "groarena"),
-  // still preferring an active account. The user table is small, so scanning it is cheap.
+  // Email login: the sign-in field accepts "username or email", so match by email too.
+  if (!u && uname.includes('@')) {
+    const er = await sb(`arena_coach_users?select=*&email=eq.${enc(uname)}&order=is_active.desc&limit=1`);
+    u = er && er[0];
+  }
+  // Forgiving fallback: match ignoring spaces/case (e.g. "GRO Arena" typed as "groarena") on the
+  // username, or a case-insensitive email match, still preferring an active account. The user table
+  // is small, so scanning it is cheap.
   if (!u) {
     const all = await sb('arena_coach_users?select=*');
-    const cand = (all || []).filter((x) => String(x.username || '').toLowerCase().replace(/\s+/g, '') === unorm);
+    const cand = (all || []).filter((x) => String(x.username || '').toLowerCase().replace(/\s+/g, '') === unorm || String(x.email || '').toLowerCase().trim() === uname);
     u = cand.find((x) => x.is_active) || cand[0];
   }
   if (!u || !u.is_active || !verifyPassword(body.password, u.password_hash)) return send(res, 401, { error: 'Incorrect username or password.' });
