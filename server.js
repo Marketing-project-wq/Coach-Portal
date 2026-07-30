@@ -1588,11 +1588,17 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const topClasses = Object.values(byType).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
   const topDays = Object.values(byDay).sort((a, b) => b.pax - a.pax || b.classes - a.classes);
   // Flat, sortable class list for the range: class type, time, coach, date, participants.
+  // `coachKeys` is the set of roster coaches this class is attributed to — matched with the
+  // SAME tolerant logic as the coach cards (instructorHasCoach), so filtering the breakdown by a
+  // coach reconciles exactly with that coach's card (co-taught "Cindy Lauw & Rheza", "Coach Rheza",
+  // "A & B" all resolve to the real coach). The `coach` field keeps the raw instructor for display.
+  const roster = list.map((c) => c.name);
   const classList = (scheds || []).map((x) => {
     const dow = new Date(x.schedule_date + 'T00:00:00').getDay();
     return {
       type: shortType((types[x.class_type_id] || {}).name) || 'Class',
       time: hhmm(x.start_time), coach: x.instructor || '—',
+      coachKeys: roster.filter((nm) => instructorHasCoach(x.instructor, nm)),
       date: fmtDMon(x.schedule_date), dateISO: x.schedule_date,
       day: DOW_FULL[dow], dow,
       pax: (counts[x.id] || {}).confirmed || 0,
