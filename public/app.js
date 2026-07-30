@@ -438,23 +438,23 @@ class Component extends DCLogic {
     return { monthLabel: 'July 2026', hoursAvailable: true,
       months: [{ ym: '2026-07', label: 'Jul 2026', picked: true }, { ym: '2026-06', label: 'Jun 2026', picked: false }],
       rows: [
-        { name: 'Rheza', role: 'Coach', scheduled: 20, conducted: 18, completed: 17, pending: 1, minutes: 1025, hours: '17j 05m', note: '1 belum check-out', ok: false },
-        { name: 'Elsen', role: 'Coach', scheduled: 12, conducted: 12, completed: 12, pending: 0, minutes: 700, hours: '11j 40m', note: 'Lengkap', ok: true },
+        { name: 'Rheza', role: 'Coach', scheduled: 20, conducted: 18, completed: 17, pending: 1, minutes: 1025, pax: 122, hours: '17j 05m', note: '1 belum check-out', ok: false },
+        { name: 'Elsen', role: 'Coach', scheduled: 12, conducted: 12, completed: 12, pending: 0, minutes: 700, pax: 69, hours: '11j 40m', note: 'Lengkap', ok: true },
       ],
       sessions: [
         { coach: 'Rheza', date: '1 Jul', time: '07:00', cls: 'HYROX Complete', checkin: '07:02', checkout: '08:00', dur: '58m', done: true },
         { coach: 'Rheza', date: '2 Jul', time: '17:00', cls: 'HYROX Foundation', checkin: '17:03', checkout: 'belum', dur: '—', done: false },
       ],
-      totals: { scheduled: 32, conducted: 30, completed: 29, minutes: 1725, hours: '28j 45m' } };
+      totals: { scheduled: 32, conducted: 30, completed: 29, minutes: 1725, pax: 191, hours: '28j 45m' } };
   }
   exportCoachSessionsPdf() {
     const cs = this.state.d.coachSess || {}; const rows = cs.rows || [];
     if (!rows.length) return this.toastMsg('Belum ada data untuk di-export.');
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
-    const sumHead = ['Coach', 'Terjadwal', 'Conduct (check-in)', 'Selesai (check-out)', 'Total jam', 'Status'];
-    const sumRows = rows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('');
+    const sumHead = ['Coach', 'Terjadwal', 'Conduct (check-in)', 'Selesai (check-out)', 'Peserta', 'Total jam', 'Status'];
+    const sumRows = rows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + (r.pax || 0) + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('');
     const t = cs.totals || {};
-    const sumFoot = '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
+    const sumFoot = '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + (t.pax || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
     const detHead = ['Tanggal', 'Jam', 'Kelas', 'Coach', 'Check-in', 'Check-out', 'Durasi', 'Status'];
     const detRows = (cs.sessions || []).map((d) => '<tr><td>' + esc(d.date) + '</td><td>' + esc(d.time) + '</td><td>' + esc(d.cls) + '</td><td>' + esc(d.coach) + '</td><td>' + esc(d.checkin) + '</td><td class="' + (d.done ? '' : 'warn') + '">' + esc(d.checkout) + '</td><td>' + esc(d.dur) + '</td><td class="' + (d.done ? 'ok' : 'warn') + '">' + (d.done ? 'Selesai' : 'Belum check-out') + '</td></tr>').join('');
     const title = 'Rekap Sesi Coach · ' + (cs.monthLabel || '');
@@ -480,9 +480,9 @@ class Component extends DCLogic {
     const monthLbl = cs.monthLabel || ((this.state.d.registerMonths || []).find((m) => m.picked) || {}).label || '';
     // Section 1 — Rekap Sesi Coach (summary)
     const t = cs.totals || {};
-    const sumHead = ['Coach', 'Terjadwal', 'Conduct', 'Selesai', 'Total jam', 'Status'];
-    const sumBody = csRows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('')
-      + '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
+    const sumHead = ['Coach', 'Terjadwal', 'Conduct', 'Selesai', 'Peserta', 'Total jam', 'Status'];
+    const sumBody = csRows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + (r.pax || 0) + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('')
+      + '<tr class="tot"><td>Total</td><td class="c">' + (t.scheduled || 0) + '</td><td class="c">' + (t.conducted || 0) + '</td><td class="c">' + (t.completed || 0) + '</td><td class="c">' + (t.pax || 0) + '</td><td class="c">' + esc(t.hours || '—') + '</td><td></td></tr>';
     const sec1 = csRows.length ? ('<h2>1 · Rekap Sesi Coach</h2><table><thead><tr>' + sumHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + sumBody + '</tbody></table>') : '';
     // Section 2 — Rekap Absensi, grouped by DAY, with jadwal + on-time/late tag per class
     const toMin = (tt) => { const m = /^(\d{1,2}):(\d{2})/.exec(tt || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };

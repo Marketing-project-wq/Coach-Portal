@@ -1625,6 +1625,7 @@ route('GET', '/api/hc/coach-sessions', async (req, res, s, q) => {
   const scheds = (await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id,start_time,end_time&is_cancelled=eq.false&schedule_date=gte.${mStart}&schedule_date=lte.${upto}&order=schedule_date.asc,start_time.asc`)) || [];
   const ids = scheds.map((x) => x.id);
   const sess = await sessionsFull(ids);
+  const counts = await bookingCounts(ids); // confirmed participants per class (for the monthly pax total)
   const types = await classTypes();
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
   const durMin = (r) => (r && r.created_at && r.checkout_at) ? Math.max(0, Math.round((new Date(r.checkout_at) - new Date(r.created_at)) / 60000)) : null;
@@ -1643,13 +1644,14 @@ route('GET', '/api/hc/coach-sessions', async (req, res, s, q) => {
       sessions.push({ coach: u.coach_name, date: fmtDMon(sc.schedule_date), dateISO: sc.schedule_date, time: hhmm(sc.start_time), cls: shortType((types[sc.class_type_id] || {}).name), checkin: r.created_at ? hm(r.created_at) : '—', checkout: r.checkout_at ? hm(r.checkout_at) : (done ? '—' : 'belum'), dur: hLabel(dm), done });
     }
     const scheduled = my.length;
-    return { name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', scheduled, conducted, completed, pending, minutes,
+    const pax = my.reduce((a, sc) => a + ((counts[sc.id] || {}).confirmed || 0), 0); // total participants this month
+    return { name: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', scheduled, conducted, completed, pending, minutes, pax,
       hours: _checkoutAtOk ? hLabel(completed ? minutes : (conducted ? 0 : null)) : '—',
       note: pending > 0 ? `${pending} belum check-out` : (scheduled > conducted ? `${scheduled - conducted} belum conduct` : 'Lengkap'),
       ok: pending === 0 && scheduled === conducted && conducted > 0 };
   }).filter((r) => r.scheduled > 0 || r.conducted > 0);
   sessions.sort((a, b) => a.dateISO < b.dateISO ? -1 : a.dateISO > b.dateISO ? 1 : (a.coach < b.coach ? -1 : 1));
-  const totals = rows.reduce((t, r) => ({ scheduled: t.scheduled + r.scheduled, conducted: t.conducted + r.conducted, completed: t.completed + r.completed, minutes: t.minutes + r.minutes }), { scheduled: 0, conducted: 0, completed: 0, minutes: 0 });
+  const totals = rows.reduce((t, r) => ({ scheduled: t.scheduled + r.scheduled, conducted: t.conducted + r.conducted, completed: t.completed + r.completed, minutes: t.minutes + r.minutes, pax: t.pax + r.pax }), { scheduled: 0, conducted: 0, completed: 0, minutes: 0, pax: 0 });
   return send(res, 200, { rows, sessions, totals: { ...totals, hours: _checkoutAtOk ? hLabel(totals.minutes) : '—' }, months: months.map((m) => ({ ym: m, label: monLabelOf(m), picked: m === ym })).reverse(), ym, monthLabel: `${MON_FULL[M - 1]} ${Y}`, hoursAvailable: _checkoutAtOk });
 });
 route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
