@@ -182,7 +182,7 @@ class Component extends DCLogic {
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
-    else if (screen === 'schedule') this.api('/api/hc/schedule').then((d) => this.setD({ schedule: d })).catch(fail);
+    else if (screen === 'schedule') this.api('/api/hc/schedule' + (this.state.scheduleDate ? ('?date=' + this.state.scheduleDate) : '')).then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
@@ -810,6 +810,18 @@ class Component extends DCLogic {
   setMonitorRange(v) { if ((this.state.monitorRange || 'month') === v) return; this.setState({ monitorRange: v }); if (this.MOCK) return; this.loadScreen('monitor'); }
   // Filter the Class Breakdown list by coach.
   setCdCoach(v) { this.setState({ cdCoach: v }); }
+  // Team Schedule day navigation — step to another day (delta in days) and reload.
+  shiftScheduleDay(delta) {
+    const cur = this.state.scheduleDate || (this.state.d.schedule && this.state.d.schedule.date) || '';
+    if (!cur) return;
+    const nd = new Date(cur + 'T00:00:00'); nd.setDate(nd.getDate() + delta);
+    const iso = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0') + '-' + String(nd.getDate()).padStart(2, '0');
+    this.setState({ scheduleDate: iso });
+    if (this.MOCK) return;
+    this.loadScreen('schedule');
+  }
+  // Jump the Team Schedule back to today.
+  scheduleGoToday() { this.setState({ scheduleDate: '' }); if (this.MOCK) return; this.loadScreen('schedule'); }
   // Sort the Per-Class Breakdown by date / most participants / least participants.
   setStatRowSort(key) { this.setState({ statRowSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
@@ -1148,6 +1160,8 @@ class Component extends DCLogic {
     const scheduleList = ((D.schedule && D.schedule.list) || []).map((x) => { const comp = String(x.type).includes('Complete'); return { time: x.time, coach: x.coach, type: String(x.type).replace('HYROX ', ''), pax: x.pax, initials: this.ini(x.coach), photo: x.photo || '', hasPhoto: !!x.photo, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.06)' : 'rgba(0,104,201,.06)' }; });
     const hasSchedule = scheduleList.length > 0;
     const noSchedule = !hasSchedule;
+    // Team Schedule shows a "Today" shortcut only when viewing another day.
+    const scheduleNotToday = !!st.scheduleDate;
     // coaches enriched
     const roleColor = (r) => r === 'Head Coach' ? { bg: C.voltDim, col: C.volt } : { bg: 'rgba(136,143,156,.14)', col: C.muted };
     const coaches = (D.coaches || []).map((c) => {
@@ -1455,7 +1469,9 @@ class Component extends DCLogic {
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
       todayAll, pendingSubs, pendingCount, noPending, subHistory,
-      scheduleDateLabel, hasSchedule, noSchedule, scheduleList, coaches, reportRows, sel, statRows, statMonth, templates, perms,
+      scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
+      schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
+      coaches, reportRows, sel, statRows, statMonth, templates, perms,
       statWeeks, hasStatWeeks, statDays, hasStatDays,
       srDate, srMost, srLeast, sortStatDate: () => this.setStatRowSort('date'), sortStatMost: () => this.setStatRowSort('pax_desc'), sortStatLeast: () => this.setStatRowSort('pax_asc'),
       statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
