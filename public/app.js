@@ -707,6 +707,18 @@ class Component extends DCLogic {
       .then((r) => { this.setState({ reset: null }); this.toastMsg('Password reset: ' + (r.password || pw)); })
       .catch((e) => this.toastMsg(e.message));
   }
+  // Coach self-service: change my own password (Account Settings screen).
+  changeMyPassword() {
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const cur = val('cpCurrent'), nw = val('cpNew'), cf = val('cpConfirm');
+    if (!cur || !nw) return this.toastMsg('Isi password lama & baru dulu.');
+    if (nw.length < 6) return this.toastMsg('Password baru minimal 6 karakter.');
+    if (nw !== cf) return this.toastMsg('Konfirmasi password baru tidak cocok.');
+    if (this.MOCK) { ['cpCurrent', 'cpNew', 'cpConfirm'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; }); return this.toastMsg('Password berhasil diperbarui.'); }
+    this.api('/api/coach/change-password', { method: 'POST', body: JSON.stringify({ current_password: cur, new_password: nw }) })
+      .then(() => { ['cpCurrent', 'cpNew', 'cpConfirm'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; }); this.toastMsg('Password berhasil diperbarui.'); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   toggleCoach(c) {
     if (this.MOCK) return this.toastMsg('Status of ' + c.name + ' updated');
     this.api('/api/admin/coaches/' + encodeURIComponent(c.id) + '/toggle', { method: 'POST' })
@@ -915,7 +927,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -925,7 +937,7 @@ class Component extends DCLogic {
     const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
     const canAdmin = this.accountRole === 'admin';
 
-    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Class Detail'], subreq: ['Coach', 'Coverage'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Coverage'], monitor: ['Head Coach', 'Coach Monitoring'], stats: ['Head Coach', 'Monthly Statistics'], reports: ['Head Coach', 'Coach Report'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Add Coach'], templates: ['Admin', 'Feedback Template'], settings: ['Admin', 'Settings'], perms: ['Admin', 'Role Permissions'] };
+    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Class Detail'], subreq: ['Coach', 'Coverage'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Coverage'], monitor: ['Head Coach', 'Coach Monitoring'], stats: ['Head Coach', 'Monthly Statistics'], reports: ['Head Coach', 'Coach Report'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Add Coach'], templates: ['Admin', 'Feedback Template'], settings: ['Admin', 'Settings'], perms: ['Admin', 'Role Permissions'], profile: ['Account', 'Account Settings'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
     titles.monthly = ['Coach', 'Class Monitoring'];
     titles.members = ['Coach', 'Participants'];
@@ -936,7 +948,7 @@ class Component extends DCLogic {
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms' };
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1460,7 +1472,7 @@ class Component extends DCLogic {
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       menuState: st.menuOpen ? 'open' : 'closed', toggleMenu: () => this.toggleMenu(), closeMenu: () => this.closeMenu(),
-      goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'),
+      goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'), goProfile: () => this.go('profile'), submitChangePassword: () => this.changeMyPassword(),
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       reviewFilterOn, reviewCoachOpts, setReviewCoach: (e) => this.setReviewCoach(e && e.target ? e.target.value : ''),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
