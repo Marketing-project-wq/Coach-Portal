@@ -10,6 +10,9 @@ window.__I18N = (function () {
     'Reports': 'Laporan', 'Account': 'Akun', 'Settings': 'Pengaturan', 'Permissions': 'Hak Akses',
     'Class Menu': 'Menu Kelas', 'Participants': 'Peserta', 'Logout': 'Keluar',
     'Appreciation Email': 'Email Apresiasi', 'Coach Workspace': 'Coach Workspace',
+    'Account Settings': 'Pengaturan Akun', 'Change Password': 'Ganti Password',
+    'Password Lama': 'Password Lama', 'Password Baru': 'Password Baru',
+    'Konfirmasi Password Baru': 'Konfirmasi Password Baru', 'Update Password': 'Perbarui Password',
     // ---- top bar / kickers ----
     'Coach': 'Coach', 'Head Coach': 'Head Coach', 'Admin': 'Admin', 'Administrator': 'Administrator',
     'Synced with Admin Hub': 'Tersinkron dengan Admin Hub',
