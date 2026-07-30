@@ -92,13 +92,13 @@ class Component extends DCLogic {
     else label = Math.round(d / 30) + ' months ago';
     return { label, col: this.C.text }; // plain white — the day/visit text already conveys recency
   }
-  // Skill tier from how many times a participant has attended: Beginner 1-5, Intermediate 6-10,
-  // Advanced 11+. Returns null when there is no visit history yet (no badge shown).
+  // Skill tier from how many times a participant has attended (arena-wide): Beginner 0-5,
+  // Intermediate 6-10, Advanced 11+. First-timers count as Beginner so every participant is tagged.
   attendanceLevel(v) {
     const C = this.C;
-    if (!v || v < 1) return null;
-    if (v <= 5) return { label: 'Beginner', col: C.cyan };
-    if (v <= 10) return { label: 'Intermediate', col: C.amber };
+    const n = v || 0;
+    if (n <= 5) return { label: 'Beginner', col: C.cyan };
+    if (n <= 10) return { label: 'Intermediate', col: C.amber };
     return { label: 'Advanced', col: C.green };
   }
   userObj(me) {
