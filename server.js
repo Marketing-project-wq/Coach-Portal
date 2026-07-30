@@ -1224,9 +1224,10 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
   const started = !!sess0; const checkedOut = !!(sess0 && sess0.status === 'completed'); const canCheckout = !!(sess0 && sess0.status === 'ongoing');
   const today = todayJakarta();
-  // For co-taught classes use the logged-in coach's own history; HC/admin keep the class instructor.
-  const histCoach = s.r === 'coach' ? s.c : sc.instructor;
-  const attHist = await coachAttendanceMap(histCoach, today); // visit history for this class's coach
+  // Participant experience level + menu history are computed ARENA-WIDE (all coaches), so the level
+  // (Beginner/Intermediate/Advanced) reflects the participant's real training history rather than
+  // just their visits with the coach viewing this class — important for new & external coaches.
+  const attHist = await teamAttendanceMap('2000-01-01', today);
   // Coaches see only confirmed (paid) participants; GRO/HC also see pending-payment guests so they
   // can check them in and read the payment column.
   let latePaidCount = 0;
