@@ -1194,15 +1194,24 @@ class Component extends DCLogic {
     // ranked most → least. Filterable by day & coach so HC can plan next month's schedule.
     const splitCoaches = (s) => String(s || '').split(/\s*&\s*|\s*,\s*/).map((x) => x.trim()).filter(Boolean);
     const cdCoach = st.cdCoach || '';
+    // Attribute each class to real roster coaches using the backend's coachKeys — the SAME tolerant
+    // matching the coach cards use — so filtering by a coach reconciles exactly with that coach's card
+    // ("Cindy Lauw & Rheza", "Al Farizky&Coach Rheza" all count for Rheza). Fall back to raw instructor
+    // tokens only when coachKeys is absent (older payloads).
+    const coachKeysOf = (c) => (c.coachKeys && c.coachKeys.length ? c.coachKeys : splitCoaches(c.coach));
     const coachSeen = {};
-    for (const c of (D.reportClassList || [])) { for (const nm of splitCoaches(c.coach)) coachSeen[nm] = true; }
+    for (const c of (D.reportClassList || [])) { for (const nm of coachKeysOf(c)) coachSeen[nm] = true; }
     const classDemand = (D.reportClassList || [])
-      .filter((c) => (cdCoach === '' || splitCoaches(c.coach).indexOf(cdCoach) >= 0))
+      .filter((c) => (cdCoach === '' || coachKeysOf(c).indexOf(cdCoach) >= 0))
       .slice()
       .sort((a, b) => (b.pax || 0) - (a.pax || 0) || String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)))
       .map((c, i) => ({ day: c.day || '', date: c.date || '', time: c.time || '—', type: c.type || '—', coach: c.coach || '—', pax: this.fmtNum(c.pax), top: i === 0, paxCol: (c.pax || 0) === 0 ? C.red : C.text }));
     const hasClassDemand = classDemand.length > 0;
-    const cdCoachOpts = Object.keys(coachSeen).sort((a, b) => a.localeCompare(b)).map((n) => ({ val: n, label: n, picked: cdCoach === n }));
+    // Coach filter lists the real coaches (same names as the cards), ordered by the card roster;
+    // any leftover names from the fallback path are appended alphabetically.
+    const cdCoachNames = (D.coaches || []).map((c) => c.name).filter((n) => coachSeen[n]);
+    for (const n of Object.keys(coachSeen).sort((a, b) => a.localeCompare(b))) if (cdCoachNames.indexOf(n) < 0) cdCoachNames.push(n);
+    const cdCoachOpts = cdCoachNames.map((n) => ({ val: n, label: n, picked: cdCoach === n }));
     // period scope for the Class Breakdown (all / month / week)
     const monitorRange = st.monitorRange || 'month';
     const cdRangeOpts = [{ val: 'all', label: 'All' }, { val: 'month', label: 'Month' }, { val: 'week', label: 'Week' }].map((o) => Object.assign({}, o, { picked: monitorRange === o.val }));
