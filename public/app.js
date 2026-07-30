@@ -92,6 +92,15 @@ class Component extends DCLogic {
     else label = Math.round(d / 30) + ' months ago';
     return { label, col: this.C.text }; // plain white — the day/visit text already conveys recency
   }
+  // Skill tier from how many times a participant has attended: Beginner 1-5, Intermediate 6-10,
+  // Advanced 11+. Returns null when there is no visit history yet (no badge shown).
+  attendanceLevel(v) {
+    const C = this.C;
+    if (!v || v < 1) return null;
+    if (v <= 5) return { label: 'Beginner', col: C.cyan };
+    if (v <= 10) return { label: 'Intermediate', col: C.amber };
+    return { label: 'Advanced', col: C.green };
+  }
   userObj(me) {
     const nm = me.display_name || me.coach_name || 'User';
     const roleLabel = me.role === 'hc' ? 'Head Coach' : me.role === 'admin' ? 'Administrator' : me.role === 'gro' ? 'GRO' : 'Coach';
@@ -155,8 +164,9 @@ class Component extends DCLogic {
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
     if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
-    // External coaches may only reach Schedule, Monitoring, Coverage, Venue Booking and Class Menu.
-    if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu'].indexOf(screen) < 0) screen = 'dash';
+    // External coaches may reach Schedule, Monitoring, Coverage, Venue Booking, Class Menu, the
+    // class Detail (participant names + level), and their own Account Settings.
+    if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
     // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
     if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
     if (window.localStorage) localStorage.setItem('arena_screen', screen);
@@ -1109,7 +1119,7 @@ class Component extends DCLogic {
       : detailStarted ? { label: 'Coach sudah check-in', col: 'var(--green)' }
         : { label: 'Coach belum check-in', col: 'var(--amber)' };
     const showGroCheck = isGro;
-    const showParticipantList = !this.isExternal;
+    const showParticipantList = true; // participant names are now visible to every coach (internal + external)
     // Class Menu attached to this class (Option B) — internal/HC only (external don't see the detail)
     const cdLinkedMenu = (D.classDetail && D.classDetail.linkedMenu) || null;
     const cdMenuOptions = ((D.classDetail && D.classDetail.menuOptions) || []).map((m) => ({ id: m.id, label: m.title + (m.category ? ' · ' + m.category : ''), picked: !!(cdLinkedMenu && cdLinkedMenu.id === m.id) }));
@@ -1128,9 +1138,11 @@ class Component extends DCLogic {
     const clsId = cd.schedule_id;
     const participants = ((D.classDetail && D.classDetail.participants) || []).map((p, i) => {
       const r = this.recencyLabel(p.daysSince); const v = p.visits || 0;
+      const lvl = this.attendanceLevel(v);
       const menus = String(p.menusLabel || '').split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name }));
       const on = p.attendance === 'checked_in';
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
+        hasLevel: !!lvl, level: lvl ? lvl.label : '', levelCol: lvl ? lvl.col : '', levelBg: lvl ? ('color-mix(in srgb, ' + lvl.col + ' 15%, transparent)') : '',
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
         latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'none' : 'checked_in') };
@@ -1440,7 +1452,7 @@ class Component extends DCLogic {
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin, showRoleToggle: !isGro,
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       isExternal: this.isExternal, isGro, showReview: !this.isExternal && !isGro, showLeaderboard: !this.isExternal && !isGro,
-      showMembers: isHC || isGro, canOpenClass: !this.isExternal,
+      showMembers: isHC || isGro, canOpenClass: true,
       monthClasses: (D.month || {}).classes || 0, monthPeserta: (D.month || {}).peserta || 0, todayLabel: D.todayLabel || '',
       weekRange: D.weekRange || '', prevWeek: () => this.gotoWeek(-7), nextWeek: () => this.gotoWeek(7),
       jadwalLabel: D.jadwalLabel || 'UPCOMING', applyRange: () => this.applyRange(), resetRange: () => this.resetRange(),

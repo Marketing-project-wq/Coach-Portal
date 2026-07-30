@@ -1206,7 +1206,8 @@ async function classMenuLink(scheduleId) {
   catch (e) { return null; }
 }
 route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
-  if (isExternalSession(s)) return send(res, 403, { error: 'Not available for external coaches.' });
+  // External coaches may now open their own class detail to see the participant NAMES + visit
+  // history/level. Customer contact details (phone/email/payment) stay gated to GRO/HC via canContact.
   const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor&id=eq.${enc(params.id)}&limit=1`);
   const sc = rows && rows[0];
   if (!sc) return send(res, 404, { error: 'Schedule not found.' });
