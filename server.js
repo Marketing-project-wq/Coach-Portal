@@ -123,7 +123,7 @@ function coachSpec(map, name) { const v = (map && name) ? map[String(name).trim(
 
 // External coaches: participants may review them, but they must NOT see any
 // participant data/names. They only get Schedule, Monitoring and Rotation.
-const EXTERNAL_COACHES = new Set(['brian', 'gilang', 'mae', 'yokae', 'sakha']);
+const EXTERNAL_COACHES = new Set(['brian', 'gilang', 'mae', 'sakha']);
 function isExternalCoach(name) {
   const words = String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   return words.some((w) => EXTERNAL_COACHES.has(w));
