@@ -3,7 +3,7 @@
  * Sources every screen from the backend API; falls back to sample data with ?mock=1. */
 /* External coaches: participants may review them, but they cannot see participant
  * data/names. They only get Schedule, Monitoring and Rotation. */
-const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'yokae', 'sakha'];
+const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'sakha'];
 function isExternalName(name) {
   const words = String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   return words.some((w) => EXTERNAL_COACHES.indexOf(w) >= 0);
