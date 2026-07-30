@@ -711,12 +711,12 @@ class Component extends DCLogic {
   changeMyPassword() {
     const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
     const cur = val('cpCurrent'), nw = val('cpNew'), cf = val('cpConfirm');
-    if (!cur || !nw) return this.toastMsg('Isi password lama & baru dulu.');
-    if (nw.length < 6) return this.toastMsg('Password baru minimal 6 karakter.');
-    if (nw !== cf) return this.toastMsg('Konfirmasi password baru tidak cocok.');
-    if (this.MOCK) { ['cpCurrent', 'cpNew', 'cpConfirm'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; }); return this.toastMsg('Password berhasil diperbarui.'); }
+    if (!cur || !nw) return this.toastMsg('Enter your current and new password first.');
+    if (nw.length < 6) return this.toastMsg('New password must be at least 6 characters.');
+    if (nw !== cf) return this.toastMsg('New password confirmation does not match.');
+    if (this.MOCK) { ['cpCurrent', 'cpNew', 'cpConfirm'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; }); return this.toastMsg('Password updated successfully.'); }
     this.api('/api/coach/change-password', { method: 'POST', body: JSON.stringify({ current_password: cur, new_password: nw }) })
-      .then(() => { ['cpCurrent', 'cpNew', 'cpConfirm'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; }); this.toastMsg('Password berhasil diperbarui.'); })
+      .then(() => { ['cpCurrent', 'cpNew', 'cpConfirm'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; }); this.toastMsg('Password updated successfully.'); })
       .catch((e) => this.toastMsg(e.message));
   }
   toggleCoach(c) {
@@ -937,7 +937,7 @@ class Component extends DCLogic {
     const canHC = this.accountRole === 'hc' || this.accountRole === 'admin';
     const canAdmin = this.accountRole === 'admin';
 
-    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Class Detail'], subreq: ['Coach', 'Coverage'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Coverage'], monitor: ['Head Coach', 'Coach Monitoring'], stats: ['Head Coach', 'Monthly Statistics'], reports: ['Head Coach', 'Coach Report'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Add Coach'], templates: ['Admin', 'Feedback Template'], settings: ['Admin', 'Settings'], perms: ['Admin', 'Role Permissions'], profile: ['Account', 'Account Settings'] };
+    const titles = { dash: ['Coach', 'Schedule'], detail: ['Coach', 'Class Detail'], subreq: ['Coach', 'Coverage'], email: ['Coach', 'Feedback'], overview: ['Head Coach', 'Overview'], schedule: ['Head Coach', 'Schedule'], subrev: ['Head Coach', 'Coverage'], monitor: ['Head Coach', 'Coach Monitoring'], stats: ['Head Coach', 'Monthly Statistics'], reports: ['Head Coach', 'Coach Report'], accounts: ['Admin', 'Account'], addcoach: ['Admin', 'Add Coach'], templates: ['Admin', 'Feedback Template'], settings: ['Admin', 'Settings'], perms: ['Admin', 'Role Permissions'], profile: ['Account', 'Settings'] };
     titles.reviews = (st.role === 'coach') ? ['Coach', 'Review'] : ['Head Coach', 'Review'];
     titles.monthly = ['Coach', 'Class Monitoring'];
     titles.members = ['Coach', 'Participants'];
