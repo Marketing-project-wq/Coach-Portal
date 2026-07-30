@@ -522,8 +522,13 @@
         <!-- ===== TEAM SCHEDULE ===== -->
         <sc-if value="{{ s.schedule }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
-          <div style="display:flex;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
             <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;">Schedule All Coach · {{ scheduleDateLabel }}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button onclick="{{ schedulePrevDay }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">&lsaquo; Prev</button>
+              <sc-if value="{{ scheduleNotToday }}"><button onclick="{{ scheduleGoToday }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">Today</button></sc-if>
+              <button onclick="{{ scheduleNextDay }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">Next &rsaquo;</button>
+            </div>
           </div>
           <sc-if value="{{ hasSchedule }}">
           <div style="display:flex;flex-direction:column;gap:12px;">
@@ -934,9 +939,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=9e11ecac"></script>
-<script src="sc-runtime.js?v=9e11ecac"></script>
-<script src="app.js?v=9e11ecac"></script>
+<script src="i18n.js?v=2015f9e5"></script>
+<script src="sc-runtime.js?v=2015f9e5"></script>
+<script src="app.js?v=2015f9e5"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
