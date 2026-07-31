@@ -28,9 +28,8 @@ template = template.replace('value="{{ resetPwd }}"', 'data-reset value="{{ rese
 // Login card copy: neutral heading + rename the first field label (Email -> Name)
 template = template.replace('Sign in as Coach', 'Sign in to your account');
 template = template.replace('>Email</label>', '>Name</label>');
-// Remove the promo hero panel; center the login form as a single column
-template = template.replace('background:linear-gradient(160deg,#0C0E12,#101319);">', 'background:linear-gradient(160deg,#0C0E12,#101319);display:none;">');
-template = template.replace('grid-template-columns:1.05fr .95fr', 'grid-template-columns:1fr');
+// Login is a two-column split (branded hero + glass form card), authored in the template.
+// The hero is hidden and the grid collapses to one column on small screens via responsiveCss.
 // Sidebar logo: drop the old "20" badge; show the 20FIT ARENA wordmark above "Coach Workspace"
 template = template.replace(
   '<div style="width:34px;height:34px;border-radius:9px;background:var(--volt);display:flex;align-items:center;justify-content:center;font-family:\'Archivo\';font-weight:900;font-size:16px;color:#08090B;">20</div>',
@@ -566,6 +565,8 @@ const themeCss = `
      During hover the JS handler normalizes #E4002B -> rgb(228, 0, 43), so match that. */
   aside nav button[style*="rgb(228, 0, 43)"]:hover,
   aside nav button[style*="#E4002B"]:hover { background:#C80028 !important; color:#FFFFFF !important; }
+  /* Login form field: red focus ring when the input inside is focused */
+  .login-field:focus-within { border-color:#E4002B !important; box-shadow:0 0 0 3px rgba(228,0,43,.12) !important; }
 `;
 
 const googleFonts = `  <link rel="preconnect" href="https://fonts.googleapis.com">
