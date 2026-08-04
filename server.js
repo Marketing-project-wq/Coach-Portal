@@ -148,6 +148,25 @@ async function startedSet(ids) {
   for (const r of rows || []) s.add(r.schedule_id);
   return s;
 }
+// booking_id -> [{name, qty}] of add-ons bought with that class booking (Admin Hub add-ons,
+// e.g. "Coffee + Smoothies"). Wrapped in try/catch so a missing table never breaks the view.
+async function bookingAddonsMap(ids) {
+  const m = {};
+  if (!ids.length) return m;
+  for (let i = 0; i < ids.length; i += 120) {
+    const chunk = ids.slice(i, i + 120);
+    let rows = [];
+    try { rows = await sbAll(`arena_class_booking_addons?select=booking_id,addon_name,qty&booking_id=in.(${chunk.map(enc).join(',')})`); }
+    catch (_e) { rows = []; }
+    for (const r of rows || []) { (m[r.booking_id] = m[r.booking_id] || []).push({ name: r.addon_name || 'Add-on', qty: r.qty || 1 }); }
+  }
+  return m;
+}
+// Compact one-line label of a booking's add-ons, e.g. "Coffee + Smoothies, Americano ×2".
+function addonLabelFor(list) {
+  if (!list || !list.length) return '';
+  return list.map((a) => String(a.name || 'Add-on') + (a.qty > 1 ? ' ×' + a.qty : '')).join(', ');
+}
 // Count participants marked "Hadir" (checked_in) across the given schedule ids.
 // Paginated + chunked so a large all-time window can't hit the row cap or blow the URL.
 async function checkedInCount(ids) {
@@ -954,6 +973,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
     for (const a of at || []) attById[a.booking_id] = a;
   }
   const photoMap = await classPhotoMap(ids);
+  const addMap = await bookingAddonsMap(bookings.map((b) => b.id)); // add-ons per booking (Admin Hub)
   // Coach session times per class (check-in / check-out) so the report shows when the coach
   // actually started and ended, next to the guests who attended.
   const sess = await sessionsFull(ids);
@@ -979,7 +999,7 @@ route('GET', '/api/attendance/register', async (req, res, s, q) => {
       attendance: a ? a.status : null, // 'checked_in' | 'no_show' | null
       note: a ? (a.note || '') : '', classPhoto: photoMap[b.schedule_id] || '',
       payment: b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')),
-      latePaid: !!lp, latePaidLabel: lp ? lp.label : '',
+      latePaid: !!lp, latePaidLabel: lp ? lp.label : '', addonLabel: addonLabelFor(addMap[b.id]),
       scheduleId: b.schedule_id, bookingId: b.id,
     };
   });
@@ -1234,6 +1254,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // (Beginner/Intermediate/Advanced) reflects the participant's real training history rather than
   // just their visits with the coach viewing this class — important for new & external coaches.
   const attHist = await teamAttendanceMap('2000-01-01', today);
+  // Add-ons bought with each booking (Admin Hub) — surfaced to GRO/HC so they can prepare them.
+  const addMap = canContact ? await bookingAddonsMap((bookings || []).map((b) => b.id)) : {};
   // Coaches see only confirmed (paid) participants; GRO/HC also see pending-payment guests so they
   // can check them in and read the payment column.
   let latePaidCount = 0;
@@ -1251,7 +1273,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
       classesLabel: classesLabelFor(h), menusLabel: menusLabelFor(h),
       latePaid: !!lp, latePaidLabel: lp ? lp.label : '',
     };
-    if (canContact) { row.phone = b.phone || ''; row.email = b.email || ''; row.payment = b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')); row.note = noteMap[b.id] || ''; }
+    if (canContact) { row.phone = b.phone || ''; row.email = b.email || ''; row.payment = b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')); row.note = noteMap[b.id] || ''; row.addonLabel = addonLabelFor(addMap[b.id]); }
     return row;
   });
   // Class Menu (Option B) — the menu attached to this class + all menus to choose from.
@@ -1520,9 +1542,18 @@ route('GET', '/api/hc/schedule', async (req, res, s, q) => {
   const DOW_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dateLabelEn = `${DOW_EN[dl.getDay()]} · ${dl.getDate()} ${MON[dl.getMonth()]} ${dl.getFullYear()}`;
   const pm = await coachPhotoMap();
+  // Coach check-in / check-out per class, so HC & Admin see at a glance whether each coach has
+  // started (check-in) and ended (check-out) their session.
+  const sess = await sessionsFull(ids);
+  const hmt = (iso) => iso ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso)) : '';
   const list = (rows || []).slice()
     .sort((a, b) => String(a.start_time || '').localeCompare(String(b.start_time || '')) || String(a.instructor || '').localeCompare(String(b.instructor || '')))
-    .map((r) => { const t = types[r.class_type_id] || {}; const cc = counts[r.id] || {}; return { time: hhmm(r.start_time), coach: r.instructor || '—', type: shortType(t.name), pax: (cc.confirmed || 0), photo: coachPhoto(pm, r.instructor) }; });
+    .map((r) => {
+      const t = types[r.class_type_id] || {}; const cc = counts[r.id] || {}; const ss = sess[r.id];
+      return { time: hhmm(r.start_time), coach: r.instructor || '—', type: shortType(t.name), pax: (cc.confirmed || 0), photo: coachPhoto(pm, r.instructor),
+        coachIn: ss && ss.created_at ? hmt(ss.created_at) : '', coachOut: ss && ss.checkout_at ? hmt(ss.checkout_at) : '',
+        coachStatus: ss ? ss.status : '' }; // '' none | 'ongoing' | 'completed'
+    });
   return send(res, 200, { coaches: coachNames, times, grid, list, date: day, dateLabel, dateLabelEn });
 });
 route('GET', '/api/hc/subs', async (req, res, s) => {
