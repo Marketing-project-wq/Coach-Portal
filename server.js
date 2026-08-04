@@ -1514,11 +1514,16 @@ route('GET', '/api/hc/today', async (req, res, s, q) => {
   const types = await classTypes();
   const rows = await sb(`arena_class_schedules?select=id,start_time,instructor,class_type_id&schedule_date=eq.${today}&is_cancelled=eq.false&order=start_time.asc`);
   const ids = (rows || []).map((r) => r.id);
-  const started = await startedSet(ids);
+  const sess = await sessionsFull(ids); // coach check-in/out per class today
+  const hmt = (iso) => iso ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso)) : '';
   const list = (rows || []).map((r) => {
     const t = types[r.class_type_id] || {};
-    const on = started.has(r.id);
-    return { time: hhmm(r.start_time), coach: r.instructor, type: shortType(t.name), status: on ? 'Teaching' : 'Upcoming', kind: on ? 'live' : 'idle' };
+    const ss = sess[r.id];
+    const checkedIn = !!ss, checkedOut = !!(ss && ss.status === 'completed');
+    return { time: hhmm(r.start_time), coach: r.instructor, type: shortType(t.name),
+      status: checkedOut ? 'Done' : checkedIn ? 'Teaching' : 'Upcoming', kind: checkedOut ? 'ok' : checkedIn ? 'live' : 'idle',
+      coachIn: ss && ss.created_at ? hmt(ss.created_at) : '', coachOut: ss && ss.checkout_at ? hmt(ss.checkout_at) : '',
+      checkedIn, checkedOut };
   });
   return send(res, 200, { today: list, date: today });
 });

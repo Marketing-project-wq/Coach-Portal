@@ -1160,8 +1160,15 @@ class Component extends DCLogic {
     const hasFbParticipants = !!selFbClass && fbParticipants.length > 0;
     const fbNoParticipants = !!selFbClass && fbParticipants.length === 0;
     const fbEmpty = !selFbClass;
-    // HC today all
-    const todayAll = (D.hcToday || []).map((t) => { const kc = { ok: ['rgba(28,138,75,.14)', C.green, '✓ '], warn: ['rgba(199,122,0,.14)', C.amber, '⚠ '], live: [C.voltDim, C.volt, ''], idle: ['rgba(136,143,156,.1)', C.muted, ''] }[t.kind] || ['rgba(136,143,156,.1)', C.muted, '']; return Object.assign({}, t, { bg: kc[0], col: kc[1], dot: t.kind === 'live' ? '● ' : kc[2] }); });
+    // HC today all — each of today's classes with the coach's check-in / check-out status.
+    const todayAll = (D.hcToday || []).map((t) => {
+      const kc = { ok: ['rgba(28,138,75,.14)', C.green, '✓ '], warn: ['rgba(199,122,0,.14)', C.amber, '⚠ '], live: [C.voltDim, C.volt, ''], idle: ['rgba(136,143,156,.1)', C.muted, ''] }[t.kind] || ['rgba(136,143,156,.1)', C.muted, ''];
+      const ciDone = !!t.checkedIn, coDone = !!t.checkedOut;
+      return Object.assign({}, t, { bg: kc[0], col: kc[1], dot: t.kind === 'live' ? '● ' : kc[2],
+        ciText: 'Check-in ' + (ciDone ? t.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
+        coText: 'Check-out ' + (coDone ? t.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' });
+    });
+    const hasTodayAll = todayAll.length > 0;
     // rotation requests — coach (rotation coach) decides; head coach only gets notified
     const isCoachView = st.role === 'coach';
     let pendingSubs, subHistory, incomingCount;
@@ -1501,7 +1508,7 @@ class Component extends DCLogic {
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
-      todayAll, pendingSubs, pendingCount, noPending, subHistory,
+      todayAll, hasTodayAll, pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
       schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
       coaches, reportRows, sel, statRows, statMonth, templates, perms,

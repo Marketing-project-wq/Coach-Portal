@@ -218,7 +218,6 @@
           <button onclick="{{ setLangEN }}" style="background:{{ langEnBg }};color:{{ langEnFg }};border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-family:'Manrope';font-weight:700;font-size:12.5px;cursor:pointer;">EN</button>
           <button onclick="{{ setLangID }}" style="background:{{ langIdBg }};color:{{ langIdFg }};border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-family:'Manrope';font-weight:700;font-size:12.5px;cursor:pointer;">ID</button>
         </div>
-        <div style="width:48px;height:48px;border-radius:14px;background:#E4002B;display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 12px 26px -8px rgba(228,0,43,.6);"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:23px;color:#fff;">20</span></div>
         <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;">Welcome back</div>
         <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:29px;margin:0 0 28px;letter-spacing:-.01em;">Sign in to your account</h2>
         <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Name</label>
@@ -592,6 +591,22 @@
         <!-- ===== MONITORING LIST ===== -->
         <sc-if value="{{ s.monitor }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
+          <sc-if value="{{ hasTodayAll }}">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;margin-bottom:16px;">
+            <div style="padding:13px 18px;border-bottom:1px solid var(--border);font-weight:800;font-family:'Barlow Condensed';font-size:14px;">&#128339; Coach Check-in Hari Ini</div>
+            <div style="overflow-x:auto;"><div style="min-width:560px;">
+            <div style="display:grid;grid-template-columns:64px 1fr 150px 150px;gap:10px;padding:9px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--muted2);"><div>TIME</div><div>COACH &#183; CLASS</div><div>CHECK-IN</div><div>CHECK-OUT</div></div>
+            <sc-for list="{{ todayAll }}" as="t">
+            <div style="display:grid;grid-template-columns:64px 1fr 150px 150px;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13px;">
+              <div style="font-family:'JetBrains Mono';font-weight:700;">{{ t.time }}</div>
+              <div style="min-width:0;"><div style="font-weight:700;">{{ t.coach }}</div><div style="font-size:11.5px;color:var(--muted);">{{ t.type }}</div></div>
+              <div style="font-weight:700;font-size:12px;color:{{ t.ciCol }};">{{ t.ciDot }} {{ t.ciText }}</div>
+              <div style="font-weight:700;font-size:12px;color:{{ t.coCol }};">{{ t.coDot }} {{ t.coText }}</div>
+            </div>
+            </sc-for>
+            </div></div>
+          </div>
+          </sc-if>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
             <sc-for list="{{ monitorCoaches }}" as="c" hint-placeholder-count="8">
             <button onclick="{{ c.open }}" style="text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;cursor:pointer;transition:border-color .15s,transform .15s;" style-hover="border-color:var(--volt);transform:translateY(-3px);">
@@ -963,9 +978,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=ca2262ed"></script>
-<script src="sc-runtime.js?v=ca2262ed"></script>
-<script src="app.js?v=ca2262ed"></script>
+<script src="i18n.js?v=5882bdac"></script>
+<script src="sc-runtime.js?v=5882bdac"></script>
+<script src="app.js?v=5882bdac"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
