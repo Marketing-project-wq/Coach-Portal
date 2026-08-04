@@ -191,7 +191,7 @@ class Component extends DCLogic {
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
-    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today').then((d) => this.setD({ hcToday: d.today })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
+    else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today' + (this.state.todayDate ? ('?date=' + this.state.todayDate) : '')).then((d) => this.setD({ hcToday: d.today, hcTodayDate: d.date })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
     else if (screen === 'schedule') this.api('/api/hc/schedule' + (this.state.scheduleDate ? ('?date=' + this.state.scheduleDate) : '')).then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
@@ -844,6 +844,17 @@ class Component extends DCLogic {
   }
   // Jump the Team Schedule back to today.
   scheduleGoToday() { this.setState({ scheduleDate: '' }); if (this.MOCK) return; this.loadScreen('schedule'); }
+  // Coach Check-in panel (Coach Monitoring) day navigation.
+  shiftTodayDay(delta) {
+    const cur = this.state.todayDate || (this.state.d.hcTodayDate) || '';
+    if (!cur) return;
+    const nd = new Date(cur + 'T00:00:00'); nd.setDate(nd.getDate() + delta);
+    const iso = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0') + '-' + String(nd.getDate()).padStart(2, '0');
+    this.setState({ todayDate: iso });
+    if (this.MOCK) return;
+    this.loadScreen(this.state.screen === 'overview' ? 'overview' : 'monitor');
+  }
+  todayGoToday() { this.setState({ todayDate: '' }); if (this.MOCK) return; this.loadScreen(this.state.screen === 'overview' ? 'overview' : 'monitor'); }
   // Sort the Per-Class Breakdown by date / most participants / least participants.
   setStatRowSort(key) { this.setState({ statRowSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
@@ -1169,6 +1180,12 @@ class Component extends DCLogic {
         coText: 'Check-out ' + (coDone ? t.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' });
     });
     const hasTodayAll = todayAll.length > 0;
+    // Coach Check-in panel: admin-only, with day navigation (view previous/next days).
+    const showTodayCheckin = isAdmin && hasTodayAll;
+    const _td = D.hcTodayDate || '';
+    let todayDateLabel = '';
+    if (_td) { const _dd = new Date(_td + 'T00:00:00'); const _DOW = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']; const _MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; todayDateLabel = _DOW[_dd.getDay()] + ', ' + _dd.getDate() + ' ' + _MON[_dd.getMonth()]; }
+    const todayNotToday = !!st.todayDate;
     // rotation requests — coach (rotation coach) decides; head coach only gets notified
     const isCoachView = st.role === 'coach';
     let pendingSubs, subHistory, incomingCount;
@@ -1508,7 +1525,9 @@ class Component extends DCLogic {
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
-      todayAll, hasTodayAll, pendingSubs, pendingCount, noPending, subHistory,
+      todayAll, hasTodayAll, showTodayCheckin, todayDateLabel, todayNotToday,
+      todayPrevDay: () => this.shiftTodayDay(-1), todayNextDay: () => this.shiftTodayDay(1), todayGoToday: () => this.todayGoToday(),
+      pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
       schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
       coaches, reportRows, sel, statRows, statMonth, templates, perms,
