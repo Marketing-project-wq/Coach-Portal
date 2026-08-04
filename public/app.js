@@ -1143,6 +1143,7 @@ class Component extends DCLogic {
       const on = p.attendance === 'checked_in';
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
         hasLevel: !!lvl, level: lvl ? lvl.label : '', levelCol: lvl ? lvl.col : '', levelBg: lvl ? ('color-mix(in srgb, ' + lvl.col + ' 15%, transparent)') : '',
+        addonLabel: p.addonLabel || '', hasAddon: !!p.addonLabel,
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
         latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'none' : 'checked_in') };
@@ -1181,7 +1182,13 @@ class Component extends DCLogic {
     const rotHeader = isCoachView ? 'AWAITING YOUR APPROVAL' : 'COVERAGE NOTIFICATIONS';
     // all-coach schedule — a clean, time-sorted list of classes (one card per class)
     const scheduleDateLabel = (D.schedule && (D.schedule.dateLabelEn || D.schedule.dateLabel)) || '';
-    const scheduleList = ((D.schedule && D.schedule.list) || []).map((x) => { const comp = String(x.type).includes('Complete'); return { time: x.time, coach: x.coach, type: String(x.type).replace('HYROX ', ''), pax: x.pax, initials: this.ini(x.coach), photo: x.photo || '', hasPhoto: !!x.photo, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.06)' : 'rgba(0,104,201,.06)' }; });
+    const scheduleList = ((D.schedule && D.schedule.list) || []).map((x) => {
+      const comp = String(x.type).includes('Complete');
+      const ciDone = !!x.coachIn, coDone = !!x.coachOut;
+      return { time: x.time, coach: x.coach, type: String(x.type).replace('HYROX ', ''), pax: x.pax, initials: this.ini(x.coach), photo: x.photo || '', hasPhoto: !!x.photo, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.06)' : 'rgba(0,104,201,.06)',
+        ciText: 'Check-in ' + (ciDone ? x.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
+        coText: 'Check-out ' + (coDone ? x.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' };
+    });
     const hasSchedule = scheduleList.length > 0;
     const noSchedule = !hasSchedule;
     // Team Schedule shows a "Today" shortcut only when viewing another day.
@@ -1368,6 +1375,7 @@ class Component extends DCLogic {
       cg.participants.push({
         name: r.participant, phone: r.phone || '—', email: r.email || '—',
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
+        addonLabel: r.addonLabel || '', hasAddon: !!r.addonLabel,
         latePaid: !!r.latePaid, latePaidLabel: r.latePaidLabel || '',
         attLabel: on ? 'Hadir' : 'Tidak hadir', attCol: on ? C.green : C.amber,
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
@@ -1413,6 +1421,7 @@ class Component extends DCLogic {
       return {
         n: i + 1, booking: p.booking || '—', name: p.name, phone: p.phone || '—', email: p.email || '—',
         payment: p.payment || '', hasPayment: !!p.payment, payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted),
+        addonLabel: p.addonLabel || '', hasAddon: !!p.addonLabel,
         latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         statusLabel: p.bookingStatus === 'confirmed' ? 'Confirmed' : (p.bookingStatus === 'pending_payment' ? 'Pending' : (p.bookingStatus || '')),
         statusCol: p.bookingStatus === 'confirmed' ? C.green : C.amber, statusBg: p.bookingStatus === 'confirmed' ? 'rgba(28,138,75,.12)' : 'rgba(199,122,0,.12)',
