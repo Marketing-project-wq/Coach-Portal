@@ -1195,6 +1195,7 @@ class Component extends DCLogic {
     const _ckd = D.checkinData || {};
     const checkinMode = st.checkinMode || 'week';
     const showDayHeaders = checkinMode === 'week';
+    const checkinCols = checkinMode === 'week' ? '1fr 1fr' : '1fr'; // week = 2-column card grid
     const _MONID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const _DOWID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const _fmtID = (isoStr) => { const d = new Date(isoStr + 'T00:00:00'); return _DOWID[d.getDay()] + ', ' + d.getDate() + ' ' + _MONID[d.getMonth()]; };
@@ -1555,7 +1556,7 @@ class Component extends DCLogic {
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
       todayAll, hasTodayAll, showTodayCheckin, todayDateLabel, goCheckin: () => this.go('checkin'),
-      checkinDays, hasCheckin, noCheckin, showDayHeaders, checkinRangeLabel,
+      checkinDays, hasCheckin, noCheckin, showDayHeaders, checkinCols, checkinRangeLabel,
       ckDayBg: _ckDay.bg, ckDayFg: _ckDay.fg, ckWeekBg: _ckWeek.bg, ckWeekFg: _ckWeek.fg,
       setCheckinDay: () => this.setCheckinMode('day'), setCheckinWeek: () => this.setCheckinMode('week'),
       todayPrevDay: () => this.shiftTodayDay(-1), todayNextDay: () => this.shiftTodayDay(1),
