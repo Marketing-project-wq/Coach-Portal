@@ -93,7 +93,7 @@ function nowMinutesJakarta() {
 function hhmmToMin(t) { const m = /^(\d{1,2}):(\d{2})/.exec(hhmm(t) || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; }
 // A coach may self-check-in only on the class day, from CHECKIN_WINDOW_MIN before start onward
 // (late check-in stays allowed through the day; once the day passes, check-in is closed).
-const CHECKIN_WINDOW_MIN = 60;
+const CHECKIN_WINDOW_MIN = 120;
 function checkinOpen(scheduleDate, startTime, today, nowMin) {
   if (scheduleDate !== today) return false; // only on the class day (not early on future days, not after)
   const sm = hhmmToMin(startTime); if (sm == null) return true;
@@ -391,7 +391,7 @@ function cardsFrom(sched, counts, sessionMap, types, today, linkMap) {
     const isStarted = st != null;
     const checkedOut = st === 'completed';
     const upcoming = x.schedule_date >= today; // today or later
-    // Check-in button opens only from 1h before start, on the class day; closed once the day passes.
+    // Check-in button opens only from 2h before start, on the class day; closed once the day passes.
     const canCheckinNow = checkinOpen(x.schedule_date, x.start_time, today, nowMin);
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name), coach: x.instructor || '',
       peserta: c.confirmed, cap: x.quota || 0, started: isStarted, checkedOut,
@@ -1268,7 +1268,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
   const started = !!sess0; const checkedOut = !!(sess0 && sess0.status === 'completed'); const canCheckout = !!(sess0 && sess0.status === 'ongoing');
   const today = todayJakarta();
-  // Coach self check-in opens 1h before start (class day only); GRO acts on-behalf without the window.
+  // Coach self check-in opens 2h before start (class day only); GRO acts on-behalf without the window.
   const canCheckin = !started && (isGro(s) || checkinOpen(sc.schedule_date, sc.start_time, today, nowMinutesJakarta()));
   // Participant experience level + menu history are computed ARENA-WIDE (all coaches), so the level
   // (Beginner/Intermediate/Advanced) reflects the participant's real training history rather than
@@ -1330,9 +1330,9 @@ route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   if (isGro(s)) {
     if (sc && sc.instructor) coachName = sc.instructor;
   } else {
-    // Coach self check-in opens 1h before start on the class day and closes once the day passes.
+    // Coach self check-in opens 2h before start on the class day and closes once the day passes.
     if (sc && !checkinOpen(sc.schedule_date, sc.start_time, todayJakarta(), nowMinutesJakarta())) {
-      return send(res, 400, { error: 'Check-in belum dibuka — tombol aktif 1 jam sebelum kelas, dan tertutup jika jadwalnya sudah lewat.' });
+      return send(res, 400, { error: 'Check-in belum dibuka — tombol aktif 2 jam sebelum kelas, dan tertutup jika jadwalnya sudah lewat.' });
     }
     // GPS lock: if an arena location is configured, the coach must be within its radius.
     const loc = await arenaLocation();
