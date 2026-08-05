@@ -1579,7 +1579,14 @@ route('GET', '/api/hc/coach-checkin', async (req, res, s, q) => {
       coachIn: ss && ss.created_at ? hmt(ss.created_at) : '', coachOut: ss && ss.checkout_at ? hmt(ss.checkout_at) : '',
       checkedIn: !!ss, checkedOut: !!(ss && ss.status === 'completed') });
   }
-  const days = order.map((dt) => ({ dateISO: dt, items: byDate[dt] }));
+  let days;
+  if (mode === 'week') {
+    // Full week: every day Mon..Sun, even those with no classes (empty items).
+    const monD = new Date(from + 'T00:00:00'); days = [];
+    for (let i = 0; i < 7; i++) { const d = new Date(monD); d.setDate(monD.getDate() + i); const dt = isoOf(d); days.push({ dateISO: dt, items: byDate[dt] || [] }); }
+  } else {
+    days = order.map((dt) => ({ dateISO: dt, items: byDate[dt] }));
+  }
   return send(res, 200, { mode, date: base, from, to, days });
 });
 route('GET', '/api/hc/schedule', async (req, res, s, q) => {

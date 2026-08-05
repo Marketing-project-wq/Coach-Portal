@@ -192,7 +192,7 @@ class Component extends DCLogic {
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today' + (this.state.todayDate ? ('?date=' + this.state.todayDate) : '')).then((d) => this.setD({ hcToday: d.today, hcTodayDate: d.date })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
-    else if (screen === 'checkin') this.api('/api/hc/coach-checkin?mode=' + (this.state.checkinMode || 'day') + (this.state.todayDate ? ('&date=' + this.state.todayDate) : '')).then((d) => this.setD({ checkinData: d })).catch(fail);
+    else if (screen === 'checkin') this.api('/api/hc/coach-checkin?mode=' + (this.state.checkinMode || 'week') + (this.state.todayDate ? ('&date=' + this.state.todayDate) : '')).then((d) => this.setD({ checkinData: d })).catch(fail);
     else if (screen === 'schedule') this.api('/api/hc/schedule' + (this.state.scheduleDate ? ('?date=' + this.state.scheduleDate) : '')).then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
@@ -849,7 +849,7 @@ class Component extends DCLogic {
   shiftTodayDay(delta) {
     const cur = this.state.todayDate || (this.state.d.checkinData && this.state.d.checkinData.date) || '';
     if (!cur) return;
-    const step = (this.state.checkinMode === 'week') ? 7 : 1;
+    const step = ((this.state.checkinMode || 'week') === 'week') ? 7 : 1;
     const nd = new Date(cur + 'T00:00:00'); nd.setDate(nd.getDate() + delta * step);
     const iso = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0') + '-' + String(nd.getDate()).padStart(2, '0');
     this.setState({ todayDate: iso });
@@ -858,7 +858,7 @@ class Component extends DCLogic {
   }
   todayGoToday() { this.setState({ todayDate: '' }); if (this.MOCK) return; this.loadScreen(this.state.screen); }
   // Switch the Coach Check-in screen between single-day and whole-week view.
-  setCheckinMode(m) { if ((this.state.checkinMode || 'day') === m) return; this.setState({ checkinMode: m }); if (this.MOCK) return; this.loadScreen('checkin'); }
+  setCheckinMode(m) { if ((this.state.checkinMode || 'week') === m) return; this.setState({ checkinMode: m }); if (this.MOCK) return; this.loadScreen('checkin'); }
   // Sort the Per-Class Breakdown by date / most participants / least participants.
   setStatRowSort(key) { this.setState({ statRowSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
@@ -1193,13 +1193,14 @@ class Component extends DCLogic {
     const todayNotToday = !!st.todayDate;
     // Coach Check-in screen (admin): single-day or whole-week view, grouped by date.
     const _ckd = D.checkinData || {};
-    const checkinMode = st.checkinMode || 'day';
+    const checkinMode = st.checkinMode || 'week';
     const showDayHeaders = checkinMode === 'week';
     const _MONID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const _DOWID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const _fmtID = (isoStr) => { const d = new Date(isoStr + 'T00:00:00'); return _DOWID[d.getDay()] + ', ' + d.getDate() + ' ' + _MONID[d.getMonth()]; };
     const checkinDays = (_ckd.days || []).map((dg) => ({
       dateLabel: _fmtID(dg.dateISO),
+      hasItems: (dg.items || []).length > 0, noItems: (dg.items || []).length === 0,
       items: (dg.items || []).map((t) => {
         const ciDone = !!t.checkedIn, coDone = !!t.checkedOut;
         return { time: t.time, coach: t.coach, type: String(t.type || '').replace('HYROX ', ''),
