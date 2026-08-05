@@ -84,6 +84,21 @@ async function sbAll(q, pageSize = 1000) {
 }
 function todayJakarta() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()); }
 function hhmm(t) { return t ? String(t).slice(0, 5) : ''; }
+// Current minute-of-day in Jakarta (0..1439) — used for the coach check-in time window.
+function nowMinutesJakarta() {
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  let h = 0, m = 0; for (const x of p) { if (x.type === 'hour') h = +x.value; if (x.type === 'minute') m = +x.value; }
+  return h * 60 + m;
+}
+function hhmmToMin(t) { const m = /^(\d{1,2}):(\d{2})/.exec(hhmm(t) || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+// A coach may self-check-in only on the class day, from CHECKIN_WINDOW_MIN before start onward
+// (late check-in stays allowed through the day; once the day passes, check-in is closed).
+const CHECKIN_WINDOW_MIN = 60;
+function checkinOpen(scheduleDate, startTime, today, nowMin) {
+  if (scheduleDate !== today) return false; // only on the class day (not early on future days, not after)
+  const sm = hhmmToMin(startTime); if (sm == null) return true;
+  return nowMin >= (sm - CHECKIN_WINDOW_MIN);
+}
 const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -367,6 +382,7 @@ async function coachWeek(coach, weekStartISO, today) {
 
 // Build class-card objects (used by the dashboard list and the date-range filter).
 function cardsFrom(sched, counts, sessionMap, types, today, linkMap) {
+  const nowMin = nowMinutesJakarta();
   return sched.map((x) => {
     const c = counts[x.id] || { confirmed: 0, pending: 0 };
     const t = types[x.class_type_id] || {};
@@ -375,12 +391,14 @@ function cardsFrom(sched, counts, sessionMap, types, today, linkMap) {
     const isStarted = st != null;
     const checkedOut = st === 'completed';
     const upcoming = x.schedule_date >= today; // today or later
+    // Check-in button opens only from 1h before start, on the class day; closed once the day passes.
+    const canCheckinNow = checkinOpen(x.schedule_date, x.start_time, today, nowMin);
     return { schedule_id: x.id, time: hhmm(x.start_time), end: '– ' + hhmm(x.end_time), type: shortType(t.name), coach: x.instructor || '',
       peserta: c.confirmed, cap: x.quota || 0, started: isStarted, checkedOut,
       accent: checkedOut ? '#3ED598' : (isStarted ? '#D6FF3D' : (isToday ? '#4DD4F2' : '#888F9C')),
       status: checkedOut ? 'Finished' : (isStarted ? 'In Progress' : (isToday ? 'Upcoming' : 'Scheduled')),
       // Check In shows for an upcoming class not yet started; Check Out shows while it's ongoing.
-      canAbsen: upcoming && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date), date: x.schedule_date, menuId: (linkMap && linkMap[x.id]) || '' };
+      canAbsen: canCheckinNow && !isStarted, canCheckout: st === 'ongoing', dateLabel: dLabel(x.schedule_date), date: x.schedule_date, menuId: (linkMap && linkMap[x.id]) || '' };
   });
 }
 
@@ -1250,6 +1268,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
   const started = !!sess0; const checkedOut = !!(sess0 && sess0.status === 'completed'); const canCheckout = !!(sess0 && sess0.status === 'ongoing');
   const today = todayJakarta();
+  // Coach self check-in opens 1h before start (class day only); GRO acts on-behalf without the window.
+  const canCheckin = !started && (isGro(s) || checkinOpen(sc.schedule_date, sc.start_time, today, nowMinutesJakarta()));
   // Participant experience level + menu history are computed ARENA-WIDE (all coaches), so the level
   // (Beginner/Intermediate/Advanced) reflects the participant's real training history rather than
   // just their visits with the coach viewing this class — important for new & external coaches.
@@ -1283,7 +1303,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const lm = linkedMenuId ? menuRows.find((m) => m.id === linkedMenuId) : null;
   const linkedMenu = lm ? { id: lm.id, title: lm.title, category: lm.category || '', content: lm.content || '' } : null;
   const photoMap = canContact ? await classPhotoMap([params.id]) : {};
-  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, photo: photoMap[params.id] || '', started, checkedOut, canCheckout, latePaidCount }, started, participants, menuOptions, linkedMenu });
+  return send(res, 200, { schedule: { schedule_id: sc.id, date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), coach: sc.instructor || '', fullType: t.name || 'Class', time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: shortType(t.name), quota: sc.quota, photo: photoMap[params.id] || '', started, checkedOut, canCheckout, canCheckin, latePaidCount }, started, participants, menuOptions, linkedMenu });
 });
 // Attach / change / clear the menu for a class (Option B). No-op-safe if the link table is missing.
 route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
@@ -1303,13 +1323,17 @@ route('POST', '/api/coach/class/:id/menu', async (req, res, s, q, params) => {
 route('POST', '/api/coach/class/:id/start', async (req, res, s, q, params) => {
   const body = (await readBody(req)) || {};
   // The GRO can check a coach in on their behalf (from the front desk): the session is
-  // attributed to the class's real instructor, and the coach's GPS lock is skipped.
+  // attributed to the class's real instructor, and the coach's GPS lock + time window are skipped.
+  const scs = await sb(`arena_class_schedules?select=instructor,schedule_date,start_time&id=eq.${enc(params.id)}&limit=1`);
+  const sc = scs && scs[0];
   let coachName = s.c;
   if (isGro(s)) {
-    const scs = await sb(`arena_class_schedules?select=instructor&id=eq.${enc(params.id)}&limit=1`);
-    const sc = scs && scs[0];
     if (sc && sc.instructor) coachName = sc.instructor;
   } else {
+    // Coach self check-in opens 1h before start on the class day and closes once the day passes.
+    if (sc && !checkinOpen(sc.schedule_date, sc.start_time, todayJakarta(), nowMinutesJakarta())) {
+      return send(res, 400, { error: 'Check-in belum dibuka — tombol aktif 1 jam sebelum kelas, dan tertutup jika jadwalnya sudah lewat.' });
+    }
     // GPS lock: if an arena location is configured, the coach must be within its radius.
     const loc = await arenaLocation();
     if (loc) {
@@ -1526,6 +1550,37 @@ route('GET', '/api/hc/today', async (req, res, s, q) => {
       checkedIn, checkedOut };
   });
   return send(res, 200, { today: list, date: today });
+});
+// Coach check-in/out for a single day OR a whole (Mon-start) week — powers the admin Coach Check-in
+// screen. Returns classes grouped by date with each coach's check-in / check-out session status.
+route('GET', '/api/hc/coach-checkin', async (req, res, s, q) => {
+  if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
+  const today = todayJakarta();
+  const mode = q.mode === 'week' ? 'week' : 'day';
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : today;
+  const isoOf = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  let from, to;
+  if (mode === 'week') {
+    const d = new Date(base + 'T00:00:00'); const dow = (d.getDay() + 6) % 7; // Mon=0
+    const mon = new Date(d); mon.setDate(d.getDate() - dow);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    from = isoOf(mon); to = isoOf(sun);
+  } else { from = to = base; }
+  const types = await classTypes();
+  const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,instructor,class_type_id&schedule_date=gte.${from}&schedule_date=lte.${to}&is_cancelled=eq.false&order=schedule_date.asc,start_time.asc`);
+  const ids = (rows || []).map((r) => r.id);
+  const sess = await sessionsFull(ids);
+  const hmt = (isoStr) => isoStr ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(isoStr)) : '';
+  const byDate = {}; const order = [];
+  for (const r of rows || []) {
+    const ss = sess[r.id];
+    if (!byDate[r.schedule_date]) { byDate[r.schedule_date] = []; order.push(r.schedule_date); }
+    byDate[r.schedule_date].push({ time: hhmm(r.start_time), coach: r.instructor, type: shortType((types[r.class_type_id] || {}).name),
+      coachIn: ss && ss.created_at ? hmt(ss.created_at) : '', coachOut: ss && ss.checkout_at ? hmt(ss.checkout_at) : '',
+      checkedIn: !!ss, checkedOut: !!(ss && ss.status === 'completed') });
+  }
+  const days = order.map((dt) => ({ dateISO: dt, items: byDate[dt] }));
+  return send(res, 200, { mode, date: base, from, to, days });
 });
 route('GET', '/api/hc/schedule', async (req, res, s, q) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });

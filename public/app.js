@@ -192,7 +192,7 @@ class Component extends DCLogic {
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today' + (this.state.todayDate ? ('?date=' + this.state.todayDate) : '')).then((d) => this.setD({ hcToday: d.today, hcTodayDate: d.date })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
-    else if (screen === 'checkin') this.api('/api/hc/today' + (this.state.todayDate ? ('?date=' + this.state.todayDate) : '')).then((d) => this.setD({ hcToday: d.today, hcTodayDate: d.date })).catch(fail);
+    else if (screen === 'checkin') this.api('/api/hc/coach-checkin?mode=' + (this.state.checkinMode || 'day') + (this.state.todayDate ? ('&date=' + this.state.todayDate) : '')).then((d) => this.setD({ checkinData: d })).catch(fail);
     else if (screen === 'schedule') this.api('/api/hc/schedule' + (this.state.scheduleDate ? ('?date=' + this.state.scheduleDate) : '')).then((d) => this.setD({ schedule: d })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
@@ -845,17 +845,20 @@ class Component extends DCLogic {
   }
   // Jump the Team Schedule back to today.
   scheduleGoToday() { this.setState({ scheduleDate: '' }); if (this.MOCK) return; this.loadScreen('schedule'); }
-  // Coach Check-in panel (Coach Monitoring) day navigation.
+  // Coach Check-in screen: day/week navigation. Prev/Next steps 1 day (day mode) or 7 days (week mode).
   shiftTodayDay(delta) {
-    const cur = this.state.todayDate || (this.state.d.hcTodayDate) || '';
+    const cur = this.state.todayDate || (this.state.d.checkinData && this.state.d.checkinData.date) || '';
     if (!cur) return;
-    const nd = new Date(cur + 'T00:00:00'); nd.setDate(nd.getDate() + delta);
+    const step = (this.state.checkinMode === 'week') ? 7 : 1;
+    const nd = new Date(cur + 'T00:00:00'); nd.setDate(nd.getDate() + delta * step);
     const iso = nd.getFullYear() + '-' + String(nd.getMonth() + 1).padStart(2, '0') + '-' + String(nd.getDate()).padStart(2, '0');
     this.setState({ todayDate: iso });
     if (this.MOCK) return;
     this.loadScreen(this.state.screen);
   }
   todayGoToday() { this.setState({ todayDate: '' }); if (this.MOCK) return; this.loadScreen(this.state.screen); }
+  // Switch the Coach Check-in screen between single-day and whole-week view.
+  setCheckinMode(m) { if ((this.state.checkinMode || 'day') === m) return; this.setState({ checkinMode: m }); if (this.MOCK) return; this.loadScreen('checkin'); }
   // Sort the Per-Class Breakdown by date / most participants / least participants.
   setStatRowSort(key) { this.setState({ statRowSort: key }); }
   // Sort the coach report by a column. Same column again flips the direction.
@@ -1122,7 +1125,7 @@ class Component extends DCLogic {
     const absenLabel = ac.type ? (ac.type + (ac.time ? ' · ' + ac.time : '')) : '';
     // check-out modal + class-detail check-in/out states.
     // External coaches never see participant data or check-in on the detail — only Coverage + Back.
-    const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut && !this.isExternal, detailCanCheckout = !!cd.canCheckout && !this.isExternal, detailCanCheckin = !detailStarted && !this.isExternal;
+    const detailStarted = !!cd.started, detailCheckedOut = !!cd.checkedOut && !this.isExternal, detailCanCheckout = !!cd.canCheckout && !this.isExternal, detailCanCheckin = !!cd.canCheckin && !this.isExternal;
     // GRO drills into a class from the Arena calendar: label the check-in action and show the
     // coach's check-in status explicitly so the GRO can see, and act, at a glance.
     const detailCheckinLabel = isGro ? 'Check In Coach' : 'Check In';
@@ -1188,6 +1191,29 @@ class Component extends DCLogic {
     let todayDateLabel = '';
     if (_td) { const _dd = new Date(_td + 'T00:00:00'); const _DOW = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']; const _MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; todayDateLabel = _DOW[_dd.getDay()] + ', ' + _dd.getDate() + ' ' + _MON[_dd.getMonth()]; }
     const todayNotToday = !!st.todayDate;
+    // Coach Check-in screen (admin): single-day or whole-week view, grouped by date.
+    const _ckd = D.checkinData || {};
+    const checkinMode = st.checkinMode || 'day';
+    const showDayHeaders = checkinMode === 'week';
+    const _MONID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const _DOWID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const _fmtID = (isoStr) => { const d = new Date(isoStr + 'T00:00:00'); return _DOWID[d.getDay()] + ', ' + d.getDate() + ' ' + _MONID[d.getMonth()]; };
+    const checkinDays = (_ckd.days || []).map((dg) => ({
+      dateLabel: _fmtID(dg.dateISO),
+      items: (dg.items || []).map((t) => {
+        const ciDone = !!t.checkedIn, coDone = !!t.checkedOut;
+        return { time: t.time, coach: t.coach, type: String(t.type || '').replace('HYROX ', ''),
+          ciText: 'Check-in ' + (ciDone ? t.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
+          coText: 'Check-out ' + (coDone ? t.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' };
+      }),
+    }));
+    const hasCheckin = checkinDays.some((d) => d.items.length > 0);
+    const noCheckin = !hasCheckin;
+    let checkinRangeLabel = '';
+    if (checkinMode === 'week' && _ckd.from && _ckd.to) { const _f = new Date(_ckd.from + 'T00:00:00'), _t = new Date(_ckd.to + 'T00:00:00'); checkinRangeLabel = _f.getDate() + ' ' + _MONID[_f.getMonth()] + ' – ' + _t.getDate() + ' ' + _MONID[_t.getMonth()]; }
+    else if (_ckd.date) { checkinRangeLabel = _fmtID(_ckd.date); }
+    const _ckseg = (on) => on ? { bg: C.volt, fg: '#fff' } : { bg: 'transparent', fg: C.muted };
+    const _ckDay = _ckseg(checkinMode === 'day'), _ckWeek = _ckseg(checkinMode === 'week');
     // rotation requests — coach (rotation coach) decides; head coach only gets notified
     const isCoachView = st.role === 'coach';
     let pendingSubs, subHistory, incomingCount;
@@ -1527,8 +1553,11 @@ class Component extends DCLogic {
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
-      todayAll, hasTodayAll, noTodayAll, showTodayCheckin, todayDateLabel, todayNotToday, goCheckin: () => this.go('checkin'),
-      todayPrevDay: () => this.shiftTodayDay(-1), todayNextDay: () => this.shiftTodayDay(1), todayGoToday: () => this.todayGoToday(),
+      todayAll, hasTodayAll, showTodayCheckin, todayDateLabel, goCheckin: () => this.go('checkin'),
+      checkinDays, hasCheckin, noCheckin, showDayHeaders, checkinRangeLabel,
+      ckDayBg: _ckDay.bg, ckDayFg: _ckDay.fg, ckWeekBg: _ckWeek.bg, ckWeekFg: _ckWeek.fg,
+      setCheckinDay: () => this.setCheckinMode('day'), setCheckinWeek: () => this.setCheckinMode('week'),
+      todayPrevDay: () => this.shiftTodayDay(-1), todayNextDay: () => this.shiftTodayDay(1),
       pendingSubs, pendingCount, noPending, subHistory,
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
       schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
