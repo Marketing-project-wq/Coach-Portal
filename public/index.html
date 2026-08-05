@@ -605,21 +605,23 @@
               </div>
             </div>
             <sc-if value="{{ hasCheckin }}">
-            <div style="overflow-x:auto;"><div style="min-width:560px;">
-            <div style="display:grid;grid-template-columns:70px 1fr 160px 160px;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--muted2);"><div>TIME</div><div>COACH &#183; CLASS</div><div>CHECK-IN</div><div>CHECK-OUT</div></div>
-            <sc-for list="{{ checkinDays }}" as="d">
-              <sc-if value="{{ showDayHeaders }}"><div style="padding:9px 18px;background:var(--panel2);font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.03em;border-bottom:1px solid var(--border);">{{ d.dateLabel }}</div></sc-if>
-              <sc-for list="{{ d.items }}" as="t">
-              <div style="display:grid;grid-template-columns:70px 1fr 160px 160px;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13.5px;">
-                <div style="font-family:'JetBrains Mono';font-weight:700;">{{ t.time }}</div>
-                <div style="min-width:0;"><div style="font-weight:700;">{{ t.coach }}</div><div style="font-size:11.5px;color:var(--muted);">{{ t.type }}</div></div>
-                <div style="font-weight:700;font-size:12.5px;color:{{ t.ciCol }};">{{ t.ciDot }} {{ t.ciText }}</div>
-                <div style="font-weight:700;font-size:12.5px;color:{{ t.coCol }};">{{ t.coDot }} {{ t.coText }}</div>
+            <div style="padding:16px;display:grid;grid-template-columns:{{ checkinCols }};gap:14px;align-items:start;">
+              <sc-for list="{{ checkinDays }}" as="d">
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+                <div style="padding:9px 15px;background:var(--panel2);font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.03em;border-bottom:1px solid var(--border);">{{ d.dateLabel }}</div>
+                <sc-for list="{{ d.items }}" as="t">
+                <div style="padding:11px 15px;border-bottom:1px solid var(--border);">
+                  <div style="font-size:13px;"><span style="font-family:'JetBrains Mono';font-weight:700;">{{ t.time }}</span> &#183; <span style="font-weight:700;">{{ t.coach }}</span> <span style="color:var(--muted);font-size:12px;">{{ t.type }}</span></div>
+                  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:5px;font-size:11.5px;font-weight:700;">
+                    <span style="color:{{ t.ciCol }};">{{ t.ciDot }} {{ t.ciText }}</span>
+                    <span style="color:{{ t.coCol }};">{{ t.coDot }} {{ t.coText }}</span>
+                  </div>
+                </div>
+                </sc-for>
+                <sc-if value="{{ d.noItems }}"><div style="padding:14px 15px;font-size:12px;color:var(--muted2);font-style:italic;">Tidak ada kelas</div></sc-if>
               </div>
               </sc-for>
-              <sc-if value="{{ d.noItems }}"><div style="padding:11px 18px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted2);font-style:italic;">Tidak ada kelas</div></sc-if>
-            </sc-for>
-            </div></div>
+            </div>
             </sc-if>
             <sc-if value="{{ noCheckin }}"><div style="padding:40px 24px;text-align:center;color:var(--muted);">Tidak ada kelas terjadwal pada periode ini.</div></sc-if>
           </div>
@@ -1010,9 +1012,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=e86abc25"></script>
-<script src="sc-runtime.js?v=e86abc25"></script>
-<script src="app.js?v=e86abc25"></script>
+<script src="i18n.js?v=e46e3815"></script>
+<script src="sc-runtime.js?v=e46e3815"></script>
+<script src="app.js?v=e46e3815"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();
