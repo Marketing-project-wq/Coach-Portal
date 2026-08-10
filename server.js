@@ -245,6 +245,14 @@ function emailTpl(file, name) {
   if (first && html) html = html.replace('Hi there,', 'Hi ' + first + ',');
   return html;
 }
+const escHtml = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// Fill a template that uses {{TOKEN}} placeholders (for multi-field emails). Values are HTML-escaped.
+function emailTplVars(file, map) {
+  if (!(file in _tplCache)) { try { _tplCache[file] = fs.readFileSync(path.join(__dirname, 'email-templates', file), 'utf8'); } catch (_e) { _tplCache[file] = ''; } }
+  const html = _tplCache[file];
+  if (!html) return '';
+  return html.replace(/\{\{(\w+)\}\}/g, (_m, k) => (k in map ? escHtml(map[k]) : ''));
+}
 async function sendEmail(to, subject, html) {
   const KEY = process.env.RESEND_API_KEY;
   const FROM = process.env.MAIL_FROM || '20FIT Arena <arena@20fit.id>';
@@ -793,12 +801,47 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
   const bookings = await myVenueBookings(s.c, assignMap, ptRates, null);
   return send(res, 200, { bookings, coaches: [], isHC: false });
 });
+// Email every active coach when the responsible coach for an arena+coach booking is set/changed.
+// Fire-and-forget: it never blocks or fails the assignment, and is a safe no-op until
+// RESEND_API_KEY is configured (see sendEmail).
+async function sendVenueAssignmentEmails(bookingId, coachName, assignedBy) {
+  if (!coachName || coachName === NO_COACH) return;
+  const bk = await sb(`arena_bookings?select=booking_code,full_name,booking_date,start_time,end_time&id=eq.${enc(bookingId)}&limit=1`);
+  const b = bk && bk[0];
+  if (!b) return;
+  // "All coaches" = every active coach + head coach (not the admin/GRO system accounts).
+  const users = await sb('arena_coach_users?select=email,role&is_active=eq.true');
+  const recipients = [...new Set(
+    (users || [])
+      .filter((u) => u.role === 'coach' || u.role === 'hc')
+      .map((u) => String(u.email || '').trim().toLowerCase())
+      .filter(isEmail)
+  )];
+  if (!recipients.length) return;
+  const time = hhmm(b.start_time) + (b.end_time ? ' – ' + hhmm(b.end_time) : '');
+  const html = emailTplVars('venue-assignment.html', {
+    COACH: coachName,
+    ASSIGNED_BY: assignedBy || 'Head Coach',
+    CUSTOMER: b.full_name || '—',
+    DAY_DATE: b.booking_date ? dLabel(b.booking_date) : '—',
+    TIME: time || '—',
+    CODE: b.booking_code || '—',
+  });
+  const subject = `Arena + Coach — ${coachName} ditugaskan` + (b.booking_date ? ` (${fmtDMon(b.booking_date)}${b.start_time ? ', ' + hhmm(b.start_time) : ''})` : '');
+  for (const to of recipients) await sendEmail(to, subject, html);
+}
 // Assign / reassign the responsible coach for an arena+coach booking (HC/admin only).
 route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) => {
   if (!requireHC(s)) return send(res, 403, { error: 'Head Coach access required.' });
   const body = await readBody(req);
   if (!body || !body.coach_name) return send(res, 400, { error: 'Please select a coach.' });
-  await sb('arena_venue_assignments', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ booking_id: params.id, coach_name: String(body.coach_name).trim(), assigned_by: s.d || s.c, updated_at: new Date().toISOString() }) });
+  const newCoach = String(body.coach_name).trim();
+  // Read the previous pick first, so re-selecting the same coach doesn't re-spam everyone.
+  const prev = await sb(`arena_venue_assignments?select=coach_name&booking_id=eq.${enc(params.id)}&limit=1`);
+  const prevCoach = prev && prev[0] ? prev[0].coach_name : null;
+  await sb('arena_venue_assignments', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ booking_id: params.id, coach_name: newCoach, assigned_by: s.d || s.c, updated_at: new Date().toISOString() }) });
+  // Notify all coaches only when the responsible coach actually changes (fire-and-forget).
+  if (newCoach !== prevCoach) sendVenueAssignmentEmails(params.id, newCoach, s.d || s.c).catch((e) => console.warn('[venue-assign email]', e.message));
   return send(res, 200, { ok: true });
 });
 // Remove the coach assignment (HC/admin only) — never touches the Admin Hub booking itself.
