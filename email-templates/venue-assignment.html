@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>Penugasan Coach — Arena + Coach</title>
+<title>New Booking at 20FIT Arena</title>
 <style type="text/css">
   :root { color-scheme: light; supported-color-schemes: light; }
   [data-ogsc] .brand-dark, [data-ogsb] .brand-dark { background-color:#0a0a0a !important; }
@@ -16,7 +16,7 @@
 
   <!-- Preheader (hidden preview text) -->
   <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; opacity:0;">
-    {{COACH}} ditugaskan untuk penyewaan Arena + Coach pada {{DAY_DATE}}, {{TIME}}.
+    New customer booking at 20FIT Arena — {{DATE}}, {{TIME}}.
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eceff1; padding:32px 0;">
@@ -40,8 +40,8 @@
           <!-- Hero -->
           <tr>
             <td align="center" class="brand-dark" style="background-color:#0a0a0a; padding:0 32px 40px 32px;">
-              <p style="margin:0 0 10px 0; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:#FF3B57; font-weight:bold;">Arena + Coach</p>
-              <h1 class="brand-white" style="margin:0; font-size:26px; line-height:1.3; color:#ffffff; font-weight:bold;">Penugasan Coach</h1>
+              <p style="margin:0 0 10px 0; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:#FF3B57; font-weight:bold;">New Booking</p>
+              <h1 class="brand-white" style="margin:0; font-size:26px; line-height:1.3; color:#ffffff; font-weight:bold;">New Booking at 20FIT Arena</h1>
             </td>
           </tr>
 
@@ -49,25 +49,11 @@
           <tr>
             <td style="padding:32px 32px 4px 32px;">
               <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:#333333;">
-                Halo Coach,
+                Hi Coach {{COACH}},
               </p>
               <p style="margin:0 0 8px 0; font-size:15px; line-height:1.65; color:#333333;">
-                <strong>{{ASSIGNED_BY}}</strong> telah menetapkan coach yang bertanggung jawab untuk penyewaan <strong>Arena + Coach</strong> berikut:
+                You have a new customer booking at 20FIT Arena. Please find the booking details below:
               </p>
-            </td>
-          </tr>
-
-          <!-- Assigned coach highlight -->
-          <tr>
-            <td style="padding:12px 32px 4px 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a; border-radius:10px;">
-                <tr>
-                  <td style="padding:18px 22px;">
-                    <p style="margin:0 0 4px 0; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#FF3B57; font-weight:bold;">Coach bertanggung jawab</p>
-                    <p class="brand-white" style="margin:0; font-size:22px; line-height:1.2; color:#ffffff; font-weight:bold;">{{COACH}}</p>
-                  </td>
-                </tr>
-              </table>
             </td>
           </tr>
 
@@ -76,20 +62,20 @@
             <td style="padding:20px 32px 8px 32px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eceff1; border-radius:10px;">
                 <tr>
-                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#777777; width:38%;">Customer</td>
+                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#777777; width:34%;">Customer</td>
                   <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#111111; font-weight:bold;">{{CUSTOMER}}</td>
                 </tr>
                 <tr>
-                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#777777;">Tanggal</td>
-                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#111111; font-weight:bold;">{{DAY_DATE}}</td>
+                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#777777;">Date</td>
+                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#111111; font-weight:bold;">{{DATE}}</td>
                 </tr>
                 <tr>
-                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#777777;">Waktu</td>
+                  <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#777777;">Time</td>
                   <td style="padding:14px 20px; border-bottom:1px solid #eceff1; font-size:14px; color:#111111; font-weight:bold;">{{TIME}}</td>
                 </tr>
                 <tr>
-                  <td style="padding:14px 20px; font-size:14px; color:#777777;">Kode booking</td>
-                  <td style="padding:14px 20px; font-size:14px; color:#111111; font-weight:bold;">{{CODE}}</td>
+                  <td style="padding:14px 20px; font-size:14px; color:#777777;">Arena</td>
+                  <td style="padding:14px 20px; font-size:14px; color:#111111; font-weight:bold;">20FIT Arena</td>
                 </tr>
               </table>
             </td>
@@ -97,9 +83,12 @@
 
           <!-- Outro -->
           <tr>
-            <td style="padding:20px 32px 32px 32px;">
-              <p style="margin:0; font-size:13px; line-height:1.6; color:#777777;">
-                Notifikasi ini dikirim otomatis ke seluruh coach agar semua tahu siapa yang bertugas. Detail selengkapnya bisa dilihat di Coach Portal.
+            <td style="padding:24px 32px 8px 32px;">
+              <p style="margin:0 0 20px 0; font-size:15px; line-height:1.65; color:#333333;">
+                Please take note of the booking schedule.
+              </p>
+              <p style="margin:0; font-size:15px; line-height:1.65; color:#333333;">
+                Thank you,<br>20FIT
               </p>
             </td>
           </tr>
