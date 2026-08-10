@@ -1867,8 +1867,53 @@ route('POST', '/api/coach/change-password', async (req, res, s) => {
   return send(res, 200, { ok: true });
 });
 
+// ===== External integration API (read-only, API-key auth) =====
+// Lets another project pull Coach Portal data. Auth via the `x-api-key` header (or
+// `Authorization: Bearer <key>`). Keys are stored hashed (sha256) in arena_ext_api_keys.
+async function apiKeyValid(req) {
+  let key = req.headers['x-api-key'];
+  if (!key) { const a = req.headers['authorization'] || ''; const m = /^Bearer\s+(.+)$/i.exec(a); if (m) key = m[1]; }
+  if (!key) return false;
+  const hash = crypto.createHash('sha256').update(String(key).trim()).digest('hex');
+  try { const rows = await sb(`arena_ext_api_keys?select=id&key_hash=eq.${enc(hash)}&is_active=eq.true&limit=1`); return !!(rows && rows[0]); }
+  catch (_e) { return false; }
+}
+function extAuthOk(res, ok) { if (!ok) { send(res, 401, { error: 'Invalid or missing API key. Send it in the x-api-key header.' }); return false; } return true; }
+// GET /api/ext/coaches — the coach roster (no PII / passwords).
+route('GET', '/api/ext/coaches', async (req, res) => {
+  if (!extAuthOk(res, await apiKeyValid(req))) return;
+  const rows = await sb('arena_coach_users?select=coach_name,role,is_active&role=neq.admin&order=coach_name.asc');
+  const coaches = (rows || []).map((u) => ({ name: u.coach_name, role: u.role || 'coach', active: !!u.is_active, external: (u.role || 'coach') === 'coach' && isExternalCoach(u.coach_name) }));
+  return send(res, 200, { count: coaches.length, coaches });
+});
+// GET /api/ext/schedules?from=YYYY-MM-DD&to=YYYY-MM-DD — classes with pax + coach check-in/out.
+route('GET', '/api/ext/schedules', async (req, res, s, q) => {
+  if (!extAuthOk(res, await apiKeyValid(req))) return;
+  const today = todayJakarta();
+  const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  let from = isoRe.test(q.from || '') ? q.from : today;
+  let to = isoRe.test(q.to || '') ? q.to : from;
+  if (to < from) to = from;
+  // Cap the window at 92 days to keep responses bounded.
+  { const f = new Date(from + 'T00:00:00'), maxT = new Date(f); maxT.setDate(f.getDate() + 92);
+    const maxIso = maxT.getFullYear() + '-' + String(maxT.getMonth() + 1).padStart(2, '0') + '-' + String(maxT.getDate()).padStart(2, '0');
+    if (to > maxIso) to = maxIso; }
+  const types = await classTypes();
+  const rows = await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,instructor,class_type_id,quota&is_cancelled=eq.false&schedule_date=gte.${from}&schedule_date=lte.${to}&order=schedule_date.asc,start_time.asc`);
+  const ids = (rows || []).map((r) => r.id);
+  const counts = await bookingCounts(ids);
+  const sess = await sessionsFull(ids);
+  const hmt = (isoStr) => isoStr ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(isoStr)) : null;
+  const classes = (rows || []).map((r) => { const ss = sess[r.id]; const cc = counts[r.id] || {}; return {
+    date: r.schedule_date, start: hhmm(r.start_time), end: hhmm(r.end_time),
+    coach: r.instructor || '', class_type: shortType((types[r.class_type_id] || {}).name),
+    quota: r.quota || 0, pax: cc.confirmed || 0,
+    checked_in: !!ss, checked_out: !!(ss && ss.status === 'completed'), check_in_time: ss && ss.created_at ? hmt(ss.created_at) : null }; });
+  return send(res, 200, { from, to, count: classes.length, classes });
+});
+
 // ---------- server ----------
-const PUBLIC_ROUTES = new Set(['POST /api/auth/login', 'POST /api/public/lookup', 'POST /api/public/review']);
+const PUBLIC_ROUTES = new Set(['POST /api/auth/login', 'POST /api/public/lookup', 'POST /api/public/review', 'GET /api/ext/coaches', 'GET /api/ext/schedules']);
 const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   const query = Object.fromEntries(new URL(req.url, 'http://localhost').searchParams);
