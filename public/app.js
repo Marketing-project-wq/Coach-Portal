@@ -514,7 +514,9 @@ class Component extends DCLogic {
         const co = g.coachOut ? ('&#10003; ' + esc(g.coachOut)) : '<span class="warn">belum</span>';
         const head = '<div class="clshead"><div class="clstitle">' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Jadwal ' + esc(g.time) + ' &middot; Check-in: ' + ci + ' &middot; Check-out: ' + co + '</div></div>';
         const tb = g.rows.map((rr) => '<tr>' + rr.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'ok' : 'warn') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
-        return '<div class="clsblock">' + head + '<table><thead><tr>' + attHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + tb + '</tbody></table></div>';
+        const hadirCount = g.rows.filter((rr) => String(rr[3]) === 'Hadir').length;
+        const foot = '<tr class="tot"><td colspan="3" style="text-align:right;">Total Hadir</td><td class="ok">' + hadirCount + ' / ' + g.rows.length + '</td><td colspan="2"></td></tr>';
+        return '<div class="clsblock">' + head + '<table><thead><tr>' + attHead.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + tb + foot + '</tbody></table></div>';
       }).join('');
       return '<div class="dayblock"><div class="dayhead">' + esc(dg.dateLabel) + '</div>' + blocks + '</div>';
     }).join('');
