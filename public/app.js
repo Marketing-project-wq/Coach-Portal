@@ -193,7 +193,7 @@ class Component extends DCLogic {
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
     else if (screen === 'overview' || screen === 'monitor') { this.api('/api/hc/today' + (this.state.todayDate ? ('?date=' + this.state.todayDate) : '')).then((d) => this.setD({ hcToday: d.today, hcTodayDate: d.date })).catch(fail); this.api('/api/hc/coaches?range=' + (this.state.monitorRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportClassList: d.classList || [] })).catch(fail); }
     else if (screen === 'checkin') this.api('/api/hc/coach-checkin?mode=' + (this.state.checkinMode || 'week') + (this.state.todayDate ? ('&date=' + this.state.todayDate) : '')).then((d) => this.setD({ checkinData: d })).catch(fail);
-    else if (screen === 'schedule') this.api('/api/hc/schedule' + (this.state.scheduleDate ? ('?date=' + this.state.scheduleDate) : '')).then((d) => this.setD({ schedule: d })).catch(fail);
+    else if (screen === 'schedule') this.api('/api/gro/calendar' + (this.state.teamCalYm ? ('?ym=' + this.state.teamCalYm) : '')).then((r) => this.setD({ teamCalCells: r.cells || [], teamCalLabel: r.monthLabel || '', teamCalYm: r.ym || '', teamCalPrevYm: r.prevYm || '', teamCalNextYm: r.nextYm || '' })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
     else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
@@ -847,6 +847,9 @@ class Component extends DCLogic {
   }
   // Jump the Team Schedule back to today.
   scheduleGoToday() { this.setState({ scheduleDate: '' }); if (this.MOCK) return; this.loadScreen('schedule'); }
+  // Team Schedule calendar — previous / next month.
+  teamCalPrev() { this.setState({ teamCalYm: this.state.d.teamCalPrevYm }); if (this.MOCK) return; this.loadScreen('schedule'); }
+  teamCalNext() { this.setState({ teamCalYm: this.state.d.teamCalNextYm }); if (this.MOCK) return; this.loadScreen('schedule'); }
   // Coach Check-in screen: day/week navigation. Prev/Next steps 1 day (day mode) or 7 days (week mode).
   shiftTodayDay(delta) {
     const cur = this.state.todayDate || (this.state.d.checkinData && this.state.d.checkinData.date) || '';
@@ -1413,6 +1416,17 @@ class Component extends DCLogic {
           : { text: e.time + ' ' + e.label, bg: C.volt, cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId) }),
       };
     });
+    // Team Schedule (Head Coach) — month calendar of the whole team's classes, coloured by whether
+    // the coach has checked in (green) or not yet (red). Click a class → participant popup.
+    const teamCalCells = (D.teamCalCells || []).map((c) => {
+      if (c.blank) return { show: false, bg: 'transparent', border: 'transparent', day: '', numCol: C.muted, events: [] };
+      const evs = (c.events || []).filter((e) => e.kind !== 'venue').map((e) => ({
+        text: e.time + ' · ' + (e.coach || '—'), bg: e.checkedIn ? C.green : C.volt, cursor: 'pointer',
+        pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId),
+      }));
+      return { show: true, day: c.day, date: c.date, bg: c.isToday ? C.voltDim : 'var(--panel2)', border: c.isToday ? C.volt : 'var(--border)', numCol: c.isToday ? C.volt : C.text, events: evs };
+    });
+    const hasTeamCal = teamCalCells.length > 0;
 
     // Rekap Absensi (below the calendar) — the attendance report, grouped by date → class.
     // Shown to Head Coach / Admin only (read-only report). GRO does the input via the class popup.
@@ -1563,6 +1577,7 @@ class Component extends DCLogic {
       setCheckinDay: () => this.setCheckinMode('day'), setCheckinWeek: () => this.setCheckinMode('week'),
       todayPrevDay: () => this.shiftTodayDay(-1), todayNextDay: () => this.shiftTodayDay(1),
       pendingSubs, pendingCount, noPending, subHistory,
+      teamCalCells, hasTeamCal, teamCalLabel: D.teamCalLabel || '', teamCalPrev: () => this.teamCalPrev(), teamCalNext: () => this.teamCalNext(),
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
       schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
       coaches, reportRows, sel, statRows, statMonth, templates, perms,
