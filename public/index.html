@@ -526,30 +526,30 @@
         <sc-if value="{{ s.schedule }}" hint-placeholder-val="{{ true }}">
         <div style="max-width:1140px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
-            <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;">Schedule All Coach · {{ scheduleDateLabel }}</div>
+            <div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;">Team Schedule &#183; {{ teamCalLabel }}</div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <button onclick="{{ schedulePrevDay }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">&lsaquo; Prev</button>
-              <sc-if value="{{ scheduleNotToday }}"><button onclick="{{ scheduleGoToday }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">Today</button></sc-if>
-              <button onclick="{{ scheduleNextDay }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">Next &rsaquo;</button>
+              <button onclick="{{ teamCalPrev }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">&lsaquo; Prev</button>
+              <button onclick="{{ teamCalNext }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:7px 13px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">Next &rsaquo;</button>
             </div>
           </div>
-          <sc-if value="{{ hasSchedule }}">
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <sc-for list="{{ scheduleList }}" as="cl" hint-placeholder-count="6">
-            <div style="background:var(--panel);border:1px solid var(--border);border-left:3px solid {{ cl.accent }};border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:16px;">
-              <div style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--text);min-width:56px;">{{ cl.time }}</div>
-              <div style="flex:1;min-width:0;"><div style="font-weight:800;font-family:'Barlow Condensed';font-size:15px;color:{{ cl.accent }};">{{ cl.type }}</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px;">{{ cl.pax }} pax</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px;font-weight:700;"><span style="color:{{ cl.ciCol }};">{{ cl.ciDot }} {{ cl.ciText }}</span><span style="color:{{ cl.coCol }};">{{ cl.coDot }} {{ cl.coText }}</span></div></div>
-              <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;">
-                <div style="width:34px;height:34px;border-radius:50%;background:var(--raised);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:800;font-size:12px;color:var(--text);position:relative;overflow:hidden;">{{ cl.initials }}<sc-if value="{{ cl.hasPhoto }}"><img src="{{ cl.photo }}" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></sc-if></div>
-                <div style="font-weight:700;font-size:13.5px;">{{ cl.coach }}</div>
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:16px;">
+            <div style="overflow-x:auto;"><div style="min-width:900px;">
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;"><sc-for list="{{ calDow }}" as="dw"><div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted2);padding:2px 0;">{{ dw }}</div></sc-for></div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">
+                <sc-for list="{{ teamCalCells }}" as="c">
+                <div style="min-height:112px;border-radius:9px;background:{{ c.bg }};border:1px solid {{ c.border }};padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;">
+                  <sc-if value="{{ c.show }}">
+                  <div style="font-size:12px;font-weight:800;color:{{ c.numCol }};margin-bottom:1px;">{{ c.day }}</div>
+                  <sc-for list="{{ c.events }}" as="e">
+                  <div onclick="{{ e.open }}" style="background:{{ e.bg }};color:#fff;border-radius:5px;padding:3px 6px;font-size:10px;line-height:1.25;cursor:{{ e.cursor }};display:flex;align-items:center;gap:4px;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.text }}</span><span style="background:rgba(0,0,0,.28);border-radius:100px;padding:0 6px;font-weight:700;flex-shrink:0;">{{ e.pax }}</span></div>
+                  </sc-for>
+                  </sc-if>
+                </div>
+                </sc-for>
               </div>
-            </div>
-            </sc-for>
+            </div></div>
+            <div style="display:flex;gap:16px;margin-top:12px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;"><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--green);display:inline-block;"></span>Coach sudah check-in</span><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt);display:inline-block;"></span>Belum check-in</span><span style="color:var(--muted2);">&#183; klik kelas untuk lihat peserta</span></div>
           </div>
-          </sc-if>
-          <sc-if value="{{ noSchedule }}">
-          <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:48px 24px;text-align:center;color:var(--muted);">No classes scheduled for this day.</div>
-          </sc-if>
         </div>
         </sc-if>
 
@@ -1012,9 +1012,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=7d466d35"></script>
-<script src="sc-runtime.js?v=7d466d35"></script>
-<script src="app.js?v=7d466d35"></script>
+<script src="i18n.js?v=3eccf263"></script>
+<script src="sc-runtime.js?v=3eccf263"></script>
+<script src="app.js?v=3eccf263"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

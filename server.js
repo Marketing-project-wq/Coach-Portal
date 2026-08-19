@@ -671,12 +671,15 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
   const types = await classTypes();
   const scheds = await allSchedules(mStart, mEnd);
   const counts = await bookingCounts(scheds.map((x) => x.id));
+  const sess = await sessionsFull(scheds.map((x) => x.id)); // coach check-in/out per class
   const byDay = {};
   for (const sc of scheds) {
+    const ss = sess[sc.id];
     (byDay[sc.schedule_date] = byDay[sc.schedule_date] || []).push({
       kind: 'class', time: hhmm(sc.start_time), sort: hhmm(sc.start_time),
       label: (types[sc.class_type_id] || {}).name || 'Class',
       pax: (counts[sc.id] || {}).confirmed || 0, scheduleId: sc.id,
+      coach: sc.instructor || '', checkedIn: !!ss, checkedOut: !!(ss && ss.status === 'completed'),
     });
   }
   const vb = (await sbAll(`arena_bookings?select=full_name,booking_date,start_time,end_time,status&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
