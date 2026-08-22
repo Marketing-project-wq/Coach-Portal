@@ -812,25 +812,21 @@ async function sendVenueAssignmentEmails(bookingId, coachName) {
   const bk = await sb(`arena_bookings?select=full_name,booking_date,start_time,end_time&id=eq.${enc(bookingId)}&limit=1`);
   const b = bk && bk[0];
   if (!b) return;
-  // "All coaches" = every active coach + head coach (not the admin/GRO system accounts).
-  const users = await sb('arena_coach_users?select=email,role&is_active=eq.true');
-  const recipients = [...new Set(
-    (users || [])
-      .filter((u) => u.role === 'coach' || u.role === 'hc')
-      .map((u) => String(u.email || '').trim().toLowerCase())
-      .filter(isEmail)
-  )];
-  if (!recipients.length) return;
+  // Notify ONLY the coach who was assigned. Match their account by coach_name
+  // (case/space-tolerant) and email that one address.
+  const norm = (x) => String(x || '').trim().toLowerCase();
+  const users = await sb('arena_coach_users?select=email,coach_name&is_active=eq.true');
+  const u = (users || []).find((x) => norm(x.coach_name) === norm(coachName));
+  const to = u ? norm(u.email) : '';
+  if (!isEmail(to)) return; // assigned coach has no usable email → nothing to send
   const time = hhmm(b.start_time) + (b.end_time ? ' – ' + hhmm(b.end_time) : '');
-  // Greeting names the assigned coach, so every recipient sees who is responsible.
   const html = emailTplVars('venue-assignment.html', {
     COACH: coachName,
     CUSTOMER: b.full_name || '—',
     DATE: b.booking_date ? dLabel(b.booking_date) : '—',
     TIME: time || '—',
   });
-  const subject = 'New Booking at 20FIT Arena';
-  for (const to of recipients) await sendEmail(to, subject, html);
+  await sendEmail(to, 'New Booking at 20FIT Arena', html);
 }
 // Assign / reassign the responsible coach for an arena+coach booking (HC/admin only).
 route('POST', '/api/venue/bookings/:id/assign', async (req, res, s, q, params) => {
