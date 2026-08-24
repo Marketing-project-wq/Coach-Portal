@@ -61,6 +61,49 @@ curl -H "x-api-key: <YOUR_KEY>" \
 }
 ```
 
+## `GET /api/ext/report/coach-sessions?ym=YYYY-MM`
+
+Monthly per-coach report (no PII). `ym` defaults to the current month.
+
+```json
+{
+  "ym": "2026-08",
+  "month_label": "August 2026",
+  "coaches": [
+    { "coach": "Rheza", "role": "Coach", "scheduled": 20, "conducted": 18, "completed": 17, "pax": 122 }
+  ]
+}
+```
+
+- `scheduled` = classes assigned · `conducted` = checked in · `completed` = checked out · `pax` = total participants.
+
+## `GET /api/ext/report/attendance?from=YYYY-MM-DD&to=YYYY-MM-DD`
+
+Attendance report: each class with its participants and how many were present.
+`from` defaults to the 1st of the current month, `to` to today. Range capped at 92 days.
+Includes participant **names** only (no phone/email).
+
+```json
+{
+  "from": "2026-08-01",
+  "to": "2026-08-31",
+  "count": 1,
+  "classes": [
+    {
+      "date": "2026-08-06",
+      "time": "08:00",
+      "coach": "Rheza",
+      "class_type": "HYROX Complete Class",
+      "pax": 14,
+      "hadir": 11,
+      "participants": [
+        { "name": "Albert", "attended": true, "payment": "Lunas" }
+      ]
+    }
+  ]
+}
+```
+
 ## Errors
 
 - `401` — missing or invalid API key.

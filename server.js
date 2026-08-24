@@ -1952,9 +1952,67 @@ route('GET', '/api/ext/schedules', async (req, res, s, q) => {
     checked_in: !!ss, checked_out: !!(ss && ss.status === 'completed'), check_in_time: ss && ss.created_at ? hmt(ss.created_at) : null }; });
   return send(res, 200, { from, to, count: classes.length, classes });
 });
+// GET /api/ext/report/coach-sessions?ym=YYYY-MM — monthly per-coach report: scheduled classes,
+// conducted (checked in), completed (checked out), and total participants. No PII.
+route('GET', '/api/ext/report/coach-sessions', async (req, res, s, q) => {
+  if (!extAuthOk(res, await apiKeyValid(req))) return;
+  const today = todayJakarta();
+  const ym = /^\d{4}-\d{2}$/.test(q.ym || '') ? q.ym : today.slice(0, 7);
+  const [Y, M] = ym.split('-').map(Number);
+  const mStart = `${ym}-01`;
+  const mEnd = `${ym}-${String(new Date(Y, M, 0).getDate()).padStart(2, '0')}`;
+  const upto = mEnd < today ? mEnd : today;
+  const users = await sb('arena_coach_users?select=coach_name,role&role=neq.admin&order=coach_name.asc');
+  const scheds = (await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id&is_cancelled=eq.false&schedule_date=gte.${mStart}&schedule_date=lte.${upto}`)) || [];
+  const ids = scheds.map((x) => x.id);
+  const counts = await bookingCounts(ids);
+  const sess = await sessionsFull(ids);
+  const coaches = (users || []).map((u) => {
+    const my = scheds.filter((sc) => instructorHasCoach(sc.instructor, u.coach_name));
+    let conducted = 0, completed = 0;
+    for (const sc of my) { const r = sess[sc.id]; if (!r) continue; conducted++; if (r.status === 'completed') completed++; }
+    const pax = my.reduce((a, sc) => a + ((counts[sc.id] || {}).confirmed || 0), 0);
+    return { coach: u.coach_name, role: u.role === 'hc' ? 'Head Coach' : 'Coach', scheduled: my.length, conducted, completed, pax };
+  }).filter((r) => r.scheduled > 0 || r.conducted > 0);
+  return send(res, 200, { ym, month_label: `${MON_FULL[M - 1]} ${Y}`, coaches });
+});
+// GET /api/ext/report/attendance?from=&to= — per-class attendance report: each class with its
+// participants (name + attended) and the count present. Participant names only, no phone/email.
+route('GET', '/api/ext/report/attendance', async (req, res, s, q) => {
+  if (!extAuthOk(res, await apiKeyValid(req))) return;
+  const today = todayJakarta();
+  const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  let from = isoRe.test(q.from || '') ? q.from : `${today.slice(0, 7)}-01`;
+  let to = isoRe.test(q.to || '') ? q.to : today;
+  if (to < from) to = from;
+  { const f = new Date(from + 'T00:00:00'), maxT = new Date(f); maxT.setDate(f.getDate() + 92);
+    const maxIso = maxT.getFullYear() + '-' + String(maxT.getMonth() + 1).padStart(2, '0') + '-' + String(maxT.getDate()).padStart(2, '0');
+    if (to > maxIso) to = maxIso; }
+  const types = await classTypes();
+  const scheds = (await sb(`arena_class_schedules?select=id,schedule_date,start_time,instructor,class_type_id&is_cancelled=eq.false&schedule_date=gte.${from}&schedule_date=lte.${to}&order=schedule_date.asc,start_time.asc`)) || [];
+  const ids = scheds.map((x) => x.id);
+  const bookingsByClass = {}; const attById = {};
+  for (let i = 0; i < ids.length; i += 120) {
+    const chunk = ids.slice(i, i + 120);
+    const bk = await sbAll(`arena_class_bookings?select=id,schedule_id,full_name,status&schedule_id=in.(${chunk.map(enc).join(',')})`);
+    for (const b of bk || []) { if (String(b.status) === 'cancelled') continue; (bookingsByClass[b.schedule_id] = bookingsByClass[b.schedule_id] || []).push(b); }
+    const at = await attendanceRows(`schedule_id=in.(${chunk.map(enc).join(',')})`);
+    for (const a of at || []) attById[a.booking_id] = a;
+  }
+  const classes = scheds.map((sc) => {
+    const bks = bookingsByClass[sc.id] || [];
+    const participants = bks.map((b) => { const a = attById[b.id]; return {
+      name: b.full_name || '(no name)', attended: !!(a && a.status === 'checked_in'),
+      payment: b.status === 'confirmed' ? 'Lunas' : (b.status === 'pending_payment' ? 'Belum' : (b.status || '')) }; });
+    return { date: sc.schedule_date, time: hhmm(sc.start_time), coach: sc.instructor || '',
+      class_type: shortType((types[sc.class_type_id] || {}).name), pax: participants.length,
+      hadir: participants.filter((p) => p.attended).length, participants };
+  });
+  return send(res, 200, { from, to, count: classes.length, classes });
+});
 
 // ---------- server ----------
-const PUBLIC_ROUTES = new Set(['POST /api/auth/login', 'POST /api/public/lookup', 'POST /api/public/review', 'GET /api/ext/coaches', 'GET /api/ext/schedules']);
+const PUBLIC_ROUTES = new Set(['POST /api/auth/login', 'POST /api/public/lookup', 'POST /api/public/review', 'GET /api/ext/coaches', 'GET /api/ext/schedules', 'GET /api/ext/report/coach-sessions', 'GET /api/ext/report/attendance']);
 const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   const query = Object.fromEntries(new URL(req.url, 'http://localhost').searchParams);
