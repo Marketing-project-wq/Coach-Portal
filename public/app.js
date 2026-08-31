@@ -19,6 +19,7 @@ class Component extends DCLogic {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
+      reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsDateFilter: '', rsClassFilter: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
       toast: '',
@@ -34,7 +35,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -261,6 +262,32 @@ class Component extends DCLogic {
     this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
       .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : status === 'no_show' ? 'Peserta ditandai absen' : 'Absensi dibatalkan'); })
       .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Gagal menyimpan absensi'); });
+  }
+  // ---- PINDAH JADWAL (GRO participant reschedule) ----
+  openReschedule(bookingId) {
+    if (!bookingId) return;
+    this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsDateFilter: '', rsClassFilter: '', rsSaving: false });
+    this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId))
+      .then((d) => this.setState({ reschedule: Object.assign({}, d, { bookingId }) }))
+      .catch((e) => this.toastMsg(e.message || 'Gagal memuat jadwal.'));
+  }
+  closeReschedule() { this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsDateFilter: '', rsClassFilter: '', rsSaving: false }); }
+  setRsSlot(scheduleId) { if (this.state.rsSaving) return; this.setState({ rsSlot: scheduleId }); }
+  setRsReason(e) { const v = e && e.target ? e.target.value : ''; this.setState({ rsReason: v, rsReasonOther: v === 'Lainnya' ? this.state.rsReasonOther : '' }); }
+  setRsReasonOther(e) { this.setState({ rsReasonOther: e && e.target ? e.target.value : '' }); }
+  setRsDateFilter(e) { this.setState({ rsDateFilter: e && e.target ? e.target.value : '' }); }
+  setRsClassFilter(e) { this.setState({ rsClassFilter: e && e.target ? e.target.value : '' }); }
+  submitReschedule() {
+    const st = this.state; const rs = st.reschedule; if (!rs || st.rsSaving) return;
+    if (!st.rsSlot) return this.toastMsg('Pilih jadwal baru dulu.');
+    const reason = st.rsReason === 'Lainnya' ? String(st.rsReasonOther || '').trim() : st.rsReason;
+    if (!reason) return this.toastMsg(st.rsReason === 'Lainnya' ? 'Isi alasan pindah jadwal.' : 'Pilih alasan pindah jadwal.');
+    const bookingId = rs.bookingId;
+    const openSid = (this.state.classPopup && this.state.classPopup.schedule && this.state.classPopup.schedule.schedule_id) || null;
+    this.setState({ rsSaving: true });
+    this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId), { method: 'POST', body: JSON.stringify({ schedule_id: st.rsSlot, reason }) })
+      .then(() => { this.toastMsg('Jadwal peserta berhasil dipindah.'); this.closeReschedule(); if (openSid) this.openClassPopup(openSid); })
+      .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Gagal memindahkan jadwal.'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
   _compressImage(file, maxDim, quality) {
@@ -1512,10 +1539,69 @@ class Component extends DCLogic {
         markHadir: () => this.popupAttend(cpSched.schedule_id, p.booking_id, isHadir ? 'none' : 'checked_in'),
         markTidak: () => this.popupAttend(cpSched.schedule_id, p.booking_id, isTidak ? 'none' : 'no_show'),
         note: p.note || '', saveNote: (e) => this.saveNote(cpSched.schedule_id, p.booking_id, e && e.target ? e.target.value : ''),
+        openReschedule: () => this.openReschedule(p.booking_id),
       };
     });
 
+    // PINDAH JADWAL (GRO reschedule) modal
+    const rs = st.reschedule;
+    const rsPart = rs ? (rs.participant || {}) : {};
+    const rsCur = rsPart.current || null;
+    const rsLeft = rs ? (rs.reschedulesLeft == null ? 2 : rs.reschedulesLeft) : 0;
+    const rsLimit = !!rs && rsLeft <= 0;
+    const rsAllSlots = rs ? (rs.slots || []) : [];
+    const shortD = (lbl) => String(lbl || '').replace(/\s+\d{4}$/, '');
+    // Filters apply to the future slots; the current slot is always shown (labelled, not selectable).
+    const rsView = rsAllSlots.filter((sl) => {
+      if (sl.isCurrent) return true;
+      if (st.rsDateFilter && sl.date !== st.rsDateFilter) return false;
+      if (st.rsClassFilter && sl.classTypeId !== st.rsClassFilter) return false;
+      return true;
+    });
+    const rsSlots = rsView.map((sl) => {
+      const sel = !sl.isCurrent && !rsLimit && st.rsSlot === sl.scheduleId;
+      const badgeCol = sl.level === 'green' ? C.green : (sl.level === 'yellow' ? C.amber : C.muted);
+      const badgeBg = sl.level === 'green' ? 'rgba(28,138,75,.14)' : (sl.level === 'yellow' ? 'rgba(199,122,0,.16)' : 'rgba(136,143,156,.16)');
+      const pickable = sl.selectable && !rsLimit;
+      return {
+        mainLine: sl.dateLabel + ' · ' + sl.timeRange,
+        subLine: sl.classShort + (sl.instructor ? ' · ' + sl.instructor : ''),
+        badge: sl.badge, badgeCol, badgeBg,
+        isCurrent: !!sl.isCurrent, showRadio: !sl.isCurrent, curBadge: !!sl.isCurrent,
+        sel, radioBg: sel ? 'var(--volt)' : 'transparent', radioBorder: sel ? 'var(--volt)' : 'var(--border2)',
+        cardBorder: sel ? 'var(--volt)' : (sl.isCurrent ? 'var(--border2)' : 'var(--border)'),
+        cardBg: sel ? 'color-mix(in srgb,var(--volt) 8%,var(--panel))' : (sl.isCurrent ? 'var(--bg)' : 'var(--panel)'),
+        cardOpacity: (!pickable && !sl.isCurrent) ? '.5' : '1',
+        cardCursor: pickable ? 'pointer' : 'default',
+        pick: () => { if (pickable) this.setRsSlot(sl.scheduleId); },
+      };
+    });
+    const RS_REASONS = ['Sakit', 'Ada acara', 'Perubahan jadwal kerja', 'Lainnya'];
+    const rsReasonOpts = RS_REASONS.map((r) => ({ value: r, label: r, picked: st.rsReason === r }));
+    const rsShowOther = st.rsReason === 'Lainnya';
+    const rsSelSlot = st.rsSlot ? rsAllSlots.find((x) => x.scheduleId === st.rsSlot && !x.isCurrent) : null;
+    const rsReasonFilled = st.rsReason && (st.rsReason !== 'Lainnya' || String(st.rsReasonOther || '').trim());
+    const rsCanSave = !!rsSelSlot && !!rsReasonFilled && !rsLimit && !st.rsSaving;
+    let rsSummary = '';
+    if (rsSelSlot && rsCur) {
+      rsSummary = (rsPart.name || 'Peserta') + ': '
+        + rsCur.classShort + ' ' + shortD(rsCur.dateLabel) + ' ' + (rsCur.start || '')
+        + '  →  ' + rsSelSlot.classShort + ' ' + shortD(rsSelSlot.dateLabel) + ' ' + rsSelSlot.start;
+    }
+
     return {
+      showReschedule: !!rs, closeReschedule: () => this.closeReschedule(),
+      rsName: rsPart.name || '', rsBookingCode: rsPart.bookingCode || '', rsHasBookingCode: !!rsPart.bookingCode,
+      rsCurClass: rsCur ? rsCur.className : '', rsCurWhen: rsCur ? (rsCur.dow + ' · ' + rsCur.timeRange) : '', rsCurCoach: rsCur && rsCur.instructor ? ('Coach ' + rsCur.instructor) : '', rsHasCur: !!rsCur,
+      rsLeftLabel: 'Sisa jatah pindah: ' + rsLeft + ' dari ' + (rs ? rs.maxReschedules : 2) + '×', rsLimitReached: rsLimit,
+      rsSlots, rsHasSlots: rsSlots.length > 0, rsNoSlots: !!rs && rsSlots.length === 0,
+      rsDateOpts: (rs ? (rs.dateOptions || []) : []).map((o) => ({ value: o.value, label: o.label, picked: st.rsDateFilter === o.value })),
+      rsClassOpts: (rs ? (rs.classOptions || []) : []).map((o) => ({ value: o.value, label: o.label, picked: st.rsClassFilter === o.value })),
+      setRsDateFilter: (e) => this.setRsDateFilter(e), setRsClassFilter: (e) => this.setRsClassFilter(e),
+      rsReasonOpts, setRsReason: (e) => this.setRsReason(e), rsShowOther, rsReasonOther: st.rsReasonOther || '', setRsReasonOther: (e) => this.setRsReasonOther(e),
+      rsHasSummary: !!rsSummary, rsSummary,
+      rsCanSave, rsSaveDisabled: !rsCanSave, rsSaveBg: rsCanSave ? 'var(--volt)' : 'var(--border2)', rsSaveCursor: rsCanSave ? 'pointer' : 'not-allowed',
+      rsSaveLabel: st.rsSaving ? 'Menyimpan…' : 'Simpan', submitReschedule: () => this.submitReschedule(),
       showClassPopup: !!cp, closeClassPopup: () => this.closeClassPopup(),
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
       cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',

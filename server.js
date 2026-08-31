@@ -104,6 +104,7 @@ const DOW_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MON_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function fmtDMon(d) { const dt = new Date(d + 'T00:00:00'); return dt.getDate() + ' ' + MON[dt.getMonth()]; }
+function fmtDMonY(d) { const dt = new Date(d + 'T00:00:00'); return dt.getDate() + ' ' + MON[dt.getMonth()] + ' ' + dt.getFullYear(); }
 function dLabel(d) { const dt = new Date(d + 'T00:00:00'); return DOW[dt.getDay()].charAt(0) + DOW[dt.getDay()].slice(1).toLowerCase() + ' ' + dt.getDate() + ' ' + MON[dt.getMonth()]; }
 
 // ---------- data helpers ----------
@@ -709,6 +710,99 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
     ym, monthLabel: `${MON_FULL[month - 1]} ${year}`, cells,
     prevYm: `${pm.y}-${String(pm.m).padStart(2, '0')}`, nextYm: `${nm.y}-${String(nm.m).padStart(2, '0')}`,
   });
+});
+
+// ===== GRO: PINDAH JADWAL (participant reschedule) =====
+// Move a participant's class booking to another slot. Shared logic lives in the
+// reschedule_class_booking() Postgres function so Admin Hub and Coach Portal reschedule
+// through the exact same atomic path (lock target slot → validate → move → audit).
+const RESCHEDULE_WINDOW_DAYS = 14; // show target slots for the next 14 days
+const MAX_RESCHEDULES = 2;         // a participant may be moved at most twice
+function addDaysISO(iso, n) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
+// GET: participant info card + the list of slots to move them to.
+route('GET', '/api/gro/reschedule/:bookingId', async (req, res, s, q, params) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const bk = ((await sb(`arena_class_bookings?select=id,booking_code,full_name,phone,schedule_id,status&id=eq.${enc(params.bookingId)}&limit=1`)) || [])[0];
+  if (!bk) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  if (bk.status === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
+  const types = await classTypes();
+  const today = todayJakarta();
+  const nowMin = nowMinutesJakarta();
+  const to = addDaysISO(today, RESCHEDULE_WINDOW_DAYS);
+  // Every non-cancelled slot in the window, plus the participant's current slot (which may sit
+  // outside the window / in the past — it is still shown, labelled, and never selectable).
+  const winScheds = await allSchedules(today, to);
+  const cur = ((await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,quota,class_type_id,instructor,is_cancelled&id=eq.${enc(bk.schedule_id)}&limit=1`)) || [])[0];
+  const seen = new Set();
+  const pool = [];
+  for (const sc of winScheds) { if (!seen.has(sc.id)) { seen.add(sc.id); pool.push(sc); } }
+  if (cur && !seen.has(cur.id)) { seen.add(cur.id); pool.push(cur); }
+  const counts = await bookingCounts([...seen]);
+  // How many times this participant has already been moved (audit trail).
+  let usedResched = 0;
+  try { usedResched = ((await sb(`arena_admin_audit_log?select=id&action=eq.reschedule_booking&record_id=eq.${enc(bk.id)}`)) || []).length; } catch (_e) { usedResched = 0; }
+  const buildSlot = (sc) => {
+    const t = types[sc.class_type_id] || {};
+    const used = ((counts[sc.id] || {}).confirmed || 0) + ((counts[sc.id] || {}).pending || 0);
+    const remaining = Math.max(0, (sc.quota || 0) - used);
+    const isCurrent = sc.id === bk.schedule_id;
+    const startMin = hhmmToMin(sc.start_time);
+    const isPast = sc.schedule_date < today || (sc.schedule_date === today && startMin != null && startMin <= nowMin);
+    const frac = sc.quota > 0 ? remaining / sc.quota : 0;
+    const level = remaining === 0 ? 'grey' : (frac > 0.25 ? 'green' : 'yellow'); // green >25% left, yellow ≤25%, grey full
+    return {
+      scheduleId: sc.id, date: sc.schedule_date, dateLabel: fmtDMonY(sc.schedule_date), dow: dLabel(sc.schedule_date),
+      start: hhmm(sc.start_time), end: hhmm(sc.end_time), timeRange: hhmm(sc.start_time) + (sc.end_time ? ('–' + hhmm(sc.end_time)) : ''),
+      className: t.name || 'Class', classShort: shortType(t.name), classTypeId: sc.class_type_id, instructor: sc.instructor || '',
+      quota: sc.quota || 0, used, remaining, badge: used + '/' + (sc.quota || 0), level,
+      isCurrent, isPast, selectable: !isCurrent && !isPast && remaining > 0,
+    };
+  };
+  // The list: the current slot first (labelled), then every future slot in the window, by date/time.
+  const future = pool.filter((sc) => sc.id !== bk.schedule_id).map(buildSlot).filter((x) => !x.isPast);
+  future.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+  const curSlot = cur ? buildSlot(cur) : null;
+  const slots = curSlot ? [curSlot, ...future] : future;
+  // Filter options derived from the selectable/visible slots.
+  const dateSet = new Map(); const typeSet = new Map();
+  for (const x of future) {
+    if (!dateSet.has(x.date)) dateSet.set(x.date, x.dateLabel);
+    if (x.classTypeId && !typeSet.has(x.classTypeId)) typeSet.set(x.classTypeId, x.className);
+  }
+  const dateOptions = [...dateSet.entries()].map(([value, label]) => ({ value, label }));
+  const classOptions = [...typeSet.entries()].map(([value, label]) => ({ value, label }));
+  return send(res, 200, {
+    participant: {
+      bookingId: bk.id, name: bk.full_name || '(no name)', bookingCode: bk.booking_code || '', phone: bk.phone || '',
+      current: curSlot ? { className: curSlot.className, classShort: curSlot.classShort, dateLabel: curSlot.dateLabel, dow: curSlot.dow, start: curSlot.start, timeRange: curSlot.timeRange, instructor: curSlot.instructor } : null,
+    },
+    reschedulesUsed: usedResched, reschedulesLeft: Math.max(0, MAX_RESCHEDULES - usedResched), maxReschedules: MAX_RESCHEDULES,
+    slots, dateOptions, classOptions,
+  });
+});
+
+// POST: perform the move (atomic, via the shared Postgres function).
+route('POST', '/api/gro/reschedule/:bookingId', async (req, res, s, q, params) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  const newScheduleId = body.schedule_id ? String(body.schedule_id) : '';
+  const reason = String(body.reason || '').trim().slice(0, 300);
+  if (!newScheduleId) return send(res, 400, { error: 'Pilih jadwal baru dulu.' });
+  if (!reason) return send(res, 400, { error: 'Alasan pindah jadwal wajib diisi.' });
+  let result;
+  try {
+    result = await sb('rpc/reschedule_class_booking', {
+      method: 'POST',
+      body: JSON.stringify({ p_booking_id: params.bookingId, p_new_schedule_id: newScheduleId, p_reason: reason, p_actor: (s.d || s.c || 'gro'), p_max_reschedules: MAX_RESCHEDULES }),
+    });
+  } catch (e) {
+    return send(res, 500, { error: 'Gagal memindahkan jadwal. Coba lagi.' });
+  }
+  if (!result || result.ok !== true) {
+    return send(res, 400, { error: (result && result.message) || 'Tidak bisa memindahkan jadwal.' });
+  }
+  return send(res, 200, { ok: true, rescheduleNo: result.reschedule_no, remaining: result.remaining_before });
 });
 
 // ===== VENUE BOOKING — sourced from the Admin Hub `arena_bookings` table =====
