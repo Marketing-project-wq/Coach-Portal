@@ -19,7 +19,7 @@ class Component extends DCLogic {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
-      reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsDateFilter: '', rsClassFilter: '', rsSaving: false,
+      reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
       toast: '',
@@ -266,17 +266,15 @@ class Component extends DCLogic {
   // ---- PINDAH JADWAL (GRO participant reschedule) ----
   openReschedule(bookingId) {
     if (!bookingId) return;
-    this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsDateFilter: '', rsClassFilter: '', rsSaving: false });
+    this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId))
       .then((d) => this.setState({ reschedule: Object.assign({}, d, { bookingId }) }))
       .catch((e) => this.toastMsg(e.message || 'Gagal memuat jadwal.'));
   }
-  closeReschedule() { this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsDateFilter: '', rsClassFilter: '', rsSaving: false }); }
+  closeReschedule() { this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false }); }
   setRsSlot(scheduleId) { if (this.state.rsSaving) return; this.setState({ rsSlot: scheduleId }); }
   setRsReason(e) { const v = e && e.target ? e.target.value : ''; this.setState({ rsReason: v, rsReasonOther: v === 'Lainnya' ? this.state.rsReasonOther : '' }); }
   setRsReasonOther(e) { this.setState({ rsReasonOther: e && e.target ? e.target.value : '' }); }
-  setRsDateFilter(e) { this.setState({ rsDateFilter: e && e.target ? e.target.value : '' }); }
-  setRsClassFilter(e) { this.setState({ rsClassFilter: e && e.target ? e.target.value : '' }); }
   submitReschedule() {
     const st = this.state; const rs = st.reschedule; if (!rs || st.rsSaving) return;
     if (!st.rsSlot) return this.toastMsg('Pilih jadwal baru dulu.');
@@ -1551,14 +1549,8 @@ class Component extends DCLogic {
     const rsLimit = !!rs && rsLeft <= 0;
     const rsAllSlots = rs ? (rs.slots || []) : [];
     const shortD = (lbl) => String(lbl || '').replace(/\s+\d{4}$/, '');
-    // Filters apply to the future slots; the current slot is always shown (labelled, not selectable).
-    const rsView = rsAllSlots.filter((sl) => {
-      if (sl.isCurrent) return true;
-      if (st.rsDateFilter && sl.date !== st.rsDateFilter) return false;
-      if (st.rsClassFilter && sl.classTypeId !== st.rsClassFilter) return false;
-      return true;
-    });
-    const rsSlots = rsView.map((sl) => {
+    // No filters — GRO picks a slot directly. Current slot stays first (labelled, not selectable).
+    const rsSlots = rsAllSlots.map((sl) => {
       const sel = !sl.isCurrent && !rsLimit && st.rsSlot === sl.scheduleId;
       const badgeCol = sl.level === 'green' ? C.green : (sl.level === 'yellow' ? C.amber : C.muted);
       const badgeBg = sl.level === 'green' ? 'rgba(28,138,75,.14)' : (sl.level === 'yellow' ? 'rgba(199,122,0,.16)' : 'rgba(136,143,156,.16)');
@@ -1593,11 +1585,8 @@ class Component extends DCLogic {
       showReschedule: !!rs, closeReschedule: () => this.closeReschedule(),
       rsName: rsPart.name || '', rsBookingCode: rsPart.bookingCode || '', rsHasBookingCode: !!rsPart.bookingCode,
       rsCurClass: rsCur ? rsCur.className : '', rsCurWhen: rsCur ? (rsCur.dow + ' · ' + rsCur.timeRange) : '', rsCurCoach: rsCur && rsCur.instructor ? ('Coach ' + rsCur.instructor) : '', rsHasCur: !!rsCur,
-      rsLeftLabel: 'Sisa jatah pindah: ' + rsLeft + ' dari ' + (rs ? rs.maxReschedules : 2) + '×', rsLimitReached: rsLimit,
+      rsLimitReached: rsLimit,
       rsSlots, rsHasSlots: rsSlots.length > 0, rsNoSlots: !!rs && rsSlots.length === 0,
-      rsDateOpts: (rs ? (rs.dateOptions || []) : []).map((o) => ({ value: o.value, label: o.label, picked: st.rsDateFilter === o.value })),
-      rsClassOpts: (rs ? (rs.classOptions || []) : []).map((o) => ({ value: o.value, label: o.label, picked: st.rsClassFilter === o.value })),
-      setRsDateFilter: (e) => this.setRsDateFilter(e), setRsClassFilter: (e) => this.setRsClassFilter(e),
       rsReasonOpts, setRsReason: (e) => this.setRsReason(e), rsShowOther, rsReasonOther: st.rsReasonOther || '', setRsReasonOther: (e) => this.setRsReasonOther(e),
       rsHasSummary: !!rsSummary, rsSummary,
       rsCanSave, rsSaveDisabled: !rsCanSave, rsSaveBg: rsCanSave ? 'var(--volt)' : 'var(--border2)', rsSaveCursor: rsCanSave ? 'pointer' : 'not-allowed',
