@@ -121,7 +121,7 @@ class Component extends DCLogic {
     });
   }
   setD(patch) { this.setState({ d: Object.assign({}, this.state.d, patch) }); }
-  loadCalendar(ym) { if (this.MOCK) return; this.api('/api/coach/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
+  loadCalendar(ym) { if (this.MOCK) return; const qp = []; if (ym) qp.push('ym=' + ym); if (this.state.role === 'admin') qp.push('scope=all'); this.api('/api/coach/calendar' + (qp.length ? ('?' + qp.join('&')) : '')).then((r) => this.setD({ calCells: r.cells, calMonthLabel: r.monthLabel, calYm: r.ym, calPrevYm: r.prevYm, calNextYm: r.nextYm })).catch(() => {}); }
   toastMsg(msg) { this.setState({ toast: this.trToast(msg) }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
   // ---------- i18n (English base; localize the rendered DOM + toasts when lang='id') ----------
   setLang(l) { if (window.localStorage) localStorage.setItem('arena_lang', l); this.setState({ lang: l }); }
@@ -689,7 +689,8 @@ class Component extends DCLogic {
     if (from > to) return this.toastMsg('The "from" date must be before the "to" date.');
     const label = (this.fmtD(from) + ' – ' + this.fmtD(to)).toUpperCase();
     if (this.MOCK) return this.setD({ jadwalLabel: label });
-    this.api('/api/coach/classes?from=' + from + '&to=' + to).then((r) => this.setD({ today: r.classes, venues: r.venues || [], menuOptions: r.menuOptions || [], jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
+    const sc = this.state.role === 'admin' ? '&scope=all' : '';
+    this.api('/api/coach/classes?from=' + from + '&to=' + to + sc).then((r) => this.setD({ today: r.classes, venues: r.venues || [], menuOptions: r.menuOptions || [], jadwalLabel: label })).catch((e) => this.toastMsg(e.message));
   }
   resetRange() { if (this.MOCK) return this.setD({ jadwalLabel: 'UPCOMING' }); this.loadScreen('dash'); }
   todayISO() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
@@ -699,7 +700,8 @@ class Component extends DCLogic {
     // Optimistic: move the highlight + header instantly, then load that day's cards.
     this.setD({ jadwalLabel: label, selDate: date });
     if (this.MOCK) return;
-    this.api('/api/coach/classes?from=' + date + '&to=' + date).then((r) => this.setD({ today: r.classes, venues: r.venues || [], menuOptions: r.menuOptions || [] })).catch((e) => this.toastMsg(e.message));
+    const sc = this.state.role === 'admin' ? '&scope=all' : '';
+    this.api('/api/coach/classes?from=' + date + '&to=' + date + sc).then((r) => this.setD({ today: r.classes, venues: r.venues || [], menuOptions: r.menuOptions || [] })).catch((e) => this.toastMsg(e.message));
   }
   copyReviewLink() { const link = (typeof location !== 'undefined' ? location.origin : '') + '/review'; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(link).then(() => this.toastMsg('Review link copied')).catch(() => this.toastMsg(link)); } else { this.toastMsg(link); } }
   setReviewCoach(name) { this.setState({ reviewCoach: name || '' }); if (!this.MOCK) this.loadScreen('reviews'); }
@@ -1405,15 +1407,25 @@ class Component extends DCLogic {
     // Kalender Arena (GRO Schedule screen) — a full month grid; each day lists its class bars
     // (red, with pax + clickable to open per-class check-in) and venue bookings (dark).
     const showArenaCal = isGro;
+    // Pick readable text (white/near-black) for a given class-type background colour.
+    const contrastText = (hex) => {
+      const h = String(hex || '').replace('#', '');
+      if (h.length !== 6) return '#fff';
+      const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+      return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111111' : '#ffffff'; // light bg → dark text
+    };
     const arenaCalCells = (D.arenaCalCells || []).map((c) => {
       if (c.blank) return { show: false, bg: 'transparent', border: 'transparent', day: '', numCol: C.muted, events: [] };
       return {
         show: true, day: c.day, date: c.date,
         bg: c.isToday ? C.voltDim : 'var(--panel2)', border: c.isToday ? C.volt : 'var(--border)',
         numCol: c.isToday ? C.volt : C.text,
-        events: (c.events || []).map((e) => e.kind === 'venue'
-          ? { text: (e.timeRange || e.time) + ' ' + e.label, bg: '#2B3242', cursor: 'default', hasPax: false, pax: '', open: () => {} }
-          : { text: e.time + ' ' + e.label, bg: C.volt, cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId) }),
+        events: (c.events || []).map((e) => {
+          if (e.kind === 'venue') return { text: (e.timeRange || e.time) + ' ' + e.label, bg: '#2B3242', fg: '#ffffff', paxBg: 'rgba(0,0,0,.28)', cursor: 'default', hasPax: false, pax: '', open: () => {} };
+          // Colour each class bar by its type (arena_class_types.color); fall back to the brand red.
+          const bg = e.color || C.volt; const fg = contrastText(bg);
+          return { text: e.time + ' ' + e.label, bg, fg, paxBg: fg === '#ffffff' ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.55)', cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId) };
+        }),
       };
     });
     // Team Schedule (Head Coach) — month calendar of the whole team's classes, coloured by whether
@@ -1596,7 +1608,7 @@ class Component extends DCLogic {
       cdRangeOpts, cdCoachOpts, setCdRange: (e) => this.setMonitorRange(e && e.target ? e.target.value : 'month'), setCdCoach: (e) => this.setCdCoach(e && e.target ? e.target.value : ''),
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
-      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailCheckoutLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro,
+      detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailCheckoutLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro || isAdmin,
       detailHasLatePaid: (cd.latePaidCount || 0) > 0, detailLatePaidNote: (cd.latePaidCount || 0) + ' peserta bayar setelah kelas berjalan',
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
