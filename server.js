@@ -605,7 +605,10 @@ route('GET', '/api/coach/classes', async (req, res, s, q) => {
   const from = q.from || today;
   const to = q.to || null;
   const types = await classTypes();
-  const sched = (isGro(s) ? await allSchedules(from, to) : await coachSchedules(s.c, from, to)).slice(0, 120);
+  // Admin viewing the Schedule as "Admin" (scope=all) sees every coach's classes, like GRO does.
+  // Gated on the real token role so a normal coach can't request the team-wide view.
+  const seeAll = isGro(s) || (s.r === 'admin' && q.scope === 'all');
+  const sched = (seeAll ? await allSchedules(from, to) : await coachSchedules(s.c, from, to)).slice(0, 120);
   const ids = sched.map((x) => x.id);
   const [counts, started, venues, linkMap, menuOptions] = await Promise.all([bookingCounts(ids), sessionStatusMap(ids), isGro(s) ? Promise.resolve([]) : coachVenueCards(s.c, from, to, today), classMenuLinks(ids), menuOptionsList()]);
   return send(res, 200, { classes: cardsFrom(sched, counts, started, types, today, linkMap), venues, menuOptions, from, to });
@@ -639,7 +642,10 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
   const year = parseInt(ym.slice(0, 4), 10); const month = parseInt(ym.slice(5, 7), 10);
   const lastDay = new Date(year, month, 0).getDate();
   const mEnd = `${ym}-${String(lastDay).padStart(2, '0')}`;
-  const sched = await coachSchedules(s.c, `${ym}-01`, mEnd);
+  // Admin viewing as "Admin" (scope=all) gets every coach's classes so the "Has a class"
+  // markers reflect the whole team, not just the admin account. Gated on the real token role.
+  const seeAll = s.r === 'admin' && q.scope === 'all';
+  const sched = seeAll ? await allSchedules(`${ym}-01`, mEnd) : await coachSchedules(s.c, `${ym}-01`, mEnd);
   const cnt = {}; for (const x of sched) cnt[x.schedule_date] = (cnt[x.schedule_date] || 0) + 1;
   // Fold assigned venue bookings into the same day markers so venue-only days still highlight & are clickable.
   const venues = await coachAssignedBookings(s.c, `${ym}-01`, mEnd, 'booking_date');
@@ -678,6 +684,7 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
     (byDay[sc.schedule_date] = byDay[sc.schedule_date] || []).push({
       kind: 'class', time: hhmm(sc.start_time), sort: hhmm(sc.start_time),
       label: (types[sc.class_type_id] || {}).name || 'Class',
+      color: (types[sc.class_type_id] || {}).color || null, // class-type colour (arena_class_types.color)
       pax: (counts[sc.id] || {}).confirmed || 0, scheduleId: sc.id,
       coach: sc.instructor || '', checkedIn: !!ss, checkedOut: !!(ss && ss.status === 'completed'),
     });
