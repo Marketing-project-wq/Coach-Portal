@@ -2087,10 +2087,10 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   const monthEndFull = `${ym}-${String(lastDay).padStart(2, '0')}`;
   const monthEnd = monthEndFull < today ? monthEndFull : today; // cap the current month at today
   const types = await classTypes();
-  const rows0 = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&instructor=ilike.*${enc(params.name)}*&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${monthEnd}&order=schedule_date.asc`);
+  const rows0 = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&instructor=ilike.*${enc(params.name)}*&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${monthEnd}&order=schedule_date.asc,start_time.asc`);
   const rows = (rows0 || []).filter((r) => instructorHasCoach(r.instructor, params.name));
   const counts = await bookingCounts((rows || []).map((r) => r.id));
-  const stats = (rows || []).map((r) => ({ date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
+  const stats = (rows || []).map((r) => ({ dateISO: r.schedule_date, date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
   const monthLabel = `${MON_FULL[mm - 1]} ${yy}`;
   // Month picker options — from the earliest month with data in Admin Hub up to the current month.
   const floorYm = await earliestYm('arena_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7));

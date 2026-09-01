@@ -965,9 +965,15 @@ class Component extends DCLogic {
     if (scr === 'stats') {
       title = (st.selCoachName || 'Coach') + ' — Per-Class Breakdown · ' + (D.statMonth || '');
       let arr = (D.stats || []).slice(); const s = st.statRowSort || 'date';
-      if (s === 'pax_desc') arr.sort((a, b) => (b.peserta || 0) - (a.peserta || 0));
-      else if (s === 'pax_asc') arr.sort((a, b) => (a.peserta || 0) - (b.peserta || 0));
-      sections = [{ heading: '', headers: ['Date', 'Day', 'Time', 'Class Type', 'Pax'], rows: arr.map((r) => [r.date, r.day, r.time, r.type, r.peserta]) }];
+      // Numbering follows the displayed order; every sort keeps date+time as the tiebreak so the order reads sensibly.
+      const byDate = (a, b) => String(a.dateISO || a.date || '').localeCompare(String(b.dateISO || b.date || '')) || String(a.time || '').localeCompare(String(b.time || ''));
+      if (s === 'pax_desc') arr.sort((a, b) => (b.peserta || 0) - (a.peserta || 0) || byDate(a, b));
+      else if (s === 'pax_asc') arr.sort((a, b) => (a.peserta || 0) - (b.peserta || 0) || byDate(a, b));
+      else arr.sort(byDate);
+      const totalPax = arr.reduce((sum, r) => sum + (r.peserta || 0), 0);
+      sections = [{ heading: '', headers: ['No', 'Date', 'Day', 'Time', 'Class Type', 'Pax'],
+        rows: arr.map((r, i) => [i + 1, r.date, r.day, r.time, r.type, r.peserta]),
+        totalRow: ['', 'TOTAL', '', '', arr.length + ' kelas', totalPax] }];
     } else {
       title = '20FIT Arena — Report · ' + (D.reportPeriod || '');
       sections = [];
@@ -1003,7 +1009,7 @@ class Component extends DCLogic {
     };
     const body = sections.map(tableFor).join('');
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
-      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:6px;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}tr.total td{border-top:2px solid #333;border-bottom:none;font-weight:800;background:#fafafa;}@media print{body{padding:0;}h2,table{break-inside:avoid;}}</style>'
+      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:6px;}thead{display:table-header-group;}tr{break-inside:avoid;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}td:first-child,th:first-child{text-align:center;width:1%;white-space:nowrap;font-weight:400;}tr.total td{border-top:2px solid #333;border-bottom:none;font-weight:800;background:#fafafa;}tr.total td:first-child{font-weight:800;}@media print{body{padding:0;}h2{break-inside:avoid;}}</style>'
       + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
       + body + '</body></html>';
     const ifr = document.createElement('iframe');
