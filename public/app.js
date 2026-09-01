@@ -19,7 +19,7 @@ class Component extends DCLogic {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
-      rschSearch: '', rschStatus: '',
+      rschSearch: '', rschStatus: '', vcEdit: {},
       pkgSearch: '', pkgStatus: '', pkgDetail: null,
       reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
@@ -850,6 +850,8 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg('Hidden · no coach needed'); this.loadScreen(this.state.screen); })
       .catch((e) => this.toastMsg(e.message));
   }
+  // Reveal the coach dropdown on a booking that has no coach yet (keeps coachless cards clean by default).
+  startSetCoach(id) { this.setState({ vcEdit: Object.assign({}, this.state.vcEdit, { [id]: true }) }); }
   // Set/clear the optional coach on a venue booking (arena_bookings.coach_id). Empty = Tanpa coach.
   // The server blocks a pick that clashes with the coach's other class/venue at that time.
   setBookingCoach(id, coachId) {
@@ -1141,11 +1143,13 @@ class Component extends DCLogic {
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
         dismiss: () => this.dismissVenue(b.id), restore: () => this.unassignVenue(b.id),
         showAssign: mode === 'assign', showCoachInfo: mode === 'coach',
-        // Optional coach field (independent of the dispatch flow above). The dropdown only shows on
-        // cards that ALREADY have a coach (to change/clear it) — booking cards without a coach stay
-        // clean instead of every card carrying a "Tanpa coach" dropdown.
+        // Optional coach field (independent of the dispatch flow above). Cards that already have a
+        // coach show the dropdown (to change/clear). Coachless cards stay clean — showing a small
+        // "Tetapkan coach" trigger that reveals the dropdown on demand (no dropdown on every card).
         bookingCoach: b.bookingCoach || '', hasBookingCoach: !!b.bookingCoach, coachId: b.coachId || '',
-        canSetCoach: venueIsHC && !!b.bookingCoach,
+        showCoachDropdown: venueIsHC && (!!b.bookingCoach || !!(st.vcEdit && st.vcEdit[b.id])),
+        showSetCoachBtn: venueIsHC && !b.bookingCoach && !(st.vcEdit && st.vcEdit[b.id]),
+        startSetCoach: () => this.startSetCoach(b.id),
         coachIdOpts: venueCoachIdOpts.map((o) => Object.assign({}, o, { picked: o.id === b.coachId })),
         setCoach: (e) => this.setBookingCoach(b.id, e && e.target ? e.target.value : ''),
       };
