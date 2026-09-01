@@ -1144,9 +1144,11 @@ class Component extends DCLogic {
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
         dismiss: () => this.dismissVenue(b.id), restore: () => this.unassignVenue(b.id),
         showAssign: mode === 'assign', showCoachInfo: mode === 'coach',
-        // Optional coach field (independent of the dispatch flow above)
+        // Optional coach field (independent of the dispatch flow above). The dropdown only shows on
+        // cards that ALREADY have a coach (to change/clear it) — booking cards without a coach stay
+        // clean instead of every card carrying a "Tanpa coach" dropdown.
         bookingCoach: b.bookingCoach || '', hasBookingCoach: !!b.bookingCoach, coachId: b.coachId || '',
-        canSetCoach: venueIsHC, // true for GRO / HC / admin (the roles that load the full list)
+        canSetCoach: venueIsHC && !!b.bookingCoach,
         coachIdOpts: venueCoachIdOpts.map((o) => Object.assign({}, o, { picked: o.id === b.coachId })),
         setCoach: (e) => this.setBookingCoach(b.id, e && e.target ? e.target.value : ''),
       };
