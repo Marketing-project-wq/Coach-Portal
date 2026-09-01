@@ -201,7 +201,7 @@ class Component extends DCLogic {
     else if (screen === 'email') { this.setState({ selFbClass: '' }); this.setD({ fbParticipants: [], fbClassLabel: '' }); this.api('/api/coach/feedback/classes').then((d) => this.setD({ fbClasses: d.classes })).catch(fail); }
     else if (screen === 'reviews') this.api('/api/coach/reviews' + (this.state.reviewCoach ? '?coach=' + encodeURIComponent(this.state.reviewCoach) : '')).then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories, reviewCoaches: r.coaches || [] })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
-    else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueCoachList: r.coachList || [], venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
@@ -862,6 +862,14 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg('Hidden · no coach needed'); this.loadScreen(this.state.screen); })
       .catch((e) => this.toastMsg(e.message));
   }
+  // Set/clear the optional coach on a venue booking (arena_bookings.coach_id). Empty = Tanpa coach.
+  // The server blocks a pick that clashes with the coach's other class/venue at that time.
+  setBookingCoach(id, coachId) {
+    if (this.MOCK) return this.toastMsg(coachId ? 'Coach di-set' : 'Coach dikosongkan');
+    this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/coach', { method: 'POST', body: JSON.stringify({ coach_id: coachId }) })
+      .then((r) => { this.toastMsg(r && r.coach ? ('Coach di-set: ' + r.coach) : 'Coach dikosongkan'); this.loadScreen(this.state.screen); })
+      .catch((e) => { this.toastMsg(e.message || 'Gagal menyimpan coach.'); this.loadScreen(this.state.screen); });
+  }
   randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
   addTemplate() {
     const text = (typeof prompt === 'function') ? prompt('New feedback template text:') : '';
@@ -1120,6 +1128,8 @@ class Component extends DCLogic {
     // venue booking — sourced from Admin Hub; HC assigns a coach to the "arena + coach" ones
     const venueIsHC = !!D.venueIsHC;
     const venueCoachOpts = (D.venueCoaches || []).map((c) => ({ name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · external' : '') }));
+    // Optional coach (arena_bookings.coach_id) dropdown options — GRO/HC can set a coach on any booking.
+    const venueCoachIdOpts = (D.venueCoachList || []).map((c) => ({ id: c.id, name: c.name, label: c.name + (c.role === 'Head Coach' ? ' · Head Coach' : '') + (c.external ? ' · external' : '') }));
     // mode 'assign' → HC dispatch card (coach dropdown); mode 'coach' → coach card (own booking)
     const mapVenueBooking = (b, mode) => {
       const assigned = !!b.coach;
@@ -1134,6 +1144,11 @@ class Component extends DCLogic {
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
         dismiss: () => this.dismissVenue(b.id), restore: () => this.unassignVenue(b.id),
         showAssign: mode === 'assign', showCoachInfo: mode === 'coach',
+        // Optional coach field (independent of the dispatch flow above)
+        bookingCoach: b.bookingCoach || '', hasBookingCoach: !!b.bookingCoach, coachId: b.coachId || '',
+        canSetCoach: venueIsHC, // true for GRO / HC / admin (the roles that load the full list)
+        coachIdOpts: venueCoachIdOpts.map((o) => Object.assign({}, o, { picked: o.id === b.coachId })),
+        setCoach: (e) => this.setBookingCoach(b.id, e && e.target ? e.target.value : ''),
       };
     };
     // Two separate screens:
