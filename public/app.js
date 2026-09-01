@@ -19,6 +19,7 @@ class Component extends DCLogic {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
+      rschOpen: false, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: false,
       reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
@@ -35,7 +36,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.rschOpen) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -134,7 +135,17 @@ class Component extends DCLogic {
     for (let i = 0; i < rep.length; i++) out = out.split(rep[i][0]).join(rep[i][1]);
     return out;
   }
-  __afterRender(root) { if (this.state.lang === 'id') this.localizeDOM(root); }
+  __afterRender(root) {
+    if (this.state.lang === 'id') this.localizeDOM(root);
+    // Keep the reschedule live-search box focused across the full re-render each keystroke triggers,
+    // otherwise typing the second character would lose focus (the input node is rebuilt).
+    if (this._rsFocus && this.state.rschOpen && this.state.rsStep === 1) {
+      const el = (root || document).querySelector('#rsSearchInput');
+      if (el && document.activeElement !== el) {
+        try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
+      }
+    }
+  }
   localizeDOM(root) {
     const I = window.__I18N || {}; const d = I.dict || {}; const dr = I.dateRepl || [];
     const EMO = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}️‍]/gu;
@@ -263,15 +274,39 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : status === 'no_show' ? 'Peserta ditandai absen' : 'Absensi dibatalkan'); })
       .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Gagal menyimpan absensi'); });
   }
-  // ---- PINDAH JADWAL (GRO participant reschedule) ----
-  openReschedule(bookingId) {
-    if (!bookingId) return;
-    this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
-    this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId))
-      .then((d) => this.setState({ reschedule: Object.assign({}, d, { bookingId }) }))
-      .catch((e) => this.toastMsg(e.message || 'Gagal memuat jadwal.'));
+  // ---- PINDAH JADWAL (GRO participant reschedule) — 2-step modal ----
+  // Step 1: search & pick a participant. Step 2: pick the new slot (existing flow).
+  openReschedulePicker() {
+    this._rsFocus = true;
+    this.setState({ rschOpen: true, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: true, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
+    this.loadRsSearch('');
   }
-  closeReschedule() { this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false }); }
+  closeReschedule() {
+    clearTimeout(this._rsTimer); this._rsFocus = false;
+    this.setState({ rschOpen: false, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: false, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
+  }
+  onRsSearch(e) { this.loadRsSearch(e && e.target ? e.target.value : ''); }
+  loadRsSearch(term) {
+    const t = String(term || '');
+    clearTimeout(this._rsTimer);
+    this.setState({ rsSearch: t, rsSearching: true });
+    if (this.MOCK) { this.setState({ rsSearching: false }); return; }
+    this._rsTimer = setTimeout(() => {
+      this.api('/api/gro/participants/search' + (t ? ('?q=' + encodeURIComponent(t)) : ''))
+        .then((d) => { if (this.state.rsSearch === t) this.setState({ rsResults: d.participants || [], rsSearching: false }); })
+        .catch((e) => { this.setState({ rsSearching: false }); this.toastMsg(e.message || 'Gagal mencari peserta.'); });
+    }, 220);
+  }
+  // Step 1 → 2: load the chosen participant's available slots.
+  pickParticipant(bookingId) {
+    if (!bookingId) return;
+    this._rsFocus = false;
+    this.setState({ rsStep: 2, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
+    this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId))
+      .then((d) => { if (this.state.rschOpen) this.setState({ reschedule: Object.assign({}, d, { bookingId }) }); })
+      .catch((e) => { this.toastMsg(e.message || 'Gagal memuat jadwal.'); this.setState({ rsStep: 1 }); });
+  }
+  backToSearch() { this._rsFocus = true; this.setState({ rsStep: 1, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false }); }
   setRsSlot(scheduleId) { if (this.state.rsSaving) return; this.setState({ rsSlot: scheduleId }); }
   setRsReason(e) { const v = e && e.target ? e.target.value : ''; this.setState({ rsReason: v, rsReasonOther: v === 'Lainnya' ? this.state.rsReasonOther : '' }); }
   setRsReasonOther(e) { this.setState({ rsReasonOther: e && e.target ? e.target.value : '' }); }
@@ -284,7 +319,7 @@ class Component extends DCLogic {
     const openSid = (this.state.classPopup && this.state.classPopup.schedule && this.state.classPopup.schedule.schedule_id) || null;
     this.setState({ rsSaving: true });
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId), { method: 'POST', body: JSON.stringify({ schedule_id: st.rsSlot, reason }) })
-      .then(() => { this.toastMsg('Jadwal peserta berhasil dipindah.'); this.closeReschedule(); if (openSid) this.openClassPopup(openSid); })
+      .then(() => { this.toastMsg('Jadwal peserta berhasil dipindah.'); this.closeReschedule(); if (openSid) this.openClassPopup(openSid); else this.autoRefresh(); })
       .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Gagal memindahkan jadwal.'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
@@ -1537,11 +1572,23 @@ class Component extends DCLogic {
         markHadir: () => this.popupAttend(cpSched.schedule_id, p.booking_id, isHadir ? 'none' : 'checked_in'),
         markTidak: () => this.popupAttend(cpSched.schedule_id, p.booking_id, isTidak ? 'none' : 'no_show'),
         note: p.note || '', saveNote: (e) => this.saveNote(cpSched.schedule_id, p.booking_id, e && e.target ? e.target.value : ''),
-        openReschedule: () => this.openReschedule(p.booking_id),
       };
     });
 
-    // PINDAH JADWAL (GRO reschedule) modal
+    // PINDAH JADWAL (GRO reschedule) modal — step 1 (pick participant) + step 2 (pick slot)
+    const shortDL = (lbl) => String(lbl || '').replace(/\s+\d{4}$/, '');
+    const rsResults = (st.rsResults || []).map((p) => {
+      const sc = p.schedule || null;
+      return {
+        name: p.name, bookingCode: p.bookingCode || '', hasCode: !!p.bookingCode,
+        schedLine: sc ? (sc.className + ' · ' + shortDL(sc.dateLabel) + ' · ' + sc.timeRange + (sc.instructor ? ' · Coach ' + sc.instructor : '')) : 'Jadwal tidak ditemukan',
+        checkedIn: !!p.checkedIn,
+        rowOpacity: p.checkedIn ? '.55' : '1', rowCursor: p.checkedIn ? 'not-allowed' : 'pointer',
+        rowBg: p.checkedIn ? 'var(--bg)' : 'var(--panel)',
+        pick: () => { if (!p.checkedIn) this.pickParticipant(p.bookingId); },
+      };
+    });
+
     const rs = st.reschedule;
     const rsPart = rs ? (rs.participant || {}) : {};
     const rsCur = rsPart.current || null;
@@ -1582,7 +1629,17 @@ class Component extends DCLogic {
     }
 
     return {
-      showReschedule: !!rs, closeReschedule: () => this.closeReschedule(),
+      isGro, openReschedulePicker: () => this.openReschedulePicker(),
+      showReschedule: !!st.rschOpen, closeReschedule: () => this.closeReschedule(),
+      rsStep1: st.rschOpen && st.rsStep === 1, rsStep2: st.rschOpen && st.rsStep === 2,
+      // step 1
+      rsSearchVal: st.rsSearch || '', onRsSearch: (e) => this.onRsSearch(e),
+      rsSearching: st.rsSearching, rsResults, rsHasResults: rsResults.length > 0,
+      rsNoResults: !st.rsSearching && rsResults.length === 0,
+      rsResultsHint: (st.rsSearch || '').trim() ? 'Hasil pencarian' : 'Peserta jadwal hari ini',
+      backToSearch: () => this.backToSearch(),
+      // step 2
+      rsLoadingSlots: st.rsStep === 2 && !rs, rsReady: st.rsStep === 2 && !!rs,
       rsName: rsPart.name || '', rsBookingCode: rsPart.bookingCode || '', rsHasBookingCode: !!rsPart.bookingCode,
       rsCurClass: rsCur ? rsCur.className : '', rsCurWhen: rsCur ? (rsCur.dow + ' · ' + rsCur.timeRange) : '', rsCurCoach: rsCur && rsCur.instructor ? ('Coach ' + rsCur.instructor) : '', rsHasCur: !!rsCur,
       rsLimitReached: rsLimit,
