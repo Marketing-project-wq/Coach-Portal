@@ -10,6 +10,13 @@ window.__I18N = (function () {
     'Reports': 'Laporan', 'Account': 'Akun', 'Settings': 'Pengaturan', 'Permissions': 'Hak Akses',
     'Class Menu': 'Menu Kelas', 'Participants': 'Peserta', 'Logout': 'Keluar',
     'Appreciation Email': 'Email Apresiasi', 'Coach Workspace': 'Coach Workspace',
+    'Venue Booking': 'Sewa Venue', 'Package Orders': 'Pesanan Paket', 'Reschedule': 'Reschedule',
+    'Assign Venue': 'Tugaskan Venue', 'Top Arena Renters': 'Penyewa Arena Teratas', 'Coach Check-in': 'Check-in Coach',
+    // ---- GRO: package orders / reschedule / venue ----
+    'Read-only': 'Hanya-baca', 'Booking Code': 'Kode Booking', 'Order Code': 'Kode Order',
+    'All Status': 'Semua Status', 'Locked': 'Terkunci', 'Set coach': 'Tetapkan coach',
+    'Package': 'Paket', 'Sessions': 'Sesi', 'Purchase Date': 'Tgl Beli', 'Active': 'Aktif', 'Used up': 'Habis',
+    'Pick a participant to reschedule': 'Pilih peserta yang mau dipindah jadwalnya',
     // ---- account settings (self-service password) ----
     'Change Password': 'Ganti Password',
     'Change your own login password (minimum 6 characters). Forgot your password? Ask an admin to reset it from the Account screen.': 'Ubah password login kamu sendiri (minimal 6 karakter). Lupa password? Minta admin mereset dari menu Account.',
@@ -120,9 +127,11 @@ window.__I18N = (function () {
     'HEAD COACH': 'HEAD COACH',
     // ---- status labels ----
     'Upcoming': 'Akan Datang', 'In Progress': 'Sedang Berlangsung', 'Scheduled': 'Terjadwal',
-    'Teaching': 'Mengajar', 'Completed': 'Selesai', 'Confirmed': 'Confirmed', 'Checked-in': 'Hadir',
+    'Teaching': 'Mengajar', 'Completed': 'Selesai', 'Confirmed': 'Terkonfirmasi', 'Checked-in': 'Hadir',
     'No-show': 'Tidak Hadir', 'Approved': 'Disetujui', 'Rejected': 'Ditolak', 'Pending': 'Menunggu',
-    'Sent': 'Terkirim', 'Failed': 'Gagal', 'Active': 'Aktif', 'Inactive': 'Nonaktif',
+    'Sent': 'Terkirim', 'Failed': 'Gagal', 'Inactive': 'Nonaktif', 'Cancelled': 'Dibatalkan',
+    // ---- calendar day-of-week headers (standalone, no digit → matched exactly) ----
+    'Mon': 'Sen', 'Tue': 'Sel', 'Wed': 'Rab', 'Thu': 'Kam', 'Fri': 'Jum', 'Sat': 'Sab', 'Sun': 'Min',
     // ---- recency ----
     'First time': 'Pertama kali', 'Today': 'Hari ini', 'Yesterday': 'Kemarin',
     // ---- empty states with emoji (matched emoji-stripped) ----
