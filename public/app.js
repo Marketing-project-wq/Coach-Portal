@@ -19,7 +19,7 @@ class Component extends DCLogic {
       loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
-      rschOpen: false, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: false,
+      rschSearch: '', rschStatus: '',
       pkgSearch: '', pkgStatus: '', pkgDetail: null,
       reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
@@ -37,7 +37,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.rschOpen || this.state.pkgDetail) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -142,8 +142,8 @@ class Component extends DCLogic {
     if (this.state.lang === 'id') this.localizeDOM(root);
     // Keep the reschedule live-search box focused across the full re-render each keystroke triggers,
     // otherwise typing the second character would lose focus (the input node is rebuilt).
-    if (this._rsFocus && this.state.rschOpen && this.state.rsStep === 1) {
-      const el = (root || document).querySelector('#rsSearchInput');
+    if (this._rschFocus && this.state.screen === 'reschedule') {
+      const el = (root || document).querySelector('#rschSearchInput');
       if (el && document.activeElement !== el) {
         try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
       }
@@ -210,6 +210,7 @@ class Component extends DCLogic {
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueCoachList: r.coachList || [], venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'packageorders') this.api('/api/gro/package-orders').then((r) => this.setD({ packageOrders: r.orders || [] })).catch(fail);
+    else if (screen === 'reschedule') this.api('/api/gro/participants/search').then((r) => this.setD({ rschBookings: r.participants || [] })).catch(fail);
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
@@ -284,39 +285,19 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : status === 'no_show' ? 'Peserta ditandai absen' : 'Absensi dibatalkan'); })
       .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Gagal menyimpan absensi'); });
   }
-  // ---- RESCHEDULE (GRO participant reschedule) — 2-step modal ----
-  // Step 1: search & pick a participant. Step 2: pick the new slot (existing flow).
-  openReschedulePicker() {
-    this._rsFocus = true;
-    this.setState({ rschOpen: true, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: true, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
-    this.loadRsSearch('');
-  }
-  closeReschedule() {
-    clearTimeout(this._rsTimer); this._rsFocus = false;
-    this.setState({ rschOpen: false, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: false, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
-  }
-  onRsSearch(e) { this.loadRsSearch(e && e.target ? e.target.value : ''); }
-  loadRsSearch(term) {
-    const t = String(term || '');
-    clearTimeout(this._rsTimer);
-    this.setState({ rsSearch: t, rsSearching: true });
-    if (this.MOCK) { this.setState({ rsSearching: false }); return; }
-    this._rsTimer = setTimeout(() => {
-      this.api('/api/gro/participants/search' + (t ? ('?q=' + encodeURIComponent(t)) : ''))
-        .then((d) => { if (this.state.rsSearch === t) this.setState({ rsResults: d.participants || [], rsSearching: false }); })
-        .catch((e) => { this.setState({ rsSearching: false }); this.toastMsg(e.message || 'Gagal mencari peserta.'); });
-    }, 220);
-  }
-  // Step 1 → 2: load the chosen participant's available slots.
-  pickParticipant(bookingId) {
+  // ---- RESCHEDULE (GRO) — a full page of class bookings (step 1) + a slot-picker modal (step 2) ----
+  setRschSearch(e) { this._rschFocus = true; this.setState({ rschSearch: e && e.target ? e.target.value : '' }); }
+  setRschStatus(e) { this._rschFocus = false; this.setState({ rschStatus: e && e.target ? e.target.value : '' }); }
+  // A row's "Reschedule" action → load that booking's available slots and open the modal (step 2).
+  openSlotPicker(bookingId) {
     if (!bookingId) return;
-    this._rsFocus = false;
-    this.setState({ rsStep: 2, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
+    this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false });
+    if (this.MOCK) return;
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId))
-      .then((d) => { if (this.state.rschOpen) this.setState({ reschedule: Object.assign({}, d, { bookingId }) }); })
-      .catch((e) => { this.toastMsg(e.message || 'Gagal memuat jadwal.'); this.setState({ rsStep: 1 }); });
+      .then((d) => this.setState({ reschedule: Object.assign({}, d, { bookingId }) }))
+      .catch((e) => this.toastMsg(e.message || 'Gagal memuat jadwal.'));
   }
-  backToSearch() { this._rsFocus = true; this.setState({ rsStep: 1, reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false }); }
+  closeReschedule() { this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false }); }
   setRsSlot(scheduleId) { if (this.state.rsSaving) return; this.setState({ rsSlot: scheduleId }); }
   setRsReason(e) { const v = e && e.target ? e.target.value : ''; this.setState({ rsReason: v, rsReasonOther: v === 'Lainnya' ? this.state.rsReasonOther : '' }); }
   setRsReasonOther(e) { this.setState({ rsReasonOther: e && e.target ? e.target.value : '' }); }
@@ -326,10 +307,9 @@ class Component extends DCLogic {
     const reason = st.rsReason === 'Lainnya' ? String(st.rsReasonOther || '').trim() : st.rsReason;
     if (!reason) return this.toastMsg(st.rsReason === 'Lainnya' ? 'Isi alasan reschedule.' : 'Pilih alasan reschedule.');
     const bookingId = rs.bookingId;
-    const openSid = (this.state.classPopup && this.state.classPopup.schedule && this.state.classPopup.schedule.schedule_id) || null;
     this.setState({ rsSaving: true });
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId), { method: 'POST', body: JSON.stringify({ schedule_id: st.rsSlot, reason }) })
-      .then(() => { this.toastMsg('Reschedule peserta berhasil.'); this.closeReschedule(); if (openSid) this.openClassPopup(openSid); else this.autoRefresh(); })
+      .then(() => { this.toastMsg('Reschedule peserta berhasil.'); this.closeReschedule(); if (this.state.screen === 'reschedule') this.loadScreen('reschedule'); else this.autoRefresh(); })
       .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Gagal memindahkan jadwal.'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
@@ -1064,8 +1044,10 @@ class Component extends DCLogic {
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
     titles.packageorders = ['GRO', 'Package Orders'];
+    titles.reschedule = ['GRO', 'Reschedule'];
     if (scr === 'packageorders') tt = titles.packageorders;
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders' };
+    if (scr === 'reschedule') tt = titles.reschedule;
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1619,17 +1601,28 @@ class Component extends DCLogic {
       };
     });
 
-    // RESCHEDULE (GRO reschedule) modal — step 1 (pick participant) + step 2 (pick slot)
-    const shortDL = (lbl) => String(lbl || '').replace(/\s+\d{4}$/, '');
-    const rsResults = (st.rsResults || []).map((p) => {
-      const sc = p.schedule || null;
+    // RESCHEDULE (GRO) — step 1 is a full page of class bookings (table); step 2 is the slot-picker modal.
+    const RSCH_STATUS = [{ v: '', l: 'Semua Status' }, { v: 'confirmed', l: 'Confirmed' }, { v: 'pending', l: 'Pending' }, { v: 'checkedin', l: 'Sudah check-in' }];
+    const rschTerm = (st.rschSearch || '').trim().toLowerCase();
+    const rschRows = (D.rschBookings || []).filter((p) => {
+      if (rschTerm && ((p.name || '') + ' ' + (p.bookingCode || '') + ' ' + (p.phone || '')).toLowerCase().indexOf(rschTerm) < 0) return false;
+      if (st.rschStatus === 'checkedin') return !!p.checkedIn;
+      if (st.rschStatus === 'confirmed') return p.bookingStatus === 'confirmed' && !p.checkedIn;
+      if (st.rschStatus === 'pending') return p.bookingStatus === 'pending_payment' && !p.checkedIn;
+      return true;
+    }).map((p) => {
+      const st0 = p.checkedIn ? { label: 'Sudah check-in', bg: 'rgba(136,143,156,.18)', col: C.muted }
+        : (p.bookingStatus === 'confirmed' ? { label: 'Confirmed', bg: 'rgba(28,138,75,.14)', col: C.green }
+          : { label: 'Pending', bg: 'rgba(199,122,0,.16)', col: C.amber });
       return {
-        name: p.name, bookingCode: p.bookingCode || '', hasCode: !!p.bookingCode,
-        schedLine: sc ? (sc.className + ' · ' + shortDL(sc.dateLabel) + ' · ' + sc.timeRange + (sc.instructor ? ' · Coach ' + sc.instructor : '')) : 'Jadwal tidak ditemukan',
-        checkedIn: !!p.checkedIn,
-        rowOpacity: p.checkedIn ? '.55' : '1', rowCursor: p.checkedIn ? 'not-allowed' : 'pointer',
-        rowBg: p.checkedIn ? 'var(--bg)' : 'var(--panel)',
-        pick: () => { if (!p.checkedIn) this.pickParticipant(p.bookingId); },
+        bookingCode: p.bookingCode || '—', name: p.name, phone: p.phone || '—',
+        className: p.classShort || p.className || 'Class', classColor: p.classColor || 'var(--muted2)',
+        whenLabel: p.whenLabel || '—',
+        statusLabel: st0.label, statusBg: st0.bg, statusCol: st0.col,
+        checkedIn: !!p.checkedIn, canReschedule: !p.checkedIn,
+        actLabel: p.checkedIn ? 'Terkunci' : 'Reschedule',
+        actBg: p.checkedIn ? 'var(--border2)' : 'var(--volt)', actCursor: p.checkedIn ? 'not-allowed' : 'pointer',
+        act: () => { if (!p.checkedIn) this.openSlotPicker(p.bookingId); },
       };
     });
 
@@ -1673,17 +1666,13 @@ class Component extends DCLogic {
     }
 
     return {
-      isGro, openReschedulePicker: () => this.openReschedulePicker(),
-      showReschedule: !!st.rschOpen, closeReschedule: () => this.closeReschedule(),
-      rsStep1: st.rschOpen && st.rsStep === 1, rsStep2: st.rschOpen && st.rsStep === 2,
-      // step 1
-      rsSearchVal: st.rsSearch || '', onRsSearch: (e) => this.onRsSearch(e),
-      rsSearching: st.rsSearching, rsResults, rsHasResults: rsResults.length > 0,
-      rsNoResults: !st.rsSearching && rsResults.length === 0,
-      rsResultsHint: (st.rsSearch || '').trim() ? 'Hasil pencarian' : 'Peserta jadwal hari ini',
-      backToSearch: () => this.backToSearch(),
-      // step 2
-      rsLoadingSlots: st.rsStep === 2 && !rs, rsReady: st.rsStep === 2 && !!rs,
+      isGro, goReschedule: () => this.go('reschedule'),
+      // step 1 — the Reschedule page (table of class bookings)
+      rschSearchVal: st.rschSearch || '', setRschSearch: (e) => this.setRschSearch(e),
+      rschStatusOpts: RSCH_STATUS.map((o) => ({ value: o.v, label: o.l, picked: st.rschStatus === o.v })), setRschStatus: (e) => this.setRschStatus(e),
+      rschRows, rschHasRows: rschRows.length > 0, rschNoRows: rschRows.length === 0, rschCountLabel: rschRows.length + ' booking',
+      // step 2 — the slot-picker modal (opens when a booking's slots are loaded)
+      showReschedule: !!rs, closeReschedule: () => this.closeReschedule(), backToSearch: () => this.closeReschedule(),
       rsName: rsPart.name || '', rsBookingCode: rsPart.bookingCode || '', rsHasBookingCode: !!rsPart.bookingCode,
       rsCurClass: rsCur ? rsCur.className : '', rsCurWhen: rsCur ? (rsCur.dow + ' · ' + rsCur.timeRange) : '', rsCurCoach: rsCur && rsCur.instructor ? ('Coach ' + rsCur.instructor) : '', rsHasCur: !!rsCur,
       rsLimitReached: rsLimit,

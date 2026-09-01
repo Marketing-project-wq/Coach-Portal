@@ -808,31 +808,25 @@ route('POST', '/api/gro/reschedule/:bookingId', async (req, res, s, q, params) =
   return send(res, 200, { ok: true, rescheduleNo: result.reschedule_no, remaining: result.remaining_before });
 });
 
-// GET: participant picker for the reschedule modal (step 1). With ?q= it live-searches by name
-// or booking code; without it, defaults to participants booked on TODAY's classes (the common
-// walk-in case). Each result carries the participant's current schedule and a checked-in flag.
+// GET: the class-bookings table for the Reschedule page (step 1). Returns EVERY upcoming
+// (schedule_date >= today) confirmed/pending class booking with its current schedule, class
+// (name + colour), participant name/phone, booking status and a checked-in flag. The page does
+// its own search + status filtering client-side. GRO-only.
 route('GET', '/api/gro/participants/search', async (req, res, s, q) => {
   if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
   const today = todayJakarta();
-  const term = String(q.q || '').trim();
-  let bookings = [];
-  if (term) {
-    // ilike wildcard search across name + booking code (PostgREST uses * as the wildcard).
-    const like = enc('*' + term.replace(/[*(),]/g, ' ') + '*');
-    bookings = (await sb(`arena_class_bookings?select=id,full_name,booking_code,schedule_id,status&status=in.(confirmed,pending_payment)&or=(full_name.ilike.${like},booking_code.ilike.${like})&order=created_at.desc&limit=40`)) || [];
-  } else {
-    const sch = (await sb(`arena_class_schedules?select=id&is_cancelled=eq.false&schedule_date=eq.${today}`)) || [];
-    const ids = sch.map((x) => x.id);
-    if (ids.length) bookings = (await sb(`arena_class_bookings?select=id,full_name,booking_code,schedule_id,status&status=in.(confirmed,pending_payment)&schedule_id=in.(${ids.map(enc).join(',')})&order=full_name.asc&limit=100`)) || [];
-  }
-  const schIds = [...new Set(bookings.map((b) => b.schedule_id).filter(Boolean))];
-  const schMap = {};
-  if (schIds.length) {
-    const rows = (await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&id=in.(${schIds.map(enc).join(',')})`)) || [];
-    for (const r of rows) schMap[r.id] = r;
-  }
   const types = await classTypes();
-  // Which of these bookings are already checked-in (any slot) — shown greyed, not selectable.
+  const scheds = await sbAll(`arena_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&is_cancelled=eq.false&schedule_date=gte.${today}&order=schedule_date.asc,start_time.asc`);
+  const schMap = {}; for (const sc of scheds) schMap[sc.id] = sc;
+  const schIds = scheds.map((x) => x.id);
+  if (!schIds.length) return send(res, 200, { participants: [] });
+  let bookings = [];
+  for (let i = 0; i < schIds.length; i += 100) {
+    const chunk = schIds.slice(i, i + 100);
+    const rows = await sb(`arena_class_bookings?select=id,full_name,booking_code,phone,schedule_id,status&status=in.(confirmed,pending_payment)&schedule_id=in.(${chunk.map(enc).join(',')})`).catch(() => []);
+    bookings.push(...(rows || []));
+  }
+  // Which bookings are already checked-in (any slot) — greyed & not reschedulable.
   const checkedIn = new Set();
   const bids = bookings.map((b) => b.id);
   for (let i = 0; i < bids.length; i += 120) {
@@ -843,14 +837,15 @@ route('GET', '/api/gro/participants/search', async (req, res, s, q) => {
   const participants = bookings.map((b) => {
     const sc = schMap[b.schedule_id]; const t = sc ? (types[sc.class_type_id] || {}) : {};
     return {
-      bookingId: b.id, name: b.full_name || '(no name)', bookingCode: b.booking_code || '', checkedIn: checkedIn.has(b.id),
-      schedule: sc ? {
-        className: t.name || 'Class', dateLabel: fmtDMonY(sc.schedule_date), dow: dLabel(sc.schedule_date),
-        timeRange: hhmm(sc.start_time) + (sc.end_time ? ('–' + hhmm(sc.end_time)) : ''), instructor: sc.instructor || '',
-      } : null,
+      bookingId: b.id, name: b.full_name || '(no name)', bookingCode: b.booking_code || '', phone: b.phone || '',
+      checkedIn: checkedIn.has(b.id), bookingStatus: b.status || '',
+      className: t.name || 'Class', classShort: shortType(t.name), classColor: t.color || '',
+      scheduleDate: sc ? sc.schedule_date : '', startTime: sc ? hhmm(sc.start_time) : '',
+      whenLabel: sc ? (fmtDMonY(sc.schedule_date) + ' ' + hhmm(sc.start_time)) : '',
     };
   });
-  return send(res, 200, { participants, defaultToday: !term });
+  participants.sort((a, b) => (a.scheduleDate + a.startTime).localeCompare(b.scheduleDate + b.startTime));
+  return send(res, 200, { participants });
 });
 
 // ===== GRO: PACKAGE ORDERS (read-only) =====

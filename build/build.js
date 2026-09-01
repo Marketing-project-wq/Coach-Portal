@@ -372,6 +372,37 @@ const packageScreen = '<sc-if value="{{ s.packageorders }}"><div style="max-widt
 + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', packageScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
+// ---- Reschedule (GRO) — step 1: a full page of class bookings (table). Row action opens the slot-picker modal. ----
+const rschGrid = 'grid-template-columns:150px 1.4fr 150px 1fr 140px 110px 118px;';
+const rescheduleScreen = '<sc-if value="{{ s.reschedule }}"><div style="max-width:1200px;margin:0 auto;">'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">Reschedule</div>'
+  + '</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Pilih peserta yang mau dipindah jadwalnya &#183; {{ rschCountLabel }}</div>'
+  + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">'
+    + '<input id="rschSearchInput" value="{{ rschSearchVal }}" oninput="{{ setRschSearch }}" placeholder="Cari nama, kode booking, atau telp…" style="flex:1;min-width:240px;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:11px 14px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;">'
+    + '<select onchange="{{ setRschStatus }}" style="' + selStyle + '"><sc-for list="{{ rschStatusOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
+  + '</div>'
+  + '<sc-if value="{{ rschHasRows }}"><div style="' + cardBox + 'overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:960px;">'
+    + '<div style="display:grid;' + rschGrid + 'background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">'
+      + '<div style="padding:12px 14px;">Booking Code</div><div style="padding:12px 14px;">Kelas</div><div style="padding:12px 14px;">Jadwal</div><div style="padding:12px 14px;">Nama</div><div style="padding:12px 14px;">Telp</div><div style="padding:12px 14px;">Status</div><div style="padding:12px 14px;text-align:right;">Aksi</div>'
+    + '</div>'
+    + '<sc-for list="{{ rschRows }}" as="r">'
+    + '<div style="display:grid;' + rschGrid + 'border-top:1px solid var(--border);align-items:center;">'
+      + '<div style="padding:12px 14px;font-family:\'JetBrains Mono\';font-size:11.5px;color:var(--muted);">{{ r.bookingCode }}</div>'
+      + '<div style="padding:12px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;"><span style="width:9px;height:9px;border-radius:50%;background:{{ r.classColor }};flex-shrink:0;"></span>{{ r.className }}</div>'
+      + '<div style="padding:12px 14px;font-size:12.5px;color:var(--muted);">{{ r.whenLabel }}</div>'
+      + '<div style="padding:12px 14px;font-weight:700;font-size:13px;">{{ r.name }}</div>'
+      + '<div style="padding:12px 14px;font-family:\'JetBrains Mono\';font-size:11.5px;color:var(--muted);">{{ r.phone }}</div>'
+      + '<div style="padding:12px 14px;"><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;background:{{ r.statusBg }};color:{{ r.statusCol }};white-space:nowrap;">{{ r.statusLabel }}</span></div>'
+      + '<div style="padding:9px 14px;text-align:right;"><button onclick="{{ r.act }}" style="background:{{ r.actBg }};border:0;color:#ffffff;border-radius:9px;padding:8px 14px;font-family:\'Archivo\';font-weight:800;font-size:11.5px;cursor:{{ r.actCursor }};text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;">{{ r.actLabel }}</button></div>'
+    + '</div>'
+    + '</sc-for>'
+  + '</div></div></div></sc-if>'
+  + '<sc-if value="{{ rschNoRows }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Tidak ada booking yang cocok.</div></sc-if>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', rescheduleScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
 // Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
 const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'
   + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">'
