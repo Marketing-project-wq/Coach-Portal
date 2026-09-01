@@ -1303,10 +1303,7 @@
 
       <!-- Participant info card + kembali ke daftar -->
       <div style="background:var(--bg);border:1px solid var(--border2);border-radius:13px;padding:14px 16px;margin:16px 0 12px;flex-shrink:0;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div style="min-width:0;"><div style="font-family:'Archivo';font-weight:800;font-size:16px;">{{ rsName }}</div><sc-if value="{{ rsHasBookingCode }}"><div style="font-family:'JetBrains Mono';font-size:11px;color:var(--muted2);margin-top:1px;">{{ rsBookingCode }}</div></sc-if></div>
-          <button onclick="{{ backToSearch }}" style="flex-shrink:0;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:7px 14px;font-family:'Hanken Grotesk';font-weight:700;font-size:12px;cursor:pointer;" style-hover="border-color:var(--volt);color:var(--volt);">← Ganti peserta</button>
-        </div>
+        <div style="min-width:0;"><div style="font-family:'Archivo';font-weight:800;font-size:16px;">{{ rsName }}</div><sc-if value="{{ rsHasBookingCode }}"><div style="font-family:'JetBrains Mono';font-size:11px;color:var(--muted2);margin-top:1px;">{{ rsBookingCode }}</div></sc-if></div>
         <sc-if value="{{ rsHasCur }}">
         <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--border);">
           <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Jadwal saat ini</div>
