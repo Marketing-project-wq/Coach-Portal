@@ -84,7 +84,9 @@ class Component extends DCLogic {
     const m = { 'Confirmed': ['rgba(136,143,156,.14)', C.muted], 'Checked-in': ['rgba(28,138,75,.14)', C.green], 'No-show': ['rgba(228,0,43,.14)', C.red], 'Upcoming': ['rgba(136,143,156,.14)', C.muted], 'Scheduled': ['rgba(136,143,156,.14)', C.muted], 'In Progress': [C.voltDim, C.volt], 'Teaching': [C.voltDim, C.volt], 'Completed': ['rgba(28,138,75,.14)', C.green], 'Approved': ['rgba(28,138,75,.14)', C.green], 'Cancelled': ['rgba(228,0,43,.14)', C.red], 'Rejected': ['rgba(228,0,43,.14)', C.red], 'Pending': ['rgba(136,143,156,.14)', C.muted], 'Sent': ['rgba(28,138,75,.14)', C.green], 'Failed': ['rgba(228,0,43,.14)', C.red] };
     const v = m[status] || ['rgba(136,143,156,.14)', C.muted]; return { bg: v[0], col: v[1] };
   }
-  navMeta(active) { return active ? { bg: '#E4002B', fg: '#ffffff', bar: '#E4002B' } : { bg: 'transparent', fg: 'var(--text)', bar: 'transparent' }; }
+  // `hover` is the background used on mouse-over: an active item keeps its red (so hover never
+  // greys out the page you're already on), an inactive one shows the subtle sidebar overlay.
+  navMeta(active) { return active ? { bg: '#E4002B', fg: '#ffffff', bar: '#E4002B', hover: '#E4002B' } : { bg: 'transparent', fg: 'var(--text)', bar: 'transparent', hover: 'var(--panel2)' }; }
   recencyLabel(d) {
     let label;
     if (d == null) label = 'First time';
@@ -1673,6 +1675,7 @@ class Component extends DCLogic {
       langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',
       langIdBg: st.lang === 'id' ? 'var(--volt)' : 'transparent', langIdFg: st.lang === 'id' ? '#ffffff' : 'var(--muted)',
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin, showRoleToggle: !isGro,
+      showCoachHeader: !isGro, // GRO's sidebar isn't grouped by role, so it drops the "COACH" header
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       isExternal: this.isExternal, isGro, showReview: !this.isExternal && !isGro, showLeaderboard: !this.isExternal && !isGro,
       showMembers: isHC || isGro, canOpenClass: true,

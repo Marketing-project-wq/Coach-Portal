@@ -465,6 +465,14 @@ for (const [a, b] of renames) template = template.split(a).join(b);
 // above, which anchor on this same button, so the other injected items stay intact).
 template = template.replace(/<button onclick="\{\{ goEmail \}\}"[\s\S]*?<\/button>/, '');
 
+// Sidebar nav hover: hover must not override the active item's red (that made the page you're
+// already on turn grey on hover). Rewrite every nav button's static grey hover to a per-item
+// binding — active items hover to their own red, inactive ones to the subtle grey overlay.
+template = template.replace(
+  /(style="[^"]*\{\{ nav\.(\w+)\.bg \}\}[^"]*")\s+style-hover="background:var\(--panel2\);"/g,
+  (m, styleAttr, key) => `${styleAttr} style-hover="background:{{ nav.${key}.hover }}"`
+);
+
 // Full-bleed + mobile responsiveness. Targets the design's inline-styled containers
 // via [style*=...] selectors so no markup classes are needed; !important beats inline styles.
 const responsiveCss = `
