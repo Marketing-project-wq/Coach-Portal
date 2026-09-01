@@ -342,6 +342,36 @@ const venueAssignScreen = '<sc-if value="{{ s.venueassign }}"><div style="max-wi
   + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', venueScreen + '\n\n        ' + venueAssignScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
+// ---- Package Orders (GRO, read-only) ----
+const packageScreen = '<sc-if value="{{ s.packageorders }}"><div style="max-width:1000px;margin:0 auto;">'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">Package Orders</div>'
+    + '<span style="font-size:10.5px;font-weight:700;padding:4px 11px;border-radius:100px;background:rgba(136,143,156,.16);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Read-only</span>'
+  + '</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:16px;">{{ pkgCountLabel }}</div>'
+  + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">'
+    + '<input id="pkgSearchInput" value="{{ pkgSearchVal }}" oninput="{{ setPkgSearch }}" placeholder="Cari nama peserta atau kode order…" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:11px 14px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;">'
+    + '<select onchange="{{ setPkgStatus }}" style="' + selStyle + '"><sc-for list="{{ pkgStatusOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>'
+  + '</div>'
+  + '<sc-if value="{{ pkgHasOrders }}"><div style="' + cardBox + 'overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:820px;">'
+    + '<div style="display:grid;grid-template-columns:150px 1.2fr 1.6fr 78px 118px 92px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">'
+      + '<div style="padding:12px 14px;">Kode Order</div><div style="padding:12px 14px;">Peserta</div><div style="padding:12px 14px;">Paket</div><div style="padding:12px 14px;">Sesi</div><div style="padding:12px 14px;">Tgl Beli</div><div style="padding:12px 14px;">Status</div>'
+    + '</div>'
+    + '<sc-for list="{{ pkgOrders }}" as="r">'
+    + '<div onclick="{{ r.open }}" style="display:grid;grid-template-columns:150px 1.2fr 1.6fr 78px 118px 92px;border-top:1px solid var(--border);align-items:center;cursor:pointer;" style-hover="background:var(--panel2);">'
+      + '<div style="padding:12px 14px;font-family:\'JetBrains Mono\';font-size:11.5px;color:var(--muted);">{{ r.code }}</div>'
+      + '<div style="padding:12px 14px;font-weight:700;font-size:13.5px;">{{ r.name }}</div>'
+      + '<div style="padding:12px 14px;font-size:12.5px;color:var(--muted);">{{ r.package }}</div>'
+      + '<div style="padding:12px 14px;font-weight:700;font-family:\'JetBrains Mono\';font-size:12.5px;">{{ r.sessionsLabel }}</div>'
+      + '<div style="padding:12px 14px;font-size:12.5px;color:var(--muted);">{{ r.buyDateLabel }}</div>'
+      + '<div style="padding:12px 14px;"><span style="font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:100px;background:{{ r.statusBg }};color:{{ r.statusCol }};">{{ r.statusLabel }}</span></div>'
+    + '</div>'
+    + '</sc-for>'
+  + '</div></div></div></sc-if>'
+  + '<sc-if value="{{ pkgNoOrders }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">Tidak ada package order yang cocok.</div></sc-if>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', packageScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
 // Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
 const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'
   + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">'
