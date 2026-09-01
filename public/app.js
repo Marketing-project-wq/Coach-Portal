@@ -1147,8 +1147,10 @@ class Component extends DCLogic {
         // coach show the dropdown (to change/clear). Coachless cards stay clean — showing a small
         // "Tetapkan coach" trigger that reveals the dropdown on demand (no dropdown on every card).
         bookingCoach: b.bookingCoach || '', hasBookingCoach: !!b.bookingCoach, coachId: b.coachId || '',
-        showCoachDropdown: venueIsHC && (!!b.bookingCoach || !!(st.vcEdit && st.vcEdit[b.id])),
-        showSetCoachBtn: venueIsHC && !b.bookingCoach && !(st.vcEdit && st.vcEdit[b.id]),
+        // Only coach/admin (isHC) may edit the coach — GRO is read-only on venue bookings and just
+        // sees the coach name (if any). This mirrors the server-side 403 on the coach endpoint.
+        showCoachDropdown: isHC && (!!b.bookingCoach || !!(st.vcEdit && st.vcEdit[b.id])),
+        showSetCoachBtn: isHC && !b.bookingCoach && !(st.vcEdit && st.vcEdit[b.id]),
         startSetCoach: () => this.startSetCoach(b.id),
         coachIdOpts: venueCoachIdOpts.map((o) => Object.assign({}, o, { picked: o.id === b.coachId })),
         setCoach: (e) => this.setBookingCoach(b.id, e && e.target ? e.target.value : ''),

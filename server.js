@@ -1112,7 +1112,9 @@ route('POST', '/api/venue/bookings/:id/no-coach', async (req, res, s, q, params)
 // Empty coach_id clears it. A non-empty pick is blocked if the coach already has an
 // overlapping class or venue booking that day (server-side conflict check).
 route('POST', '/api/venue/bookings/:id/coach', async (req, res, s, q, params) => {
-  if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Not available for this role.' });
+  // Venue booking changes are for coach/admin only. GRO is read-only on venue bookings — same
+  // as every other write endpoint here (assign / unassign / no-coach all use requireHC).
+  if (!requireHC(s)) return send(res, 403, { error: 'Aksi ini hanya dapat dilakukan oleh coach atau admin, bukan GRO.' });
   const body = (await readBody(req)) || {};
   const coachId = body.coach_id ? String(body.coach_id).trim() : '';
   const bk = ((await sb(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,status&id=eq.${enc(params.id)}&limit=1`)) || [])[0];
