@@ -545,7 +545,7 @@
 
       <nav data-navscroll style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:3px;">
         <sc-if value="{{ isGro }}" hint-placeholder-val="{{ true }}">
-        <button onclick="{{ openReschedulePicker }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Pindah Jadwal</button>
+        <button onclick="{{ openReschedulePicker }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Reschedule</button>
         <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 15px;"></div>
         </sc-if>
         <sc-if value="{{ showCoachHeader }}" hint-placeholder-val="{{ true }}"><div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:8px 10px 6px;">COACH</div></sc-if>
@@ -1290,12 +1290,12 @@
   </div>
   </sc-if>
 
-  <!-- ===== PINDAH JADWAL MODAL (GRO reschedule) — 2 steps ===== -->
+  <!-- ===== RESCHEDULE MODAL (GRO) — 2 steps ===== -->
   <sc-if value="{{ showReschedule }}">
   <div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeReschedule }}">
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:24px 26px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;">
-        <div style="display:flex;align-items:center;gap:11px;"><span style="font-size:20px;line-height:1;">&#128197;</span><div style="font-family:'Archivo';font-weight:900;font-size:20px;letter-spacing:-.01em;text-transform:uppercase;">Pindah Jadwal</div></div>
+        <div style="display:flex;align-items:center;gap:11px;"><span style="font-size:20px;line-height:1;">&#128197;</span><div style="font-family:'Archivo';font-weight:900;font-size:20px;letter-spacing:-.01em;text-transform:uppercase;">Reschedule</div></div>
         <button onclick="{{ closeReschedule }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
       </div>
 
@@ -1338,7 +1338,7 @@
         </div>
         </sc-if>
       </div>
-      <sc-if value="{{ rsLimitReached }}"><div style="background:rgba(228,0,43,.1);border:1px solid rgba(228,0,43,.3);color:var(--red);border-radius:11px;padding:11px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;flex-shrink:0;">Peserta ini sudah mencapai batas maksimum pindah jadwal.</div></sc-if>
+      <sc-if value="{{ rsLimitReached }}"><div style="background:rgba(228,0,43,.1);border:1px solid rgba(228,0,43,.3);color:var(--red);border-radius:11px;padding:11px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;flex-shrink:0;">Peserta ini sudah mencapai batas maksimum reschedule.</div></sc-if>
 
       <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:8px;flex-shrink:0;">Pilih Jadwal Baru</div>
       <div style="overflow:auto;flex:1;min-height:80px;margin:0 -2px;padding:0 2px;">
@@ -1360,7 +1360,7 @@
       </div>
 
       <div style="flex-shrink:0;margin-top:14px;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:7px;">Alasan Pindah Jadwal</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:7px;">Alasan Reschedule</div>
         <select onchange="{{ setRsReason }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;cursor:pointer;"><option value="">— Pilih alasan —</option><sc-for list="{{ rsReasonOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
         <sc-if value="{{ rsShowOther }}"><input value="{{ rsReasonOther }}" onchange="{{ setRsReasonOther }}" placeholder="Tulis alasan lainnya…" style="width:100%;box-sizing:border-box;margin-top:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;outline:0;"></sc-if>
       </div>
