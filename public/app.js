@@ -20,6 +20,7 @@ class Component extends DCLogic {
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       rschOpen: false, rsStep: 1, rsSearch: '', rsResults: [], rsSearching: false,
+      pkgSearch: '', pkgStatus: '', pkgDetail: null,
       reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
@@ -36,7 +37,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.rschOpen) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.rschOpen || this.state.pkgDetail) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -147,6 +148,12 @@ class Component extends DCLogic {
         try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
       }
     }
+    if (this._pkgFocus && this.state.screen === 'packageorders') {
+      const el = (root || document).querySelector('#pkgSearchInput');
+      if (el && document.activeElement !== el) {
+        try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
+      }
+    }
   }
   localizeDOM(root) {
     const I = window.__I18N || {}; const d = I.dict || {}; const dr = I.dateRepl || [];
@@ -202,6 +209,7 @@ class Component extends DCLogic {
     else if (screen === 'reviews') this.api('/api/coach/reviews' + (this.state.reviewCoach ? '?coach=' + encodeURIComponent(this.state.reviewCoach) : '')).then((r) => this.setD({ reviews: r.reviews, reviewAvg: r.avg, reviewCount: r.count, reviewCats: r.categories, reviewCoaches: r.coaches || [] })).catch(fail);
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueCoachList: r.coachList || [], venueIsHC: r.isHC })).catch(fail);
+    else if (screen === 'packageorders') this.api('/api/gro/package-orders').then((r) => this.setD({ packageOrders: r.orders || [] })).catch(fail);
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
@@ -870,6 +878,11 @@ class Component extends DCLogic {
       .then((r) => { this.toastMsg(r && r.coach ? ('Coach di-set: ' + r.coach) : 'Coach dikosongkan'); this.loadScreen(this.state.screen); })
       .catch((e) => { this.toastMsg(e.message || 'Gagal menyimpan coach.'); this.loadScreen(this.state.screen); });
   }
+  // ---- Package Orders (GRO, read-only) — client-side search + status filter over the fetched list ----
+  setPkgSearch(e) { this._pkgFocus = true; this.setState({ pkgSearch: e && e.target ? e.target.value : '' }); }
+  setPkgStatus(e) { this._pkgFocus = false; this.setState({ pkgStatus: e && e.target ? e.target.value : '' }); }
+  openPkgDetail(order) { this._pkgFocus = false; this.setState({ pkgDetail: order }); }
+  closePkgDetail() { this.setState({ pkgDetail: null }); }
   randomPw() { const el = document.getElementById('newCoachPw'); if (!el) return; const cs = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; for (let i = 0; i < 8; i++) p += cs[Math.floor(Math.random() * cs.length)]; el.value = p; }
   addTemplate() {
     const text = (typeof prompt === 'function') ? prompt('New feedback template text:') : '';
@@ -1029,7 +1042,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile'), checkin: A('checkin') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile'), checkin: A('checkin'), packageorders: A('packageorders') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -1050,7 +1063,9 @@ class Component extends DCLogic {
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin' };
+    titles.packageorders = ['GRO', 'Package Orders'];
+    if (scr === 'packageorders') tt = titles.packageorders;
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1167,6 +1182,16 @@ class Component extends DCLogic {
     const noVenueDispatch = venueDispatch.length === 0;
     const hasVenueHidden = venueHidden.length > 0;
     const venueUnassignedCount = venueDispatch.filter((b) => b.needsCoach && !b.assigned).length;
+    // Package Orders (GRO, read-only) — client-side search + status filter over the fetched list.
+    const PKG_STATUS = [{ v: '', l: 'Semua status' }, { v: 'aktif', l: 'Aktif' }, { v: 'habis', l: 'Habis' }, { v: 'pending', l: 'Pending' }, { v: 'batal', l: 'Batal' }];
+    const pkgTerm = (st.pkgSearch || '').trim().toLowerCase();
+    const pkgStatusMeta = (k) => k === 'aktif' ? { bg: 'rgba(28,138,75,.14)', col: C.green } : (k === 'pending' ? { bg: 'rgba(199,122,0,.16)', col: C.amber } : (k === 'batal' ? { bg: 'rgba(228,0,43,.14)', col: C.red } : { bg: 'rgba(136,143,156,.18)', col: C.muted }));
+    const pkgOrders = (D.packageOrders || []).filter((o) => {
+      if (st.pkgStatus && o.statusKey !== st.pkgStatus) return false;
+      if (pkgTerm && ((o.name || '') + ' ' + (o.code || '')).toLowerCase().indexOf(pkgTerm) < 0) return false;
+      return true;
+    }).map((o) => { const m = pkgStatusMeta(o.statusKey); return Object.assign({}, o, { statusBg: m.bg, statusCol: m.col, open: () => this.openPkgDetail(o) }); });
+    const pd = st.pkgDetail; const pdMeta = pd ? pkgStatusMeta(pd.statusKey) : null;
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
     const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Arena booking', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Flexible time', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v) }));
     const hasScheduleVenues = scheduleVenues.length > 0;
@@ -1693,6 +1718,16 @@ class Component extends DCLogic {
       langIdBg: st.lang === 'id' ? 'var(--volt)' : 'transparent', langIdFg: st.lang === 'id' ? '#ffffff' : 'var(--muted)',
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin, showRoleToggle: !isGro,
       showCoachHeader: !isGro, // GRO's sidebar isn't grouped by role, so it drops the "COACH" header
+      // Package Orders (GRO, read-only)
+      pkgSearchVal: st.pkgSearch || '', setPkgSearch: (e) => this.setPkgSearch(e),
+      pkgStatusOpts: PKG_STATUS.map((o) => ({ value: o.v, label: o.l, picked: st.pkgStatus === o.v })), setPkgStatus: (e) => this.setPkgStatus(e),
+      pkgOrders, pkgHasOrders: pkgOrders.length > 0, pkgNoOrders: pkgOrders.length === 0,
+      pkgCountLabel: pkgOrders.length + ' order',
+      showPkgDetail: !!pd, closePkgDetail: () => this.closePkgDetail(),
+      pdCode: pd ? pd.code : '', pdName: pd ? pd.name : '', pdPhone: pd ? pd.phone : '', pdHasPhone: !!(pd && pd.phone), pdEmail: pd ? pd.email : '', pdHasEmail: !!(pd && pd.email),
+      pdPackage: pd ? pd.package : '', pdSessions: pd ? pd.sessionsLabel : '', pdBuyDate: pd ? pd.buyDateLabel : '',
+      pdStatusLabel: pd ? pd.statusLabel : '', pdStatusBg: pdMeta ? pdMeta.bg : '', pdStatusCol: pdMeta ? pdMeta.col : '',
+      pdVoucher: pd ? pd.voucherCode : '', pdHasVoucher: !!(pd && pd.voucherCode), pdNotes: pd ? pd.notes : '', pdHasNotes: !!(pd && pd.notes),
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       isExternal: this.isExternal, isGro, showReview: !this.isExternal && !isGro, showLeaderboard: !this.isExternal && !isGro,
       showMembers: isHC || isGro, canOpenClass: true,
@@ -1727,7 +1762,7 @@ class Component extends DCLogic {
       pageKicker: tt[0], pageTitle: tt[1],
       setRoleCoach: () => this.setRole('coach'), setRoleHC: () => this.setRole('hc'), setRoleAdmin: () => this.setRole('admin'),
       menuState: st.menuOpen ? 'open' : 'closed', toggleMenu: () => this.toggleMenu(), closeMenu: () => this.closeMenu(),
-      goDash: () => this.go('dash'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'), goProfile: () => this.go('profile'), submitChangePassword: () => this.changeMyPassword(),
+      goDash: () => this.go('dash'), goPackageOrders: () => this.go('packageorders'), goEmail: () => this.go('email'), goReviews: () => this.go('reviews'), goMonthly: () => this.go('monthly'), goOverview: () => this.go('overview'), goSchedule: () => this.go('schedule'), goSubReview: () => this.go('subrev'), goMonitor: () => this.go('monitor'), goReports: () => this.go('reports'), goAccounts: () => this.go('accounts'), goTemplates: () => this.go('templates'), goSettings: () => this.go('settings'), goPerms: () => this.go('perms'), goProfile: () => this.go('profile'), submitChangePassword: () => this.changeMyPassword(),
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       reviewFilterOn, reviewCoachOpts, setReviewCoach: (e) => this.setReviewCoach(e && e.target ? e.target.value : ''),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),

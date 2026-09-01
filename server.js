@@ -853,6 +853,51 @@ route('GET', '/api/gro/participants/search', async (req, res, s, q) => {
   return send(res, 200, { participants, defaultToday: !term });
 });
 
+// ===== GRO: PACKAGE ORDERS (read-only) =====
+// Same source as Admin Hub (arena_package_orders + arena_package_vouchers). GRO/HC can only
+// read & search — no create/update/cancel/delete endpoints exist, and price/payment columns
+// are never sent to the client (hidden at the backend, not just the UI).
+function pkgOrderStatus(o, v) {
+  const st = String(o.status || '').toLowerCase();
+  if (st === 'cancelled') return { key: 'batal', label: 'Batal' };
+  if (st === 'pending_payment') return { key: 'pending', label: 'Pending' };
+  const total = v ? (v.total_sessions || 0) : (o.sessions || 0);
+  const used = v ? (v.used_sessions || 0) : 0;
+  return (total - used) <= 0 ? { key: 'habis', label: 'Habis' } : { key: 'aktif', label: 'Aktif' };
+}
+function shapePkgOrder(o, v) {
+  const total = v ? (v.total_sessions || 0) : (o.sessions || 0);
+  const used = v ? (v.used_sessions || 0) : 0;
+  const stt = pkgOrderStatus(o, v);
+  const buy = o.created_at ? String(o.created_at).slice(0, 10) : '';
+  return {
+    id: o.id, code: o.order_code || '', name: o.full_name || '(no name)', phone: o.phone || '', email: o.email || '',
+    package: o.package_name || '', used, total, sessionsLabel: used + '/' + total,
+    buyDate: buy, buyDateLabel: buy ? fmtDMonY(buy) : '',
+    statusKey: stt.key, statusLabel: stt.label,
+    voucherCode: o.voucher_code || (v ? (v.voucher_code || '') : ''), notes: o.notes || '', channel: o.channel || '',
+  };
+}
+route('GET', '/api/gro/package-orders', async (req, res, s, q) => {
+  if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Fitur ini hanya untuk GRO / Head Coach.' });
+  const term = String(q.q || '').trim();
+  // NOTE: price, discount_amount, payment_method, payment_ref, paid_at are intentionally NOT selected.
+  let base = 'arena_package_orders?select=id,order_code,full_name,phone,email,package_name,sessions,status,created_at,voucher_code,notes,channel&order=created_at.desc.nullslast';
+  if (term) { const like = enc('*' + term.replace(/[*(),]/g, ' ') + '*'); base += `&or=(full_name.ilike.${like},order_code.ilike.${like})`; }
+  const orders = await sbAll(base);
+  const ids = orders.map((o) => o.id);
+  const vmap = {};
+  for (let i = 0; i < ids.length; i += 120) {
+    const chunk = ids.slice(i, i + 120);
+    const rows = await sb(`arena_package_vouchers?select=order_id,used_sessions,total_sessions,voucher_code,is_active&order_id=in.(${chunk.map(enc).join(',')})`).catch(() => []);
+    for (const r of rows || []) vmap[r.order_id] = r;
+  }
+  let rows = orders.map((o) => shapePkgOrder(o, vmap[o.id]));
+  const statusFilter = String(q.status || '').trim().toLowerCase();
+  if (statusFilter && statusFilter !== 'all') rows = rows.filter((r) => r.statusKey === statusFilter);
+  return send(res, 200, { orders: rows, count: rows.length });
+});
+
 // ===== VENUE BOOKING — sourced from the Admin Hub `arena_bookings` table =====
 // Coaches that can be assigned (all coaches + head coaches, external included; excludes admin).
 async function assignableCoaches() {

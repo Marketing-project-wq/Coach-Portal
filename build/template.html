@@ -544,10 +544,6 @@
       </div>
 
       <nav data-navscroll style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:3px;">
-        <sc-if value="{{ isGro }}" hint-placeholder-val="{{ true }}">
-        <button onclick="{{ openReschedulePicker }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Reschedule</button>
-        <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 15px;"></div>
-        </sc-if>
         <sc-if value="{{ showCoachHeader }}" hint-placeholder-val="{{ true }}"><div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:8px 10px 6px;">COACH</div></sc-if>
         <button onclick="{{ goDash }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.dash.bg }};color:{{ nav.dash.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.dash.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Dashboard</button>
         <button onclick="{{ goEmail }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.email.bg }};color:{{ nav.email.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.email.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Appreciation Email</button>
@@ -568,6 +564,12 @@
         <button onclick="{{ goRenters }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.renters.bg }};color:{{ nav.renters.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.renters.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Top Arena Renters</button>
         <button onclick="{{ goSettings }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.settings.bg }};color:{{ nav.settings.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.settings.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Settings</button>
         <button onclick="{{ goPerms }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.perms.bg }};color:{{ nav.perms.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.perms.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Permissions</button>
+        </sc-if>
+
+        <sc-if value="{{ isGro }}" hint-placeholder-val="{{ true }}">
+        <button onclick="{{ goPackageOrders }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.packageorders.bg }};color:{{ nav.packageorders.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.packageorders.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Package Orders</button>
+        <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 14px;"></div>
+        <button onclick="{{ openReschedulePicker }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Reschedule</button>
         </sc-if>
       </nav>
 
@@ -1373,6 +1375,36 @@
       </div>
       </sc-if>
       </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== PACKAGE ORDER DETAIL (read-only) ===== -->
+  <sc-if value="{{ showPkgDetail }}">
+  <div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closePkgDetail }}">
+    <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:24px 26px;max-width:460px;width:100%;max-height:90vh;overflow:auto;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="font-family:'Archivo';font-weight:900;font-size:19px;letter-spacing:-.01em;text-transform:uppercase;">Detail Order</div>
+        <button onclick="{{ closePkgDetail }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0 2px;">
+        <span style="font-family:'JetBrains Mono';font-size:12px;color:var(--muted);">{{ pdCode }}</span>
+        <span style="font-size:10.5px;font-weight:700;padding:3px 11px;border-radius:100px;background:{{ pdStatusBg }};color:{{ pdStatusCol }};">{{ pdStatusLabel }}</span>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:13px;padding:15px 16px;margin-top:12px;">
+        <div style="font-family:'Archivo';font-weight:800;font-size:17px;">{{ pdName }}</div>
+        <sc-if value="{{ pdHasPhone }}"><div style="font-size:12.5px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono';">&#128222; {{ pdPhone }}</div></sc-if>
+        <sc-if value="{{ pdHasEmail }}"><div style="font-size:12.5px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono';">&#9993; {{ pdEmail }}</div></sc-if>
+      </div>
+      <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Paket</div>
+      <div style="font-size:14px;font-weight:700;margin-top:3px;">{{ pdPackage }}</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Sesi Terpakai</div><div style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;margin-top:3px;">{{ pdSessions }}</div></div>
+        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Tgl Beli</div><div style="font-size:14px;font-weight:600;margin-top:4px;">{{ pdBuyDate }}</div></div>
+      </div>
+      <sc-if value="{{ pdHasVoucher }}"><div style="margin-top:14px;"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Voucher</span><div style="font-family:'JetBrains Mono';font-size:13px;margin-top:3px;">{{ pdVoucher }}</div></div></sc-if>
+      <sc-if value="{{ pdHasNotes }}"><div style="margin-top:14px;"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Catatan</span><div style="font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5;">{{ pdNotes }}</div></div></sc-if>
+      <button onclick="{{ closePkgDetail }}" style="margin-top:20px;width:100%;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">Tutup</button>
     </div>
   </div>
   </sc-if>
