@@ -715,7 +715,7 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
   });
 });
 
-// ===== GRO: PINDAH JADWAL (participant reschedule) =====
+// ===== GRO: RESCHEDULE (participant reschedule) =====
 // Move a participant's class booking to another slot. Shared logic lives in the
 // reschedule_class_booking() Postgres function so Admin Hub and Coach Portal reschedule
 // through the exact same atomic path (lock target slot → validate → move → audit).
@@ -792,7 +792,7 @@ route('POST', '/api/gro/reschedule/:bookingId', async (req, res, s, q, params) =
   const newScheduleId = body.schedule_id ? String(body.schedule_id) : '';
   const reason = String(body.reason || '').trim().slice(0, 300);
   if (!newScheduleId) return send(res, 400, { error: 'Pilih jadwal baru dulu.' });
-  if (!reason) return send(res, 400, { error: 'Alasan pindah jadwal wajib diisi.' });
+  if (!reason) return send(res, 400, { error: 'Alasan reschedule wajib diisi.' });
   let result;
   try {
     result = await sb('rpc/reschedule_class_booking', {

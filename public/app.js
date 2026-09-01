@@ -276,7 +276,7 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : status === 'no_show' ? 'Peserta ditandai absen' : 'Absensi dibatalkan'); })
       .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Gagal menyimpan absensi'); });
   }
-  // ---- PINDAH JADWAL (GRO participant reschedule) — 2-step modal ----
+  // ---- RESCHEDULE (GRO participant reschedule) — 2-step modal ----
   // Step 1: search & pick a participant. Step 2: pick the new slot (existing flow).
   openReschedulePicker() {
     this._rsFocus = true;
@@ -316,12 +316,12 @@ class Component extends DCLogic {
     const st = this.state; const rs = st.reschedule; if (!rs || st.rsSaving) return;
     if (!st.rsSlot) return this.toastMsg('Pilih jadwal baru dulu.');
     const reason = st.rsReason === 'Lainnya' ? String(st.rsReasonOther || '').trim() : st.rsReason;
-    if (!reason) return this.toastMsg(st.rsReason === 'Lainnya' ? 'Isi alasan pindah jadwal.' : 'Pilih alasan pindah jadwal.');
+    if (!reason) return this.toastMsg(st.rsReason === 'Lainnya' ? 'Isi alasan reschedule.' : 'Pilih alasan reschedule.');
     const bookingId = rs.bookingId;
     const openSid = (this.state.classPopup && this.state.classPopup.schedule && this.state.classPopup.schedule.schedule_id) || null;
     this.setState({ rsSaving: true });
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId), { method: 'POST', body: JSON.stringify({ schedule_id: st.rsSlot, reason }) })
-      .then(() => { this.toastMsg('Jadwal peserta berhasil dipindah.'); this.closeReschedule(); if (openSid) this.openClassPopup(openSid); else this.autoRefresh(); })
+      .then(() => { this.toastMsg('Reschedule peserta berhasil.'); this.closeReschedule(); if (openSid) this.openClassPopup(openSid); else this.autoRefresh(); })
       .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Gagal memindahkan jadwal.'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
@@ -1594,7 +1594,7 @@ class Component extends DCLogic {
       };
     });
 
-    // PINDAH JADWAL (GRO reschedule) modal — step 1 (pick participant) + step 2 (pick slot)
+    // RESCHEDULE (GRO reschedule) modal — step 1 (pick participant) + step 2 (pick slot)
     const shortDL = (lbl) => String(lbl || '').replace(/\s+\d{4}$/, '');
     const rsResults = (st.rsResults || []).map((p) => {
       const sc = p.schedule || null;
