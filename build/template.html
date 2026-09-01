@@ -569,7 +569,7 @@
         <sc-if value="{{ isGro }}" hint-placeholder-val="{{ true }}">
         <button onclick="{{ goPackageOrders }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.packageorders.bg }};color:{{ nav.packageorders.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.packageorders.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Package Orders</button>
         <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 14px;"></div>
-        <button onclick="{{ openReschedulePicker }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Reschedule</button>
+        <button onclick="{{ goReschedule }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Reschedule</button>
         </sc-if>
       </nav>
 
@@ -1301,32 +1301,7 @@
         <button onclick="{{ closeReschedule }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
       </div>
 
-      <!-- ===== STEP 1: pick participant ===== -->
-      <sc-if value="{{ rsStep1 }}">
-      <input id="rsSearchInput" value="{{ rsSearchVal }}" oninput="{{ onRsSearch }}" placeholder="Cari nama atau kode booking…" style="width:100%;box-sizing:border-box;margin:16px 0 12px;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;color:var(--text);font-family:'Hanken Grotesk';font-size:14px;outline:0;flex-shrink:0;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:8px;flex-shrink:0;">{{ rsResultsHint }}</div>
-      <div style="overflow:auto;flex:1;min-height:120px;margin:0 -2px;padding:0 2px;">
-        <sc-if value="{{ rsSearching }}"><div style="text-align:center;color:var(--muted);font-size:12.5px;padding:26px 0;">Mencari…</div></sc-if>
-        <sc-if value="{{ rsHasResults }}">
-        <sc-for list="{{ rsResults }}" as="r">
-        <div onclick="{{ r.pick }}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:{{ r.rowBg }};border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:9px;opacity:{{ r.rowOpacity }};cursor:{{ r.rowCursor }};">
-          <div style="min-width:0;">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;font-size:14.5px;">{{ r.name }}</span><sc-if value="{{ r.hasCode }}"><span style="font-family:'JetBrains Mono';font-size:11px;color:var(--muted2);">{{ r.bookingCode }}</span></sc-if></div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px;">{{ r.schedLine }}</div>
-          </div>
-          <sc-if value="{{ r.checkedIn }}"><span style="flex-shrink:0;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(136,143,156,.18);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;">Sudah check-in</span></sc-if>
-        </div>
-        </sc-for>
-        </sc-if>
-        <sc-if value="{{ rsNoResults }}"><div style="text-align:center;color:var(--muted);font-size:12.5px;padding:26px 0;">Peserta tidak ditemukan.</div></sc-if>
-      </div>
-      </sc-if>
-
-      <!-- ===== STEP 2: pick new slot ===== -->
-      <sc-if value="{{ rsStep2 }}">
-      <sc-if value="{{ rsLoadingSlots }}"><div style="text-align:center;color:var(--muted);font-size:13px;padding:40px 0;flex:1;">Memuat jadwal…</div></sc-if>
-      <sc-if value="{{ rsReady }}">
-      <!-- Participant info card + Ganti peserta -->
+      <!-- Participant info card + kembali ke daftar -->
       <div style="background:var(--bg);border:1px solid var(--border2);border-radius:13px;padding:14px 16px;margin:16px 0 12px;flex-shrink:0;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <div style="min-width:0;"><div style="font-family:'Archivo';font-weight:800;font-size:16px;">{{ rsName }}</div><sc-if value="{{ rsHasBookingCode }}"><div style="font-family:'JetBrains Mono';font-size:11px;color:var(--muted2);margin-top:1px;">{{ rsBookingCode }}</div></sc-if></div>
@@ -1373,8 +1348,6 @@
         <button onclick="{{ closeReschedule }}" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 24px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">Batal</button>
         <button onclick="{{ submitReschedule }}" disabled="{{ rsSaveDisabled }}" style="background:{{ rsSaveBg }};border:0;color:#ffffff;border-radius:100px;padding:11px 28px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:{{ rsSaveCursor }};text-transform:uppercase;">{{ rsSaveLabel }}</button>
       </div>
-      </sc-if>
-      </sc-if>
     </div>
   </div>
   </sc-if>
