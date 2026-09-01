@@ -805,6 +805,51 @@ route('POST', '/api/gro/reschedule/:bookingId', async (req, res, s, q, params) =
   return send(res, 200, { ok: true, rescheduleNo: result.reschedule_no, remaining: result.remaining_before });
 });
 
+// GET: participant picker for the reschedule modal (step 1). With ?q= it live-searches by name
+// or booking code; without it, defaults to participants booked on TODAY's classes (the common
+// walk-in case). Each result carries the participant's current schedule and a checked-in flag.
+route('GET', '/api/gro/participants/search', async (req, res, s, q) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const term = String(q.q || '').trim();
+  let bookings = [];
+  if (term) {
+    // ilike wildcard search across name + booking code (PostgREST uses * as the wildcard).
+    const like = enc('*' + term.replace(/[*(),]/g, ' ') + '*');
+    bookings = (await sb(`arena_class_bookings?select=id,full_name,booking_code,schedule_id,status&status=in.(confirmed,pending_payment)&or=(full_name.ilike.${like},booking_code.ilike.${like})&order=created_at.desc&limit=40`)) || [];
+  } else {
+    const sch = (await sb(`arena_class_schedules?select=id&is_cancelled=eq.false&schedule_date=eq.${today}`)) || [];
+    const ids = sch.map((x) => x.id);
+    if (ids.length) bookings = (await sb(`arena_class_bookings?select=id,full_name,booking_code,schedule_id,status&status=in.(confirmed,pending_payment)&schedule_id=in.(${ids.map(enc).join(',')})&order=full_name.asc&limit=100`)) || [];
+  }
+  const schIds = [...new Set(bookings.map((b) => b.schedule_id).filter(Boolean))];
+  const schMap = {};
+  if (schIds.length) {
+    const rows = (await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&id=in.(${schIds.map(enc).join(',')})`)) || [];
+    for (const r of rows) schMap[r.id] = r;
+  }
+  const types = await classTypes();
+  // Which of these bookings are already checked-in (any slot) — shown greyed, not selectable.
+  const checkedIn = new Set();
+  const bids = bookings.map((b) => b.id);
+  for (let i = 0; i < bids.length; i += 120) {
+    const chunk = bids.slice(i, i + 120);
+    const rows = await sb(`arena_class_attendance?select=booking_id&status=eq.checked_in&booking_id=in.(${chunk.map(enc).join(',')})`).catch(() => []);
+    for (const r of rows || []) checkedIn.add(r.booking_id);
+  }
+  const participants = bookings.map((b) => {
+    const sc = schMap[b.schedule_id]; const t = sc ? (types[sc.class_type_id] || {}) : {};
+    return {
+      bookingId: b.id, name: b.full_name || '(no name)', bookingCode: b.booking_code || '', checkedIn: checkedIn.has(b.id),
+      schedule: sc ? {
+        className: t.name || 'Class', dateLabel: fmtDMonY(sc.schedule_date), dow: dLabel(sc.schedule_date),
+        timeRange: hhmm(sc.start_time) + (sc.end_time ? ('–' + hhmm(sc.end_time)) : ''), instructor: sc.instructor || '',
+      } : null,
+    };
+  });
+  return send(res, 200, { participants, defaultToday: !term });
+});
+
 // ===== VENUE BOOKING — sourced from the Admin Hub `arena_bookings` table =====
 // Coaches that can be assigned (all coaches + head coaches, external included; excludes admin).
 async function assignableCoaches() {
