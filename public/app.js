@@ -25,7 +25,7 @@ class Component extends DCLogic {
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
       toast: '',
-      lang: (window.localStorage && localStorage.getItem('arena_lang')) || 'en',
+      lang: (window.localStorage && localStorage.getItem('arena_lang')) || 'id',
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
