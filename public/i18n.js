@@ -258,6 +258,11 @@ window.__I18N = (function () {
     cannot_validate_future:{ id: 'Sesi belum dimulai, belum bisa divalidasi', en: 'Session has not started yet' },
     pending_note:          { id: 'Sesi berikut belum divalidasi dan tidak dihitung dalam total',
                              en: 'The following sessions are not yet validated and are excluded from totals' },
+    // action-button tooltips (Validate Coach table)
+    validate_hint:         { id: 'Klik untuk validasi kehadiran coach', en: 'Click to validate coach attendance' },
+    summary_hint:          { id: 'Lihat ringkasan validasi (terkunci)', en: 'View validation summary (locked)' },
+    session_cancelled:     { id: 'Sesi dibatalkan — tidak bisa divalidasi', en: 'Session cancelled — cannot be validated' },
+    before_cutoff_hint:    { id: 'Validasi hanya untuk sesi mulai 1 September 2026', en: 'Validation is only for sessions from 1 September 2026' },
   };
 
   return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl, T: T };
