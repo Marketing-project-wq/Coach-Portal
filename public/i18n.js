@@ -210,5 +210,55 @@ window.__I18N = (function () {
     ['Status of ', 'Status '], [' updated', ' diperbarui'], [' participants', ' peserta'],
   ];
 
-  return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl };
+  // ---- Keyed bilingual table (key -> {id, en}) ----
+  // New features must pull every label through a key here (never inline text),
+  // read via the app's t(key) helper. Default language is Indonesian (id).
+  // Names of classes, people, venues and booking codes are NOT translated.
+  var T = {
+    // buttons & titles
+    validate_coach:        { id: 'Validasi Coach',            en: 'Validate Coach' },
+    select_session:        { id: 'Pilih Sesi',                en: 'Select Session' },
+    validation_summary:    { id: 'Ringkasan Validasi',        en: 'Validation Summary' },
+    save:                  { id: 'Simpan',                    en: 'Save' },
+    cancel:                { id: 'Batal',                     en: 'Cancel' },
+    back:                  { id: 'Kembali',                   en: 'Back' },
+    // attendance status
+    present:               { id: 'Hadir',                     en: 'Present' },
+    absent:                { id: 'Tidak Hadir',               en: 'Absent' },
+    // session status
+    validated:             { id: 'Tervalidasi',               en: 'Validated' },
+    not_validated:         { id: 'Belum Divalidasi',          en: 'Not Validated' },
+    not_running:           { id: 'Tidak Berjalan',            en: 'Not Held' },
+    // session types
+    regular_class:         { id: 'Kelas Reguler',             en: 'Regular Class' },
+    arena_with_coach:      { id: 'Sewa Arena + Coach',        en: 'Arena Rental + Coach' },
+    arena_without_coach:   { id: 'Sewa Arena',                en: 'Arena Rental' },
+    no_coach:              { id: 'Tanpa Coach',               en: 'No Coach' },
+    // form labels
+    scheduled_coach:       { id: 'Coach Terjadwal',           en: 'Scheduled Coach' },
+    add_coach:             { id: 'Tambah Coach',              en: 'Add Coach' },
+    reason:                { id: 'Alasan',                    en: 'Reason' },
+    reason_required:       { id: 'Alasan wajib diisi',        en: 'Reason is required' },
+    late_validation:       { id: 'Validasi Susulan',          en: 'Late Validation' },
+    // report columns
+    no:                    { id: 'No',                        en: 'No' },
+    date:                  { id: 'Tanggal',                   en: 'Date' },
+    day:                   { id: 'Hari',                      en: 'Day' },
+    time:                  { id: 'Jam',                       en: 'Time' },
+    session_type:          { id: 'Jenis Sesi',                en: 'Session Type' },
+    class_or_client:       { id: 'Kelas / Klien',             en: 'Class / Client' },
+    other_coaches:         { id: 'Coach Lain',                en: 'Other Coaches' },
+    pax:                   { id: 'Pax',                       en: 'Pax' },
+    total_sessions:        { id: 'Total Sesi',                en: 'Total Sessions' },
+    total_pax:             { id: 'Total Pax',                 en: 'Total Pax' },
+    pending_sessions:      { id: 'Sesi Belum Divalidasi',     en: 'Pending Validation' },
+    // messages
+    validation_saved:      { id: 'Validasi tersimpan',        en: 'Validation saved' },
+    no_sessions_today:     { id: 'Tidak ada sesi pada tanggal ini', en: 'No sessions on this date' },
+    cannot_validate_future:{ id: 'Sesi belum dimulai, belum bisa divalidasi', en: 'Session has not started yet' },
+    pending_note:          { id: 'Sesi berikut belum divalidasi dan tidak dihitung dalam total',
+                             en: 'The following sessions are not yet validated and are excluded from totals' },
+  };
+
+  return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl, T: T };
 })();
