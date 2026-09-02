@@ -340,8 +340,10 @@ class Component extends DCLogic {
   openValidate(key) {
     const sess = (this.state.d.vcSessions || []).find((x) => x.key === key);
     if (!sess) return;
-    if (!sess.started) return this.toastMsg(this.t('cannot_validate_future'));
+    // Task 1: no longer blocked before the session starts. Still only Sept 2026+ sessions.
     if (this.state.d.vcBeforeCutoff) return this.toastMsg(this.t('cannot_validate_future'));
+    // Task 2: an already-validated slot is locked — open it read-only (view the summary only).
+    const readonly = !!sess.validation;
     let coaches, held = true, noCoach = false;
     if (sess.validation) {
       held = sess.validation.held !== false; noCoach = !!sess.validation.noCoach;
@@ -351,7 +353,7 @@ class Component extends DCLogic {
     }
     // late validation: the session's date is before today.
     const late = String(this.state.vcDate || this.todayISO()) < this.todayISO();
-    this.setState({ vcModal: { key, kind: sess.kind, id: sess.id, label: sess.label, time: sess.time, classType: sess.classType, pax: sess.pax, sessionType: sess.sessionType || (sess.kind === 'venue' ? 'arena_with_coach' : 'regular_class'), coaches, held, noCoach, late, step: 'edit' }, vcSaving: false });
+    this.setState({ vcModal: { key, kind: sess.kind, id: sess.id, label: sess.label, time: sess.time, classType: sess.classType, pax: sess.pax, sessionType: sess.sessionType || (sess.kind === 'venue' ? 'arena_with_coach' : 'regular_class'), coaches, held, noCoach, late, step: readonly ? 'summary' : 'edit', readonly }, vcSaving: false });
   }
   closeValidate() { this.setState({ vcModal: null, vcSaving: false }); }
   _vcPatch(patch) { this.setState({ vcModal: Object.assign({}, this.state.vcModal, patch) }); }
@@ -377,7 +379,7 @@ class Component extends DCLogic {
   }
   vcBackToEdit() { this._vcPatch({ step: 'edit' }); }
   vcSave() {
-    const m = this.state.vcModal; if (!m || this.state.vcSaving) return;
+    const m = this.state.vcModal; if (!m || m.readonly || this.state.vcSaving) return;
     this.setState({ vcSaving: true });
     const payload = { kind: m.kind, id: m.id, held: m.held, no_coach: m.noCoach, session_type: m.sessionType, late: m.late,
       coaches: (m.held && !m.noCoach) ? m.coaches.map((c) => ({ name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason })) : [] };
@@ -1770,14 +1772,18 @@ class Component extends DCLogic {
     }[status] || { label: this.t('not_validated'), bg: 'rgba(234,179,8,.16)', fg: '#a16207' });
     const vcRows = (D.vcSessions || []).map((x, i) => {
       const meta = vcStatusMeta(x.status);
-      const canValidate = x.started && !D.vcBeforeCutoff && !x.cancelled;
+      const validated = !!x.validation;
+      // Task 1: no longer requires the session to have started — only the Sept-2026 cutoff + not cancelled.
+      const canValidate = !D.vcBeforeCutoff && !x.cancelled;
+      // Task 2: a validated slot turns green and opens read-only ("Ringkasan Validasi") — it is locked.
+      const active = validated || canValidate;
       return {
         no: i + 1,
         key: x.key, time: x.time || '—', label: x.label, typeLabel: this.t(x.sessionType || (x.kind === 'venue' ? 'arena_with_coach' : 'regular_class')),
         coaches: (x.scheduledCoaches || []).join(', ') || '—', pax: (x.pax == null ? '—' : String(x.pax)),
         statusLabel: meta.label, statusBg: meta.bg, statusFg: meta.fg,
-        actLabel: x.validation ? this.t('validation_summary') : this.t('validate_coach'),
-        actDisabled: !canValidate, actBg: canValidate ? 'var(--volt)' : 'var(--border2)', actFg: canValidate ? '#fff' : 'var(--muted)', actCursor: canValidate ? 'pointer' : 'not-allowed',
+        actLabel: validated ? this.t('validation_summary') : this.t('validate_coach'),
+        actDisabled: !active, actBg: validated ? '#16a34a' : (canValidate ? 'var(--volt)' : 'var(--border2)'), actFg: active ? '#fff' : 'var(--muted)', actCursor: active ? 'pointer' : 'not-allowed',
         act: () => this.openValidate(x.key),
       };
     });
@@ -1816,6 +1822,7 @@ class Component extends DCLogic {
       showVc: !!vcm, closeValidate: () => this.closeValidate(),
       vcmTitle: vcm ? (vcm.time + ' · ' + vcm.label) : '', vcmTypeLabel: vcm ? this.t(vcm.sessionType) : '',
       vcIsEdit: !!(vcm && vcm.step === 'edit'), vcIsSummary: !!(vcm && vcm.step === 'summary'),
+      vcReadonly: !!(vcm && vcm.readonly), vcCanSave: !!(vcm && !vcm.readonly),
       vcHeld: !!(vcm && vcm.held), vcNoCoach: !!(vcm && vcm.noCoach), vcLate: !!(vcm && vcm.late),
       vcToggleHeld: () => this.vcToggleHeld(), vcToggleNoCoach: () => this.vcToggleNoCoach(), vcToggleLate: () => this.vcToggleLate(),
       vcNotRunningChip: vcChip(!!(vcm && !vcm.held)), vcNoCoachChip: vcChip(!!(vcm && vcm.noCoach)), vcLateChip: vcChip(!!(vcm && vcm.late)),

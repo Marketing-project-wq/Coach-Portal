@@ -963,7 +963,7 @@ route('POST', '/api/gro/validation/save', async (req, res, s) => {
     dateISO = b.booking_date; startTime = b.start_time; defaultType = noCoach ? 'arena_without_coach' : 'arena_with_coach';
   }
   if (dateISO < VALIDATION_FROM) return send(res, 400, { error: 'Validasi hanya berlaku untuk sesi mulai September 2026.' });
-  if (!sessionStarted(dateISO, startTime, today, nowMin)) return send(res, 400, { error: 'Sesi belum dimulai, belum bisa divalidasi.' });
+  // Task 1: the "session must have started" time-gate was removed — GRO can validate anytime.
   const sessionType = ['regular_class', 'arena_with_coach', 'arena_without_coach'].includes(body.session_type) ? body.session_type : defaultType;
   // Normalize coach rows. When "no coach" or "not held", there are no coach rows.
   let coaches = [];
@@ -988,25 +988,43 @@ route('POST', '/api/gro/validation/save', async (req, res, s) => {
       checkinDiffNote = 'tidak ada check-in coach; kehadiran dari validasi GRO';
     }
   }
-  // Upsert the session-level row.
+  // Task 2 — write-once: exactly one validation per session slot. Reject re-validation, and lean on
+  // the DB unique index (uq_session_validations_schedule / _venue) so double-click, race, or retry
+  // can never create a duplicate row — a concurrent winner surfaces as a conflict below.
   const idCol = kind === 'class' ? 'schedule_id' : 'venue_booking_id';
   const existing = ((await sb(`arena_session_validations?select=id&session_kind=eq.${kind}&${idCol}=eq.${enc(id)}&limit=1`)) || [])[0];
+  if (existing) return send(res, 409, { error: 'Sesi ini sudah divalidasi dan tidak bisa divalidasi ulang.' });
   const svBody = { session_kind: kind, [idCol]: id, session_date: dateISO, session_type: sessionType, held, no_coach: noCoach, late_validation: late, validated_by: actor, validated_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-  let svId;
-  if (existing) {
-    svId = existing.id;
-    await sb(`arena_session_validations?id=eq.${enc(svId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(svBody) });
-    await sb(`arena_coach_validations?session_validation_id=eq.${enc(svId)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
-  } else {
+  let svId = null;
+  try {
     const ins = await sb('arena_session_validations', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(svBody) });
     svId = (ins && ins[0] && ins[0].id) || null;
+  } catch (e) {
+    // Lost the race to a concurrent validation (unique index) — treat as already validated.
+    if (/\b409\b|23505|duplicate|unique/i.test(String(e && e.message))) return send(res, 409, { error: 'Sesi ini sudah divalidasi dan tidak bisa divalidasi ulang.' });
+    throw e;
   }
   if (svId && coaches.length) {
     const rows = coaches.map((c) => ({ session_validation_id: svId, [idCol]: id, session_date: dateISO, coach_name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason || null, checkin_diff: (!c.present && checkinDiffNote) ? checkinDiffNote : null }));
     await sb('arena_coach_validations', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows) });
   }
+  // Task 3 — arena rental that used an ad-hoc (off-schedule) coach: surface it on that coach's
+  // dashboard by creating a venue assignment, so they need not be pre-registered. The report
+  // already credits them via the validation (venueValidationMap takes precedence over the
+  // assignment branch, so no double-count) — this write only feeds the dashboard. Never overwrite
+  // an existing dispatch: only create when the booking has no coach assigned yet.
+  if (kind === 'venue' && held && !noCoach && svId) {
+    const adhoc = coaches.filter((c) => c.present && c.offSchedule);
+    if (adhoc.length) {
+      const asg = ((await sb(`arena_venue_assignments?select=coach_name&booking_id=eq.${enc(id)}&limit=1`)) || [])[0];
+      const alreadyAssigned = asg && asg.coach_name && asg.coach_name !== NO_COACH;
+      if (!alreadyAssigned) {
+        await sb('arena_venue_assignments', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ booking_id: id, coach_name: adhoc[0].name, assigned_by: 'validasi · ' + actor, updated_at: new Date().toISOString() }) }).catch(() => {});
+      }
+    }
+  }
   await insertAudit({ actor, action: 'validate_coach_session', table: kind === 'class' ? 'arena_class_schedules' : 'arena_bookings', recordId: id,
-    oldValue: existing ? { revalidated: true } : null,
+    oldValue: null,
     newValue: { kind, session_date: dateISO, session_type: sessionType, held, no_coach: noCoach, late_validation: late, checkin_diff: checkinDiffNote || null, coaches: coaches.map((c) => ({ name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason || '' })) } });
   return send(res, 200, { ok: true });
 });
