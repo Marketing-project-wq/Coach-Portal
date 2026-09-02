@@ -217,6 +217,62 @@ async function sessionsFull(ids) {
   return m;
 }
 
+// ===== GRO coach-attendance validation =====
+// GRO validates who actually taught each session. Validation is the source of truth for
+// coach attribution in reports, but only an OVERRIDE: a session with no validation still
+// counts via the scheduled instructor text (so a session is never lost when GRO forgets).
+// Validation only ever exists for sessions on/after VALIDATION_FROM (DB-enforced), so
+// August 2026 and earlier are never affected.
+const VALIDATION_FROM = '2026-09-01';
+function normCoach(n) { return String(n || '').trim().toLowerCase(); }
+// schedule_id -> { validated, held, no_coach, present:Set(name), coaches:[{name,present,offSchedule,reason}], ... }
+async function classValidationMap(ids) {
+  const map = {};
+  if (!ids.length) return map;
+  let sv = [], cv = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100).map(enc).join(',');
+    sv = sv.concat((await sb(`arena_session_validations?select=schedule_id,held,no_coach,session_type,validated_by,validated_at,late_validation&session_kind=eq.class&schedule_id=in.(${chunk})`)) || []);
+    cv = cv.concat((await sb(`arena_coach_validations?select=schedule_id,coach_name,present,off_schedule,reason&schedule_id=in.(${chunk})`)) || []);
+  }
+  for (const r of sv) if (r.schedule_id) map[r.schedule_id] = { validated: true, held: r.held, noCoach: r.no_coach, sessionType: r.session_type, validatedBy: r.validated_by, validatedAt: r.validated_at, late: r.late_validation, present: new Set(), coaches: [] };
+  for (const r of cv) { const m = map[r.schedule_id]; if (!m) continue; m.coaches.push({ name: r.coach_name, present: !!r.present, offSchedule: !!r.off_schedule, reason: r.reason || '' }); if (r.present) m.present.add(normCoach(r.coach_name)); }
+  return map;
+}
+// venue_booking_id -> same shape.
+async function venueValidationMap(ids) {
+  const map = {};
+  if (!ids.length) return map;
+  let sv = [], cv = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100).map(enc).join(',');
+    sv = sv.concat((await sb(`arena_session_validations?select=venue_booking_id,held,no_coach,session_type,validated_by,validated_at,late_validation&session_kind=eq.venue&venue_booking_id=in.(${chunk})`)) || []);
+    cv = cv.concat((await sb(`arena_coach_validations?select=venue_booking_id,coach_name,present,off_schedule,reason&venue_booking_id=in.(${chunk})`)) || []);
+  }
+  for (const r of sv) if (r.venue_booking_id) map[r.venue_booking_id] = { validated: true, held: r.held, noCoach: r.no_coach, sessionType: r.session_type, validatedBy: r.validated_by, validatedAt: r.validated_at, late: r.late_validation, present: new Set(), coaches: [] };
+  for (const r of cv) { const m = map[r.venue_booking_id]; if (!m) continue; m.coaches.push({ name: r.coach_name, present: !!r.present, offSchedule: !!r.off_schedule, reason: r.reason || '' }); if (r.present) m.present.add(normCoach(r.coach_name)); }
+  return map;
+}
+// Whether a coach is credited for a class, honoring GRO validation as an override when present.
+function coachCreditedForClass(sc, coach, vmap) {
+  const v = vmap && vmap[sc.id];
+  if (v && v.validated) { if (!v.held) return false; return v.present.has(normCoach(coach)); }
+  return instructorHasCoach(sc.instructor, coach);
+}
+// The list of coaches credited for a class (validated present ones, else the scheduled tokens).
+function creditedCoachNames(sc, vmap) {
+  const v = vmap && vmap[sc.id];
+  if (v && v.validated) return v.held ? v.coaches.filter((c) => c.present).map((c) => c.name) : [];
+  return instructorTokens(sc.instructor);
+}
+// Insert an audit row (best-effort — never let a logging failure break the action).
+async function insertAudit(row) {
+  try {
+    await sb('arena_admin_audit_log', { method: 'POST', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ admin_email: row.actor || 'gro', action: row.action, table_name: row.table || null, record_id: row.recordId || null, old_value: row.oldValue || null, new_value: row.newValue || null }) });
+  } catch (_e) { /* audit is best-effort */ }
+}
+
 // Late payment: a booking is paid & valid, but the payment (paid_at) only landed AFTER the
 // booked class had already ended. The guest still belongs to that class (by schedule_id, not by
 // pay date) — this just surfaces the late timing so GRO/Coach can reconcile it in the recap.
@@ -679,15 +735,25 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
   const scheds = await allSchedules(mStart, mEnd);
   const counts = await bookingCounts(scheds.map((x) => x.id));
   const sess = await sessionsFull(scheds.map((x) => x.id)); // coach check-in/out per class
+  const vmap = await classValidationMap(scheds.map((x) => x.id)); // GRO validation status per class
+  const nowMinCal = nowMinutesJakarta();
   const byDay = {};
   for (const sc of scheds) {
     const ss = sess[sc.id];
+    const v = vmap[sc.id];
+    // validation marker: only meaningful for Sept 2026+ sessions.
+    let vStatus = 'none';
+    if (sc.schedule_date >= VALIDATION_FROM) {
+      if (v && v.validated) vStatus = v.held ? 'validated' : 'not_running';
+      else if (sessionStarted(sc.schedule_date, sc.start_time, today, nowMinCal)) vStatus = 'pending';
+    }
     (byDay[sc.schedule_date] = byDay[sc.schedule_date] || []).push({
       kind: 'class', time: hhmm(sc.start_time), sort: hhmm(sc.start_time),
       label: (types[sc.class_type_id] || {}).name || 'Class',
       color: (types[sc.class_type_id] || {}).color || null, // class-type colour (arena_class_types.color)
       pax: (counts[sc.id] || {}).confirmed || 0, scheduleId: sc.id,
       coach: sc.instructor || '', checkedIn: !!ss, checkedOut: !!(ss && ss.status === 'completed'),
+      validationStatus: vStatus,
     });
   }
   const vb = (await sbAll(`arena_bookings?select=full_name,booking_date,start_time,end_time,status,coach_id&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
@@ -806,6 +872,160 @@ route('POST', '/api/gro/reschedule/:bookingId', async (req, res, s, q, params) =
     return send(res, 400, { error: (result && result.message) || 'Tidak bisa memindahkan jadwal.' });
   }
   return send(res, 200, { ok: true, rescheduleNo: result.reschedule_no, remaining: result.remaining_before });
+});
+
+// ===== GRO: COACH VALIDATION =====
+// GRO validates who actually taught each session on a given date. This is the source of
+// truth for coach attribution in reports (an override — an unvalidated session still counts
+// via the schedule). Only sessions on/after VALIDATION_FROM (Sept 2026) may be validated.
+function sessionStarted(dateISO, startTime, today, nowMin) {
+  if (dateISO < today) return true;
+  if (dateISO > today) return false;
+  const sm = hhmmToMin(startTime);
+  return sm == null || sm <= nowMin;
+}
+// GET: every session (class + arena rental) on ?date=YYYY-MM-DD, with scheduled coaches,
+// pax, coach check-in, and any existing validation.
+route('GET', '/api/gro/validation/sessions', async (req, res, s, q) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const nowMin = nowMinutesJakarta();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : today;
+  const beforeCutoff = date < VALIDATION_FROM;
+  const types = await classTypes();
+  // Classes that day (include cancelled so GRO can mark "Tidak Berjalan" clearly).
+  const cls = (await sb(`arena_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,is_cancelled&schedule_date=eq.${date}&order=start_time.asc`)) || [];
+  const clsIds = cls.map((c) => c.id);
+  const [counts, sess, vmap] = await Promise.all([bookingCounts(clsIds), sessionsFull(clsIds), classValidationMap(clsIds)]);
+  const sessions = [];
+  for (const c of cls) {
+    const v = vmap[c.id];
+    const ck = sess[c.id];
+    sessions.push({
+      key: 'class:' + c.id, kind: 'class', id: c.id, time: hhmm(c.start_time),
+      label: (types[c.class_type_id] || {}).name || 'Class', classType: (types[c.class_type_id] || {}).name || 'Class',
+      sessionType: v ? v.sessionType : 'regular_class', pax: (counts[c.id] || {}).confirmed || 0,
+      cancelled: !!c.is_cancelled, started: sessionStarted(c.schedule_date, c.start_time, today, nowMin),
+      scheduledCoaches: instructorTokens(c.instructor),
+      checkin: ck ? { coach: ck.coach_name || '', status: ck.status || 'ongoing' } : null,
+      validation: v && v.validated ? { held: v.held, noCoach: v.noCoach, sessionType: v.sessionType, late: v.late, validatedBy: v.validatedBy, validatedAt: v.validatedAt, coaches: v.coaches } : null,
+      status: (v && v.validated) ? (v.held ? 'validated' : 'not_running') : 'not_validated',
+    });
+  }
+  // Arena rentals that day.
+  const vbs = (await sb(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,status,coach_id&booking_date=eq.${date}&order=start_time.asc`).catch(() => [])) || [];
+  const vv = await venueValidationMap(vbs.map((b) => b.id));
+  const dir = await coachDirectory();
+  const asgMap = await venueAssignments();
+  for (const b of vbs) {
+    const v = vv[b.id];
+    const cn = b.coach_id ? (dir.byId[b.coach_id] || '') : '';
+    const asg = asgMap[b.id]; const an = (asg && asg.coach_name && asg.coach_name !== NO_COACH) ? asg.coach_name : '';
+    const scheduled = [cn, an].filter(Boolean);
+    sessions.push({
+      key: 'venue:' + b.id, kind: 'venue', id: b.id, time: hhmm(b.start_time),
+      label: b.full_name || 'Venue booking', classType: '', sessionType: v ? v.sessionType : (scheduled.length ? 'arena_with_coach' : 'arena_without_coach'),
+      pax: null, cancelled: String(b.status || '').toLowerCase() === 'cancelled',
+      started: sessionStarted(b.booking_date, b.start_time, today, nowMin),
+      scheduledCoaches: scheduled, checkin: null,
+      validation: v && v.validated ? { held: v.held, noCoach: v.noCoach, sessionType: v.sessionType, late: v.late, validatedBy: v.validatedBy, validatedAt: v.validatedAt, coaches: v.coaches } : null,
+      status: (v && v.validated) ? (v.held ? 'validated' : 'not_running') : 'not_validated',
+    });
+  }
+  sessions.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  const assignable = await assignableCoaches();
+  return send(res, 200, { date, beforeCutoff, validationFrom: VALIDATION_FROM, sessions, assignable });
+});
+
+// POST: save one session's validation. Body: { kind, id, held, no_coach, session_type, late,
+// coaches:[{name,present,off_schedule,reason}] }. Reason is required for any absent or added coach.
+route('POST', '/api/gro/validation/save', async (req, res, s) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  const kind = body.kind === 'venue' ? 'venue' : 'class';
+  const id = String(body.id || '');
+  if (!id) return send(res, 400, { error: 'Sesi tidak valid.' });
+  const held = body.held === false ? false : true;
+  const noCoach = !!body.no_coach;
+  const late = !!body.late;
+  const actor = s.d || s.c || 'gro';
+  const today = todayJakarta();
+  const nowMin = nowMinutesJakarta();
+  // Load the session to get its date + verify it exists and has started.
+  let dateISO, startTime, defaultType;
+  if (kind === 'class') {
+    const c = ((await sb(`arena_class_schedules?select=id,schedule_date,start_time,is_cancelled&id=eq.${enc(id)}&limit=1`)) || [])[0];
+    if (!c) return send(res, 404, { error: 'Sesi tidak ditemukan.' });
+    dateISO = c.schedule_date; startTime = c.start_time; defaultType = 'regular_class';
+  } else {
+    const b = ((await sb(`arena_bookings?select=id,booking_date,start_time&id=eq.${enc(id)}&limit=1`)) || [])[0];
+    if (!b) return send(res, 404, { error: 'Sesi tidak ditemukan.' });
+    dateISO = b.booking_date; startTime = b.start_time; defaultType = noCoach ? 'arena_without_coach' : 'arena_with_coach';
+  }
+  if (dateISO < VALIDATION_FROM) return send(res, 400, { error: 'Validasi hanya berlaku untuk sesi mulai September 2026.' });
+  if (!sessionStarted(dateISO, startTime, today, nowMin)) return send(res, 400, { error: 'Sesi belum dimulai, belum bisa divalidasi.' });
+  const sessionType = ['regular_class', 'arena_with_coach', 'arena_without_coach'].includes(body.session_type) ? body.session_type : defaultType;
+  // Normalize coach rows. When "no coach" or "not held", there are no coach rows.
+  let coaches = [];
+  if (held && !noCoach) {
+    coaches = (Array.isArray(body.coaches) ? body.coaches : []).map((c) => ({
+      name: String(c.name || '').trim(), present: c.present !== false, offSchedule: !!c.off_schedule, reason: String(c.reason || '').trim().slice(0, 300),
+    })).filter((c) => c.name);
+    // Reason is mandatory for any coach marked absent or added off-schedule.
+    for (const c of coaches) {
+      if ((!c.present || c.offSchedule) && !c.reason) return send(res, 400, { error: 'Alasan wajib diisi untuk coach yang tidak hadir atau ditambahkan.' });
+    }
+    if (!coaches.length) return send(res, 400, { error: 'Minimal satu coach, atau tandai sesi tanpa coach / tidak berjalan.' });
+  }
+  // Note any difference from the coach's own check-in (for the audit trail).
+  let checkinDiffNote = '';
+  if (kind === 'class') {
+    const ck = ((await sb(`arena_class_sessions?select=coach_name,status&schedule_id=eq.${enc(id)}&limit=1`)) || [])[0];
+    if (ck && ck.coach_name) {
+      const present = coaches.filter((c) => c.present).map((c) => normCoach(c.name));
+      if (held && !present.includes(normCoach(ck.coach_name))) checkinDiffNote = `check-in: ${ck.coach_name} tapi divalidasi tidak hadir`;
+    } else if (held && coaches.some((c) => c.present)) {
+      checkinDiffNote = 'tidak ada check-in coach; kehadiran dari validasi GRO';
+    }
+  }
+  // Upsert the session-level row.
+  const idCol = kind === 'class' ? 'schedule_id' : 'venue_booking_id';
+  const existing = ((await sb(`arena_session_validations?select=id&session_kind=eq.${kind}&${idCol}=eq.${enc(id)}&limit=1`)) || [])[0];
+  const svBody = { session_kind: kind, [idCol]: id, session_date: dateISO, session_type: sessionType, held, no_coach: noCoach, late_validation: late, validated_by: actor, validated_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  let svId;
+  if (existing) {
+    svId = existing.id;
+    await sb(`arena_session_validations?id=eq.${enc(svId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(svBody) });
+    await sb(`arena_coach_validations?session_validation_id=eq.${enc(svId)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+  } else {
+    const ins = await sb('arena_session_validations', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(svBody) });
+    svId = (ins && ins[0] && ins[0].id) || null;
+  }
+  if (svId && coaches.length) {
+    const rows = coaches.map((c) => ({ session_validation_id: svId, [idCol]: id, session_date: dateISO, coach_name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason || null, checkin_diff: (!c.present && checkinDiffNote) ? checkinDiffNote : null }));
+    await sb('arena_coach_validations', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows) });
+  }
+  await insertAudit({ actor, action: 'validate_coach_session', table: kind === 'class' ? 'arena_class_schedules' : 'arena_bookings', recordId: id,
+    oldValue: existing ? { revalidated: true } : null,
+    newValue: { kind, session_date: dateISO, session_type: sessionType, held, no_coach: noCoach, late_validation: late, checkin_diff: checkinDiffNote || null, coaches: coaches.map((c) => ({ name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason || '' })) } });
+  return send(res, 200, { ok: true });
+});
+
+// GET: Sept 2026+ sessions that have started but are not yet validated (so GRO can catch up).
+route('GET', '/api/gro/validation/pending', async (req, res, s) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const nowMin = nowMinutesJakarta();
+  const from = VALIDATION_FROM > today ? today : VALIDATION_FROM;
+  const types = await classTypes();
+  const cls = (await sbAll(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor,is_cancelled&is_cancelled=eq.false&schedule_date=gte.${from}&schedule_date=lte.${today}&order=schedule_date.desc,start_time.asc`)) || [];
+  const started = cls.filter((c) => c.schedule_date >= VALIDATION_FROM && sessionStarted(c.schedule_date, c.start_time, today, nowMin));
+  const vmap = await classValidationMap(started.map((c) => c.id));
+  const pending = started.filter((c) => !(vmap[c.id] && vmap[c.id].validated)).map((c) => ({
+    kind: 'class', id: c.id, date: c.schedule_date, dateLabel: fmtDMonY(c.schedule_date), day: DOW_FULL[new Date(c.schedule_date + 'T00:00:00').getDay()],
+    time: hhmm(c.start_time), label: (types[c.class_type_id] || {}).name || 'Class', coaches: instructorTokens(c.instructor),
+  }));
+  return send(res, 200, { pending, count: pending.length, validationFrom: VALIDATION_FROM });
 });
 
 // GET: the class-bookings table for the Reschedule page (step 1). Returns EVERY upcoming
@@ -1971,7 +2191,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const users = await sb('arena_coach_users?select=username,coach_name,role,is_active&order=coach_name.asc');
   const scheds = await sb(`arena_class_schedules?select=id,instructor,schedule_date,class_type_id,start_time&is_cancelled=eq.false&schedule_date=gte.${startDate}&schedule_date=lte.${today}`);
   const allIds = (scheds || []).map((x) => x.id);
-  const [counts, started] = await Promise.all([bookingCounts(allIds), startedSet(allIds)]);
+  const [counts, started, vmap] = await Promise.all([bookingCounts(allIds), startedSet(allIds), classValidationMap(allIds)]);
   const subs = await sb(`arena_coach_substitutions?select=from_coach,status,created_at&created_at=gte.${startDate}T00:00:00`);
   const subCount = {}; let coverageTotal = 0;
   for (const su of subs || []) { subCount[su.from_coach] = (subCount[su.from_coach] || 0) + 1; coverageTotal++; }
@@ -1979,7 +2199,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
   const list = (users || []).filter((u) => u.role !== 'admin').map((u) => {
     // Attribute each class to this coach with tolerant name matching (handles small
     // instructor-name differences from Admin Hub). Co-taught classes count for each coach.
-    const b = { ids: (scheds || []).filter((sc) => instructorHasCoach(sc.instructor, u.coach_name)).map((x) => x.id) };
+    const b = { ids: (scheds || []).filter((sc) => coachCreditedForClass(sc, u.coach_name, vmap)).map((x) => x.id) };
     b.classes = b.ids.length;
     const peserta = b.ids.reduce((a, id) => a + ((counts[id] || {}).confirmed || 0), 0);
     // Attendance = classes actually checked-in (Start Class) / total scheduled classes in range.
@@ -2020,7 +2240,7 @@ route('GET', '/api/hc/coaches', async (req, res, s, q) => {
     return {
       type: shortType((types[x.class_type_id] || {}).name) || 'Class',
       time: hhmm(x.start_time), coach: x.instructor || '—',
-      coachKeys: roster.filter((nm) => instructorHasCoach(x.instructor, nm)),
+      coachKeys: roster.filter((nm) => coachCreditedForClass(x, nm, vmap)),
       date: fmtDMon(x.schedule_date), dateISO: x.schedule_date,
       day: DOW_FULL[dow], dow,
       pax: (counts[x.id] || {}).confirmed || 0,
@@ -2048,6 +2268,7 @@ route('GET', '/api/hc/coach-sessions', async (req, res, s, q) => {
   const ids = scheds.map((x) => x.id);
   const sess = await sessionsFull(ids);
   const counts = await bookingCounts(ids); // confirmed participants per class (for the monthly pax total)
+  const vmap = await classValidationMap(ids); // GRO validation overrides coach attribution (Sept 2026+)
   const types = await classTypes();
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
   const durMin = (r) => (r && r.created_at && r.checkout_at) ? Math.max(0, Math.round((new Date(r.checkout_at) - new Date(r.created_at)) / 60000)) : null;
@@ -2055,7 +2276,7 @@ route('GET', '/api/hc/coach-sessions', async (req, res, s, q) => {
   const monLabelOf = (m) => { const [yy, mm] = m.split('-'); return `${MON[Number(mm) - 1]} ${yy}`; };
   const sessions = [];
   const rows = (users || []).map((u) => {
-    const my = scheds.filter((sc) => instructorHasCoach(sc.instructor, u.coach_name));
+    const my = scheds.filter((sc) => coachCreditedForClass(sc, u.coach_name, vmap));
     let conducted = 0, completed = 0, minutes = 0, pending = 0;
     for (const sc of my) {
       const r = sess[sc.id]; if (!r) continue;
@@ -2087,10 +2308,62 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
   const monthEndFull = `${ym}-${String(lastDay).padStart(2, '0')}`;
   const monthEnd = monthEndFull < today ? monthEndFull : today; // cap the current month at today
   const types = await classTypes();
-  const rows0 = await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&instructor=ilike.*${enc(params.name)}*&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${monthEnd}&order=schedule_date.asc,start_time.asc`);
-  const rows = (rows0 || []).filter((r) => instructorHasCoach(r.instructor, params.name));
+  // Fetch EVERY class in the month (not just ilike-matched), so GRO validation can add a coach
+  // who isn't in the scheduled instructor text, or drop one who is. `coachCreditedForClass`
+  // honours validation as an override (Sept 2026+); before that it's exactly instructorHasCoach.
+  const allRows = (await sb(`arena_class_schedules?select=id,schedule_date,start_time,class_type_id,instructor&is_cancelled=eq.false&schedule_date=gte.${monthStart}&schedule_date=lte.${monthEnd}&order=schedule_date.asc,start_time.asc`)) || [];
+  const vmap = await classValidationMap(allRows.map((r) => r.id));
+  const rows = allRows.filter((r) => coachCreditedForClass(r, params.name, vmap));
   const counts = await bookingCounts((rows || []).map((r) => r.id));
-  const stats = (rows || []).map((r) => ({ dateISO: r.schedule_date, date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time), type: shortType((types[r.class_type_id] || {}).name), peserta: (counts[r.id] || {}).confirmed || 0 }));
+  const nowMin = nowMinutesJakarta();
+  // A Sept 2026+ session counts as "pending validation" once it has started but has no validation.
+  const isPending = (dateISO, startTime) => {
+    if (dateISO < VALIDATION_FROM) return false;             // never validate August or earlier
+    return dateISO < today || (dateISO === today && (hhmmToMin(startTime) == null || hhmmToMin(startTime) <= nowMin));
+  };
+  const othersFor = (r) => creditedCoachNames(r, vmap).filter((n) => normCoach(n) !== normCoach(params.name));
+  const classStats = (rows || []).map((r) => {
+    const v = vmap[r.id];
+    const validated = !!(v && v.validated);
+    const pending = !validated && isPending(r.schedule_date, r.start_time);
+    return { dateISO: r.schedule_date, date: fmtDMon(r.schedule_date), day: DOW_FULL[new Date(r.schedule_date + 'T00:00:00').getDay()], time: hhmm(r.start_time),
+      type: shortType((types[r.class_type_id] || {}).name), sessionType: 'regular_class', classOrClient: shortType((types[r.class_type_id] || {}).name),
+      otherCoaches: othersFor(r).join(', '), peserta: (counts[r.id] || {}).confirmed || 0, validated, pending };
+  });
+  // Arena-rental sessions (Sept 2026+ only) where this coach is credited — validated present,
+  // or (no validation yet) set via the booking's coach field / dispatch assignment.
+  let venueStats = [];
+  if (monthEnd >= VALIDATION_FROM) {
+    const vFrom = monthStart < VALIDATION_FROM ? VALIDATION_FROM : monthStart;
+    const vbs = (await sb(`arena_bookings?select=id,full_name,booking_date,start_time,class_type_id,status,coach_id&booking_date=gte.${vFrom}&booking_date=lte.${monthEnd}&status=neq.cancelled&order=booking_date.asc,start_time.asc`).catch(() => [])) || [];
+    if (vbs.length) {
+      const vv = await venueValidationMap(vbs.map((b) => b.id));
+      const dir = await coachDirectory();
+      const asgMap = await venueAssignments();
+      for (const b of vbs) {
+        const v = vv[b.id];
+        let credited = false, others = [];
+        if (v && v.validated) {
+          if (!v.held) continue;
+          credited = v.present.has(normCoach(params.name));
+          others = v.coaches.filter((c) => c.present && normCoach(c.name) !== normCoach(params.name)).map((c) => c.name);
+        } else {
+          const cn = b.coach_id ? (dir.byId[b.coach_id] || '') : '';
+          const asg = asgMap[b.id]; const an = (asg && asg.coach_name && asg.coach_name !== NO_COACH) ? asg.coach_name : '';
+          const names = [cn, an].filter(Boolean);
+          credited = names.some((n) => normCoach(n) === normCoach(params.name));
+          others = names.filter((n) => normCoach(n) !== normCoach(params.name));
+        }
+        if (!credited) continue;
+        const started = b.booking_date < today || (b.booking_date === today && (hhmmToMin(b.start_time) == null || hhmmToMin(b.start_time) <= nowMin));
+        venueStats.push({ dateISO: b.booking_date, date: fmtDMon(b.booking_date), day: DOW_FULL[new Date(b.booking_date + 'T00:00:00').getDay()], time: hhmm(b.start_time),
+          type: b.full_name || 'Venue booking', sessionType: 'arena_with_coach', classOrClient: b.full_name || 'Venue booking',
+          otherCoaches: others.join(', '), peserta: null, validated: !!(v && v.validated), pending: !(v && v.validated) && started });
+      }
+    }
+  }
+  const stats = classStats.concat(venueStats).sort((a, b) => String(a.dateISO).localeCompare(String(b.dateISO)) || String(a.time).localeCompare(String(b.time)));
+  const pendingCount = stats.filter((r) => r.pending).length;
   const monthLabel = `${MON_FULL[mm - 1]} ${yy}`;
   // Month picker options — from the earliest month with data in Admin Hub up to the current month.
   const floorYm = await earliestYm('arena_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7));
@@ -2117,7 +2390,7 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
     dayMap[key].classes++; dayMap[key].pax += (counts[r.id] || {}).confirmed || 0;
   }
   const days = Object.values(dayMap).sort((a, b) => a.date < b.date ? -1 : 1).map((d) => ({ label: d.label, day: d.day, classes: d.classes, pax: d.pax }));
-  return send(res, 200, { stats, monthLabel, weeks, days, ym, months });
+  return send(res, 200, { stats, monthLabel, weeks, days, ym, months, pendingCount });
 });
 
 // ===== ADMIN =====
@@ -2242,8 +2515,9 @@ route('GET', '/api/ext/report/coach-sessions', async (req, res, s, q) => {
   const ids = scheds.map((x) => x.id);
   const counts = await bookingCounts(ids);
   const sess = await sessionsFull(ids);
+  const vmap = await classValidationMap(ids); // GRO validation overrides coach attribution (Sept 2026+)
   const coaches = (users || []).map((u) => {
-    const my = scheds.filter((sc) => instructorHasCoach(sc.instructor, u.coach_name));
+    const my = scheds.filter((sc) => coachCreditedForClass(sc, u.coach_name, vmap));
     let conducted = 0, completed = 0;
     for (const sc of my) { const r = sess[sc.id]; if (!r) continue; conducted++; if (r.status === 'completed') completed++; }
     const pax = my.reduce((a, sc) => a + ((counts[sc.id] || {}).confirmed || 0), 0);

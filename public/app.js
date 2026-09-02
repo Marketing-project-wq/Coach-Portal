@@ -20,6 +20,7 @@ class Component extends DCLogic {
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       rschSearch: '', rschStatus: '', vcEdit: {},
+      vcDate: '', vcModal: null, vcSaving: false,
       pkgSearch: '', pkgStatus: '', pkgDetail: null,
       reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
@@ -37,7 +38,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -49,7 +50,7 @@ class Component extends DCLogic {
     }
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [] };
+    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '' };
   }
   boot() {
     if (this.MOCK) {
@@ -130,6 +131,18 @@ class Component extends DCLogic {
   toastMsg(msg) { this.setState({ toast: this.trToast(msg) }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2800); }
   // ---------- i18n (English base; localize the rendered DOM + toasts when lang='id') ----------
   setLang(l) { if (window.localStorage) localStorage.setItem('arena_lang', l); this.setState({ lang: l }); }
+  // Keyed translation lookup for new features — every label goes through t(key).
+  // Falls back to the key itself if missing so nothing renders blank.
+  t(key) { const T = (window.__I18N || {}).T || {}; const e = T[key]; if (!e) return key; return e[this.state.lang] || e.id || e.en || key; }
+  locale() { return this.state.lang === 'en' ? 'en-GB' : 'id-ID'; }
+  // Locale-aware date/day — id-ID -> "Senin, 1 September 2026", en-GB -> "Monday, 1 September 2026".
+  fmtDateLocale(iso, opts) {
+    if (!iso) return '';
+    const d = (iso instanceof Date) ? iso : new Date(String(iso).length <= 10 ? (iso + 'T00:00:00') : iso);
+    if (isNaN(d.getTime())) return String(iso);
+    try { return new Intl.DateTimeFormat(this.locale(), opts || { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(d); }
+    catch (_e) { return String(iso); }
+  }
   trToast(m) {
     if (this.state.lang !== 'id' || !m) return m;
     const I = window.__I18N || {}; const d = I.dict || {};
@@ -211,6 +224,7 @@ class Component extends DCLogic {
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueCoachList: r.coachList || [], venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'packageorders') this.api('/api/gro/package-orders').then((r) => this.setD({ packageOrders: r.orders || [] })).catch(fail);
     else if (screen === 'reschedule') this.api('/api/gro/participants/search').then((r) => this.setD({ rschBookings: r.participants || [] })).catch(fail);
+    else if (screen === 'validatecoach') this.loadVcSessions();
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
@@ -311,6 +325,65 @@ class Component extends DCLogic {
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId), { method: 'POST', body: JSON.stringify({ schedule_id: st.rsSlot, reason }) })
       .then(() => { this.toastMsg('Reschedule peserta berhasil.'); this.closeReschedule(); if (this.state.screen === 'reschedule') this.loadScreen('reschedule'); else this.autoRefresh(); })
       .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Gagal memindahkan jadwal.'); });
+  }
+  // ---------- GRO coach validation ----------
+  loadVcSessions() {
+    if (this.MOCK) return;
+    const date = this.state.vcDate || this.todayISO();
+    this.api('/api/gro/validation/sessions?date=' + encodeURIComponent(date))
+      .then((r) => this.setD({ vcSessions: r.sessions || [], vcAssignable: r.assignable || [], vcBeforeCutoff: !!r.beforeCutoff, vcValidationFrom: r.validationFrom || '' }))
+      .catch((e) => this.toastMsg(e.message || 'Gagal memuat sesi.'));
+  }
+  setVcDate(e) { const v = e && e.target ? e.target.value : ''; this.setState({ vcDate: v }); if (!this.MOCK) this.loadVcSessions(); }
+  // Open the validation modal for one session, seeding coach rows from any existing
+  // validation, else from the scheduled coaches.
+  openValidate(key) {
+    const sess = (this.state.d.vcSessions || []).find((x) => x.key === key);
+    if (!sess) return;
+    if (!sess.started) return this.toastMsg(this.t('cannot_validate_future'));
+    if (this.state.d.vcBeforeCutoff) return this.toastMsg(this.t('cannot_validate_future'));
+    let coaches, held = true, noCoach = false;
+    if (sess.validation) {
+      held = sess.validation.held !== false; noCoach = !!sess.validation.noCoach;
+      coaches = (sess.validation.coaches || []).map((c) => ({ name: c.name, present: c.present !== false, offSchedule: !!c.offSchedule, reason: c.reason || '' }));
+    } else {
+      coaches = (sess.scheduledCoaches || []).map((n) => ({ name: n, present: true, offSchedule: false, reason: '' }));
+    }
+    // late validation: the session's date is before today.
+    const late = String(this.state.vcDate || this.todayISO()) < this.todayISO();
+    this.setState({ vcModal: { key, kind: sess.kind, id: sess.id, label: sess.label, time: sess.time, classType: sess.classType, pax: sess.pax, sessionType: sess.sessionType || (sess.kind === 'venue' ? 'arena_with_coach' : 'regular_class'), coaches, held, noCoach, late, step: 'edit' }, vcSaving: false });
+  }
+  closeValidate() { this.setState({ vcModal: null, vcSaving: false }); }
+  _vcPatch(patch) { this.setState({ vcModal: Object.assign({}, this.state.vcModal, patch) }); }
+  vcTogglePresent(i) { const m = this.state.vcModal; if (!m) return; const cs = m.coaches.slice(); cs[i] = Object.assign({}, cs[i], { present: !cs[i].present }); this._vcPatch({ coaches: cs }); }
+  vcSetReason(i, e) { const m = this.state.vcModal; if (!m) return; const v = e && e.target ? e.target.value : ''; const cs = m.coaches.slice(); cs[i] = Object.assign({}, cs[i], { reason: v }); this._vcPatch({ coaches: cs }); }
+  vcRemoveCoach(i) { const m = this.state.vcModal; if (!m) return; const cs = m.coaches.slice(); cs.splice(i, 1); this._vcPatch({ coaches: cs }); }
+  vcAddCoach(e) {
+    const m = this.state.vcModal; if (!m) return; const name = e && e.target ? e.target.value : ''; if (!name) return;
+    if (e && e.target) e.target.value = '';
+    if (m.coaches.some((c) => String(c.name).toLowerCase() === String(name).toLowerCase())) return this.toastMsg(name + ' sudah ada di daftar.');
+    this._vcPatch({ coaches: m.coaches.concat([{ name, present: true, offSchedule: true, reason: '' }]) });
+  }
+  vcToggleHeld() { const m = this.state.vcModal; if (!m) return; this._vcPatch({ held: !m.held }); }
+  vcToggleNoCoach() { const m = this.state.vcModal; if (!m) return; this._vcPatch({ noCoach: !m.noCoach }); }
+  vcToggleLate() { const m = this.state.vcModal; if (!m) return; this._vcPatch({ late: !m.late }); }
+  vcGoSummary() {
+    const m = this.state.vcModal; if (!m) return;
+    if (m.held && !m.noCoach) {
+      for (const c of m.coaches) { if ((!c.present || c.offSchedule) && !String(c.reason || '').trim()) return this.toastMsg(this.t('reason_required')); }
+      if (!m.coaches.length) return this.toastMsg(this.t('add_coach'));
+    }
+    this._vcPatch({ step: 'summary' });
+  }
+  vcBackToEdit() { this._vcPatch({ step: 'edit' }); }
+  vcSave() {
+    const m = this.state.vcModal; if (!m || this.state.vcSaving) return;
+    this.setState({ vcSaving: true });
+    const payload = { kind: m.kind, id: m.id, held: m.held, no_coach: m.noCoach, session_type: m.sessionType, late: m.late,
+      coaches: (m.held && !m.noCoach) ? m.coaches.map((c) => ({ name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason })) : [] };
+    this.api('/api/gro/validation/save', { method: 'POST', body: JSON.stringify(payload) })
+      .then(() => { this.toastMsg(this.t('validation_saved')); this.closeValidate(); this.loadVcSessions(); })
+      .catch((e) => { this.setState({ vcSaving: false }); this.toastMsg(e.message || 'Gagal menyimpan validasi.'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
   _compressImage(file, maxDim, quality) {
@@ -963,17 +1036,27 @@ class Component extends DCLogic {
     const st = this.state, scr = st.screen, D = st.d;
     let title, sections;
     if (scr === 'stats') {
-      title = (st.selCoachName || 'Coach') + ' — Per-Class Breakdown · ' + (D.statMonth || '');
+      const T = (k) => this.t(k);
+      title = (st.selCoachName || 'Coach') + ' — ' + this.t('validation_summary') + ' · ' + (D.statMonth || '');
       let arr = (D.stats || []).slice(); const s = st.statRowSort || 'date';
       // Numbering follows the displayed order; every sort keeps date+time as the tiebreak so the order reads sensibly.
+      const numPax = (r) => (typeof r.peserta === 'number' ? r.peserta : 0);
       const byDate = (a, b) => String(a.dateISO || a.date || '').localeCompare(String(b.dateISO || b.date || '')) || String(a.time || '').localeCompare(String(b.time || ''));
-      if (s === 'pax_desc') arr.sort((a, b) => (b.peserta || 0) - (a.peserta || 0) || byDate(a, b));
-      else if (s === 'pax_asc') arr.sort((a, b) => (a.peserta || 0) - (b.peserta || 0) || byDate(a, b));
+      if (s === 'pax_desc') arr.sort((a, b) => numPax(b) - numPax(a) || byDate(a, b));
+      else if (s === 'pax_asc') arr.sort((a, b) => numPax(a) - numPax(b) || byDate(a, b));
       else arr.sort(byDate);
-      const totalPax = arr.reduce((sum, r) => sum + (r.peserta || 0), 0);
-      sections = [{ heading: '', headers: ['No', 'Date', 'Day', 'Time', 'Class Type', 'Pax'],
-        rows: arr.map((r, i) => [i + 1, r.date, r.day, r.time, r.type, r.peserta]),
-        totalRow: ['', 'TOTAL', '', '', arr.length + ' kelas', totalPax] }];
+      const fmtD = (r) => r.dateISO ? this.fmtDateLocale(r.dateISO, { day: 'numeric', month: 'short' }) : (r.date || '');
+      const fmtDay = (r) => r.dateISO ? this.fmtDateLocale(r.dateISO, { weekday: 'long' }) : (r.day || '');
+      const paxCell = (r) => (r.peserta == null ? '—' : r.peserta);
+      const totalPax = arr.reduce((sum, r) => sum + numPax(r), 0);
+      sections = [{ heading: '', headers: [T('no'), T('date'), T('day'), T('time'), T('session_type'), T('class_or_client'), T('other_coaches'), T('pax')],
+        rows: arr.map((r, i) => [i + 1, fmtD(r), fmtDay(r), r.time, this.t(r.sessionType || 'regular_class'), r.classOrClient || r.type || '—', r.otherCoaches || '—', paxCell(r)]),
+        totalRow: ['', T('total_sessions') + ': ' + arr.length, '', '', '', '', T('total_pax'), totalPax] }];
+      // Pending validation (Sept 2026+): still counted in the totals above, listed here so GRO can catch up.
+      const pend = arr.filter((r) => r.pending);
+      if (pend.length) sections.push({ heading: T('pending_sessions'), note: this.t('pending_note'),
+        headers: [T('no'), T('date'), T('time'), T('class_or_client')],
+        rows: pend.map((r, i) => [i + 1, fmtD(r), r.time, r.classOrClient || r.type || '—']) });
     } else {
       title = '20FIT Arena — Report · ' + (D.reportPeriod || '');
       sections = [];
@@ -1005,11 +1088,11 @@ class Component extends DCLogic {
       const thead = '<tr>' + sec.headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
       const tbody = sec.rows.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>').join('');
       const tfoot = sec.totalRow ? '<tr class="total">' + sec.totalRow.map((c) => '<td>' + esc(c) + '</td>').join('') + '</tr>' : '';
-      return (sec.heading ? '<h2>' + esc(sec.heading) + '</h2>' : '') + '<table><thead>' + thead + '</thead><tbody>' + tbody + tfoot + '</tbody></table>';
+      return (sec.heading ? '<h2>' + esc(sec.heading) + '</h2>' : '') + (sec.note ? '<div class="note">' + esc(sec.note) + '</div>' : '') + '<table><thead>' + thead + '</thead><tbody>' + tbody + tfoot + '</tbody></table>';
     };
     const body = sections.map(tableFor).join('');
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>'
-      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:6px;}thead{display:table-header-group;}tr{break-inside:avoid;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}td:first-child,th:first-child{text-align:center;width:1%;white-space:nowrap;font-weight:400;}tr.total td{border-top:2px solid #333;border-bottom:none;font-weight:800;background:#fafafa;}tr.total td:first-child{font-weight:800;}@media print{body{padding:0;}h2{break-inside:avoid;}}</style>'
+      + '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;}h1{font-size:18px;margin:0 0 2px;}h2{font-size:13px;margin:22px 0 8px;color:#111;}.sub{color:#666;font-size:12px;margin-bottom:16px;}.note{color:#666;font-size:11px;margin:0 0 8px;font-style:italic;}table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:6px;}thead{display:table-header-group;}tr{break-inside:avoid;}th,td{border-bottom:1px solid #ddd;padding:7px 10px;text-align:left;}th{background:#f4f4f4;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#666;}td:last-child,th:last-child{text-align:right;font-weight:700;}td:first-child,th:first-child{text-align:center;width:1%;white-space:nowrap;font-weight:400;}tr.total td{border-top:2px solid #333;border-bottom:none;font-weight:800;background:#fafafa;}tr.total td:first-child{font-weight:800;}@media print{body{padding:0;}h2{break-inside:avoid;}}</style>'
       + '</head><body><h1>20FIT Arena</h1><div class="sub">' + esc(title) + '</div>'
       + body + '</body></html>';
     const ifr = document.createElement('iframe');
@@ -1053,9 +1136,11 @@ class Component extends DCLogic {
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
     titles.packageorders = ['GRO', 'Package Orders'];
     titles.reschedule = ['GRO', 'Reschedule'];
+    titles.validatecoach = ['GRO', this.t('validate_coach')];
     if (scr === 'packageorders') tt = titles.packageorders;
     if (scr === 'reschedule') tt = titles.reschedule;
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule' };
+    if (scr === 'validatecoach') tt = titles.validatecoach;
+    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1677,8 +1762,69 @@ class Component extends DCLogic {
         + '  →  ' + rsSelSlot.classShort + ' ' + shortD(rsSelSlot.dateLabel) + ' ' + rsSelSlot.start;
     }
 
+    // ---- GRO coach validation: session list + modal ----
+    const vcStatusMeta = (status) => ({
+      validated: { label: this.t('validated'), bg: 'rgba(34,197,94,.15)', fg: '#16a34a' },
+      not_validated: { label: this.t('not_validated'), bg: 'rgba(234,179,8,.16)', fg: '#a16207' },
+      not_running: { label: this.t('not_running'), bg: 'rgba(148,163,184,.20)', fg: 'var(--muted)' },
+    }[status] || { label: this.t('not_validated'), bg: 'rgba(234,179,8,.16)', fg: '#a16207' });
+    const vcRows = (D.vcSessions || []).map((x, i) => {
+      const meta = vcStatusMeta(x.status);
+      const canValidate = x.started && !D.vcBeforeCutoff && !x.cancelled;
+      return {
+        no: i + 1,
+        key: x.key, time: x.time || '—', label: x.label, typeLabel: this.t(x.sessionType || (x.kind === 'venue' ? 'arena_with_coach' : 'regular_class')),
+        coaches: (x.scheduledCoaches || []).join(', ') || '—', pax: (x.pax == null ? '—' : String(x.pax)),
+        statusLabel: meta.label, statusBg: meta.bg, statusFg: meta.fg,
+        actLabel: x.validation ? this.t('validation_summary') : this.t('validate_coach'),
+        actDisabled: !canValidate, actBg: canValidate ? 'var(--volt)' : 'var(--border2)', actFg: canValidate ? '#fff' : 'var(--muted)', actCursor: canValidate ? 'pointer' : 'not-allowed',
+        act: () => this.openValidate(x.key),
+      };
+    });
+    const vcm = st.vcModal;
+    const vcChip = (on) => on ? { bg: 'var(--volt)', fg: '#ffffff', border: 'var(--volt)' } : { bg: 'var(--bg)', fg: 'var(--muted)', border: 'var(--border2)' };
+    const vcCoachRows = vcm ? vcm.coaches.map((c, i) => ({
+      name: c.name, present: c.present, presentLabel: c.present ? this.t('present') : this.t('absent'),
+      presentBg: c.present ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)', presentFg: c.present ? '#16a34a' : '#dc2626',
+      needReason: (!c.present || c.offSchedule), reason: c.reason || '', offLabel: c.offSchedule ? ('+ ' + this.t('add_coach')) : this.t('scheduled_coach'),
+      toggle: () => this.vcTogglePresent(i), setReason: (e) => this.vcSetReason(i, e), remove: () => this.vcRemoveCoach(i),
+    })) : [];
+    const vcAssignOpts = (D.vcAssignable || []).map((a) => ({ value: a.name, label: a.name + (a.role ? (' · ' + a.role) : '') }));
+    let vcSummaryText = '';
+    if (vcm) {
+      if (!vcm.held) vcSummaryText = this.t('not_running');
+      else if (vcm.noCoach) vcSummaryText = this.t('no_coach');
+      else {
+        const present = vcm.coaches.filter((c) => c.present).map((c) => c.name);
+        const absent = vcm.coaches.filter((c) => !c.present).map((c) => c.name);
+        const parts = [];
+        if (present.length) parts.push(this.t('present') + ': ' + present.join(', '));
+        if (absent.length) parts.push(this.t('absent') + ': ' + absent.join(', '));
+        vcSummaryText = parts.join('   ·   ') || '—';
+      }
+    }
+
     return {
       isGro, goReschedule: () => this.go('reschedule'),
+      goValidateCoach: () => this.go('validatecoach'),
+      // GRO coach validation — session list
+      vcTitle: this.t('validate_coach'), vcSelectSessionHint: this.t('select_session'), vcDateVal: st.vcDate || this.todayISO(), setVcDate: (e) => this.setVcDate(e),
+      vcRows, vcHasRows: vcRows.length > 0, vcNoRows: vcRows.length === 0, vcNoSessionsText: this.t('no_sessions_today'),
+      vcBeforeCutoff: !!D.vcBeforeCutoff, vcBeforeCutoffText: this.t('cannot_validate_future'),
+      vcColNo: this.t('no'), vcColTime: this.t('time'), vcColSession: this.t('class_or_client'), vcColType: this.t('session_type'), vcColCoaches: this.t('scheduled_coach'), vcColPax: this.t('pax'),
+      // GRO coach validation — modal
+      showVc: !!vcm, closeValidate: () => this.closeValidate(),
+      vcmTitle: vcm ? (vcm.time + ' · ' + vcm.label) : '', vcmTypeLabel: vcm ? this.t(vcm.sessionType) : '',
+      vcIsEdit: !!(vcm && vcm.step === 'edit'), vcIsSummary: !!(vcm && vcm.step === 'summary'),
+      vcHeld: !!(vcm && vcm.held), vcNoCoach: !!(vcm && vcm.noCoach), vcLate: !!(vcm && vcm.late),
+      vcToggleHeld: () => this.vcToggleHeld(), vcToggleNoCoach: () => this.vcToggleNoCoach(), vcToggleLate: () => this.vcToggleLate(),
+      vcNotRunningChip: vcChip(!!(vcm && !vcm.held)), vcNoCoachChip: vcChip(!!(vcm && vcm.noCoach)), vcLateChip: vcChip(!!(vcm && vcm.late)),
+      vcNotRunningLabel: this.t('not_running'), vcNoCoachLabel: this.t('no_coach'), vcLateLabel: this.t('late_validation'),
+      vcShowCoaches: !!(vcm && vcm.held && !vcm.noCoach), vcCoachRows, vcHasCoachRows: vcCoachRows.length > 0,
+      vcAssignOpts, vcAddCoach: (e) => this.vcAddCoach(e), vcAddCoachLabel: this.t('add_coach'), vcReasonPlaceholder: this.t('reason'),
+      vcSummaryText, vcSummaryLabel: this.t('validation_summary'),
+      vcGoSummary: () => this.vcGoSummary(), vcBackToEdit: () => this.vcBackToEdit(), vcSave: () => this.vcSave(),
+      vcSaveLabel: st.vcSaving ? 'Menyimpan…' : this.t('save'), vcCancelLabel: this.t('cancel'), vcBackLabel: this.t('back'), vcNextLabel: this.t('validation_summary'),
       // step 1 — the Reschedule page (table of class bookings)
       rschSearchVal: st.rschSearch || '', setRschSearch: (e) => this.setRschSearch(e),
       rschStatusOpts: RSCH_STATUS.map((o) => ({ value: o.v, label: o.l, picked: st.rschStatus === o.v })), setRschStatus: (e) => this.setRschStatus(e),

@@ -406,6 +406,36 @@ const rescheduleScreen = '<sc-if value="{{ s.reschedule }}"><div style="max-widt
 + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', rescheduleScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
+// ---- Validate Coach (GRO) — session list for a date; each row opens the validation modal. ----
+const vcGrid = 'grid-template-columns:54px 88px 1.5fr 150px 1fr 74px 140px 132px;';
+const validateScreen = '<sc-if value="{{ s.validatecoach }}"><div style="max-width:1200px;margin:0 auto;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:4px;">{{ vcTitle }}</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:16px;">{{ vcSelectSessionHint }}</div>'
+  + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">'
+    + '<input type="date" value="{{ vcDateVal }}" onchange="{{ setVcDate }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:10px 14px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:14px;outline:0;box-sizing:border-box;">'
+  + '</div>'
+  + '<sc-if value="{{ vcBeforeCutoff }}"><div style="background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.32);color:#a16207;border-radius:11px;padding:11px 14px;font-size:12.5px;font-weight:600;margin-bottom:16px;">{{ vcBeforeCutoffText }}</div></sc-if>'
+  + '<sc-if value="{{ vcHasRows }}"><div style="' + cardBox + 'overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:960px;">'
+    + '<div style="display:grid;' + vcGrid + 'background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">'
+      + '<div style="padding:12px 14px;text-align:center;">{{ vcColNo }}</div><div style="padding:12px 14px;">{{ vcColTime }}</div><div style="padding:12px 14px;">{{ vcColSession }}</div><div style="padding:12px 14px;">{{ vcColType }}</div><div style="padding:12px 14px;">{{ vcColCoaches }}</div><div style="padding:12px 14px;text-align:right;">{{ vcColPax }}</div><div style="padding:12px 14px;">Status</div><div style="padding:12px 14px;text-align:right;">Aksi</div>'
+    + '</div>'
+    + '<sc-for list="{{ vcRows }}" as="r">'
+    + '<div style="display:grid;' + vcGrid + 'border-top:1px solid var(--border);align-items:center;">'
+      + '<div style="padding:12px 14px;text-align:center;font-family:\'JetBrains Mono\';font-size:12px;color:var(--muted);">{{ r.no }}</div>'
+      + '<div style="padding:12px 14px;font-family:\'JetBrains Mono\';font-size:12.5px;font-weight:700;">{{ r.time }}</div>'
+      + '<div style="padding:12px 14px;font-weight:700;font-size:13px;">{{ r.label }}</div>'
+      + '<div style="padding:12px 14px;font-size:12px;color:var(--muted);">{{ r.typeLabel }}</div>'
+      + '<div style="padding:12px 14px;font-size:12.5px;">{{ r.coaches }}</div>'
+      + '<div style="padding:12px 14px;text-align:right;font-family:\'JetBrains Mono\';font-size:12.5px;font-weight:700;">{{ r.pax }}</div>'
+      + '<div style="padding:12px 14px;"><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;background:{{ r.statusBg }};color:{{ r.statusFg }};white-space:nowrap;">{{ r.statusLabel }}</span></div>'
+      + '<div style="padding:9px 14px;text-align:right;"><button onclick="{{ r.act }}" disabled="{{ r.actDisabled }}" style="background:{{ r.actBg }};border:0;color:{{ r.actFg }};border-radius:9px;padding:8px 14px;font-family:\'Archivo\';font-weight:800;font-size:11.5px;cursor:{{ r.actCursor }};text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;">{{ r.actLabel }}</button></div>'
+    + '</div>'
+    + '</sc-for>'
+  + '</div></div></div></sc-if>'
+  + '<sc-if value="{{ vcNoRows }}"><div style="' + cardBox + 'padding:44px 24px;text-align:center;color:var(--muted);">{{ vcNoSessionsText }}</div></sc-if>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', validateScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
 // Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
 const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'
   + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;">'
