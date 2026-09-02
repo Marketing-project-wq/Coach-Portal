@@ -1777,12 +1777,21 @@ class Component extends DCLogic {
       const canValidate = !D.vcBeforeCutoff && !x.cancelled;
       // Task 2: a validated slot turns green and opens read-only ("Ringkasan Validasi") — it is locked.
       const active = validated || canValidate;
+      const coachesText = (x.scheduledCoaches || []).join(', ') || '—';
+      const paxText = (x.pax == null ? '—' : String(x.pax));
+      // Tooltip explaining the button state — especially WHY a disabled one can't be clicked.
+      const actTitle = validated ? this.t('summary_hint')
+        : canValidate ? this.t('validate_hint')
+        : (x.cancelled ? this.t('session_cancelled') : this.t('before_cutoff_hint'));
       return {
         no: i + 1,
         key: x.key, time: x.time || '—', label: x.label, typeLabel: this.t(x.sessionType || (x.kind === 'venue' ? 'arena_with_coach' : 'regular_class')),
-        coaches: (x.scheduledCoaches || []).join(', ') || '—', pax: (x.pax == null ? '—' : String(x.pax)),
+        // A "—" means "not applicable" for this row (e.g. arena rental) — render it faded so it
+        // reads as N/A, not missing data.
+        coaches: coachesText, coachesCol: coachesText === '—' ? 'var(--muted2)' : 'var(--text)',
+        pax: paxText, paxCol: paxText === '—' ? 'var(--muted2)' : 'var(--text)',
         statusLabel: meta.label, statusBg: meta.bg, statusFg: meta.fg,
-        actLabel: validated ? this.t('validation_summary') : this.t('validate_coach'),
+        actLabel: validated ? this.t('validation_summary') : this.t('validate_coach'), actTitle,
         actDisabled: !active, actBg: validated ? '#16a34a' : (canValidate ? 'var(--volt)' : 'var(--border2)'), actFg: active ? '#fff' : 'var(--muted)', actCursor: active ? 'pointer' : 'not-allowed',
         act: () => this.openValidate(x.key),
       };
