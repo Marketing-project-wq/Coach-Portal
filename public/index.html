@@ -274,8 +274,8 @@
         <sc-if value="{{ isGro }}" hint-placeholder-val="{{ true }}">
         <button onclick="{{ goPackageOrders }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.packageorders.bg }};color:{{ nav.packageorders.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.packageorders.bar }};transition:background .15s;" style-hover="background:{{ nav.packageorders.hover }}">Package Orders</button>
         <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 14px;"></div>
-        <button onclick="{{ goReschedule }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Manrope';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128197;</span>Reschedule</button>
-        <button onclick="{{ goValidateCoach }}" style="display:flex;align-items:center;gap:10px;margin-top:8px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#ffffff;font-family:'Manrope';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#9989;</span>{{ vcTitle }}</button>
+        <button onclick="{{ goReschedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ reschedNavBg }};color:var(--text);font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="font-size:16px;line-height:1;">&#128197;</span><span style="flex:1;min-width:0;">Reschedule</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
+        <button onclick="{{ goValidateCoach }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ validateNavBg }};color:var(--text);font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="font-size:16px;line-height:1;">&#9989;</span><span style="flex:1;min-width:0;">{{ vcTitle }}</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
         </sc-if>
       </nav>
 
@@ -1169,9 +1169,9 @@
   </sc-if>
 
 </div></template>
-<script src="i18n.js?v=91477361"></script>
-<script src="sc-runtime.js?v=91477361"></script>
-<script src="app.js?v=91477361"></script>
+<script src="i18n.js?v=6dcb1718"></script>
+<script src="sc-runtime.js?v=6dcb1718"></script>
+<script src="app.js?v=6dcb1718"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   window.__app = new Component();

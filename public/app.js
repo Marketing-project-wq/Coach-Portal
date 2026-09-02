@@ -1807,6 +1807,10 @@ class Component extends DCLogic {
     return {
       isGro, goReschedule: () => this.go('reschedule'),
       goValidateCoach: () => this.go('validatecoach'),
+      // These two open modal-style flows, so they never take the red active-page state.
+      // A light-grey ground marks the one whose flow is currently open.
+      reschedNavBg: scr === 'reschedule' ? 'var(--raised)' : 'transparent',
+      validateNavBg: scr === 'validatecoach' ? 'var(--raised)' : 'transparent',
       // GRO coach validation — session list
       vcTitle: this.t('validate_coach'), vcSelectSessionHint: this.t('select_session'), vcDateVal: st.vcDate || this.todayISO(), setVcDate: (e) => this.setVcDate(e),
       vcRows, vcHasRows: vcRows.length > 0, vcNoRows: vcRows.length === 0, vcNoSessionsText: this.t('no_sessions_today'),
