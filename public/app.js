@@ -16,7 +16,7 @@ class Component extends DCLogic {
     this.isExternal = false;
     this._t = null;
     this.state = {
-      loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
+      loggedIn: false, role: 'coach', screen: 'dash', token: this.tokenGet(),
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       rschSearch: '', rschStatus: '', vcEdit: {},
@@ -52,6 +52,22 @@ class Component extends DCLogic {
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '' };
   }
+  // ---- per-tab session token (multi-tab fix) ----
+  // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
+  // overwriting each other. localStorage is only a SEED so a brand-new tab still opens logged-in as
+  // the last account; on first read we copy that seed into this tab and "pin" it here.
+  tokenGet() {
+    try {
+      let t = window.sessionStorage ? (sessionStorage.getItem('arena_token') || '') : '';
+      if (!t && window.localStorage) { t = localStorage.getItem('arena_token') || ''; if (t && window.sessionStorage) sessionStorage.setItem('arena_token', t); }
+      return t;
+    } catch (_e) { return ''; }
+  }
+  tokenSet(t) { try { if (window.sessionStorage) sessionStorage.setItem('arena_token', t); if (window.localStorage) localStorage.setItem('arena_token', t); } catch (_e) {} }
+  tokenClear() { try { if (window.sessionStorage) sessionStorage.removeItem('arena_token'); if (window.localStorage) localStorage.removeItem('arena_token'); } catch (_e) {} }
+  // Last-screen restore is also per-tab, so each tab reopens on its own last screen.
+  screenGet() { try { return (window.sessionStorage && sessionStorage.getItem('arena_screen')) || ''; } catch (_e) { return ''; } }
+  screenSet(s) { try { if (window.sessionStorage) sessionStorage.setItem('arena_screen', s); } catch (_e) {} }
   boot() {
     if (this.MOCK) {
       const role = (location.search.match(/role=(\w+)/) || [])[1] || 'coach';
@@ -190,20 +206,20 @@ class Component extends DCLogic {
       ['placeholder', 'title'].forEach((a) => { const val = el.getAttribute(a); if (val && d[val.trim()] != null) el.setAttribute(a, d[val.trim()]); });
     }
   }
-  go(screen) { if (window.localStorage) localStorage.setItem('arena_screen', screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
+  go(screen) { this.screenSet(screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
   applyRole(role, restore) {
     const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : role === 'gro' ? 'dash' : 'accounts';
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
-    if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
+    if (restore) { const saved = this.screenGet(); if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
     // External coaches may reach Schedule, Monitoring, Coverage, Venue Booking, Class Menu, the
     // class Detail (participant names + level), and their own Account Settings.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
     // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
     if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
-    if (window.localStorage) localStorage.setItem('arena_screen', screen);
+    this.screenSet(screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
   }
@@ -245,14 +261,14 @@ class Component extends DCLogic {
     if (!email || !pw) return this.toastMsg('Email/username & password are required.');
     this.api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: email.trim(), password: pw }) })
       .then((res) => {
-        if (window.localStorage) localStorage.setItem('arena_token', res.token);
+        this.tokenSet(res.token);
         this.accountRole = res.coach.role;
         this.isExternal = !!res.coach.external || (res.coach.role === 'coach' && isExternalName(res.coach.coach_name || res.coach.display_name));
         this.setState({ token: res.token, loggedIn: true, user: this.userObj(res.coach) });
         this.applyRole(res.coach.role);
       }).catch((e) => this.toastMsg(e.message || 'Login failed.'));
   }
-  logout() { if (window.localStorage) localStorage.removeItem('arena_token'); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
+  logout() { this.tokenClear(); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
   // Coverage/"Change Coach" straight from a class card — sets the class context then opens Coverage.
   // Lets external coaches (who can't open the participant-detail screen) still request a substitute.
   changeCoach(c) {
