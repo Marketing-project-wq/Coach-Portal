@@ -736,7 +736,7 @@
             <div style="display:flex;align-items:flex-start;gap:12px;padding:13px 20px;border-bottom:1px solid var(--border);font-size:14px;">
               <div style="width:26px;font-family:'JetBrains Mono';color:var(--muted2);font-size:13px;padding-top:2px;flex-shrink:0;">{{ p.n }}</div>
               <div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:600;">{{ p.name }}</span><sc-if value="{{ p.hasLevel }}"><span style="background:{{ p.levelBg }};color:{{ p.levelCol }};border-radius:100px;padding:1px 9px;font-size:10px;font-weight:800;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;">{{ p.level }}</span></sc-if></div><sc-if value="{{ showCheckin }}"><div style="font-size:11.5px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono';">&#128222; {{ p.phone }} &#183; &#9993; {{ p.email }}</div><sc-if value="{{ p.hasPayment }}"><span style="display:inline-block;margin-top:5px;font-size:10.5px;font-weight:700;color:{{ p.payCol }};border:1px solid var(--border2);border-radius:100px;padding:2px 9px;">Payment: {{ p.payment }}</span></sc-if></sc-if><sc-if value="{{ p.hasAddon }}"><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;align-items:center;"><span style="font-size:10.5px;color:var(--muted2);font-weight:700;">&#128717; Add-on:</span><span style="background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber);border-radius:100px;padding:2px 10px;font-size:10.5px;font-weight:700;">{{ p.addonLabel }}</span></div></sc-if><sc-if value="{{ p.hasMenus }}"><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center;"><span style="font-size:10.5px;color:var(--muted2);font-weight:700;">Menu:</span><sc-for list="{{ p.menus }}" as="mn"><span style="background:var(--volt-dim);color:var(--volt);border-radius:100px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;">{{ mn.name }}</span></sc-for></div></sc-if></div>
-              <sc-if value="{{ showCheckin }}"><button onclick="{{ p.toggle }}" style="flex-shrink:0;border:1px solid var(--border2);background:{{ p.attBg }};color:{{ p.attFg }};border-radius:8px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;">Hadir</button></sc-if>
+              <sc-if value="{{ showCheckin }}"><button onclick="{{ p.toggle }}" style="flex-shrink:0;border:1px solid var(--border2);background:{{ p.attBg }};color:{{ p.attFg }};border-radius:8px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;">Present</button></sc-if>
             </div>
             </sc-for>
           </div>
@@ -862,7 +862,7 @@
                 </sc-for>
               </div>
             </div></div>
-            <div style="display:flex;gap:16px;margin-top:12px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;"><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--green);display:inline-block;"></span>Coach sudah check-in</span><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt);display:inline-block;"></span>Belum check-in</span><span style="color:var(--muted2);">&#183; klik kelas untuk lihat peserta</span></div>
+            <div style="display:flex;gap:16px;margin-top:12px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;"><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--green);display:inline-block;"></span>Coach checked in</span><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:11px;height:11px;border-radius:3px;background:var(--volt);display:inline-block;"></span>Not checked in</span><span style="color:var(--muted2);">&#183; click a class to see participants</span></div>
           </div>
         </div>
         </sc-if>
@@ -909,8 +909,8 @@
               <span style="font-weight:800;font-family:'Archivo';font-size:15px;">&#128339; Coach Check-in &#183; {{ checkinRangeLabel }}</span>
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <div style="display:inline-flex;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:3px;">
-                  <button onclick="{{ setCheckinDay }}" style="background:{{ ckDayBg }};color:{{ ckDayFg }};border:0;border-radius:7px;padding:6px 14px;font-family:'Hanken Grotesk';font-size:12.5px;font-weight:800;cursor:pointer;">Hari</button>
-                  <button onclick="{{ setCheckinWeek }}" style="background:{{ ckWeekBg }};color:{{ ckWeekFg }};border:0;border-radius:7px;padding:6px 14px;font-family:'Hanken Grotesk';font-size:12.5px;font-weight:800;cursor:pointer;">Minggu</button>
+                  <button onclick="{{ setCheckinDay }}" style="background:{{ ckDayBg }};color:{{ ckDayFg }};border:0;border-radius:7px;padding:6px 14px;font-family:'Hanken Grotesk';font-size:12.5px;font-weight:800;cursor:pointer;">Day</button>
+                  <button onclick="{{ setCheckinWeek }}" style="background:{{ ckWeekBg }};color:{{ ckWeekFg }};border:0;border-radius:7px;padding:6px 14px;font-family:'Hanken Grotesk';font-size:12.5px;font-weight:800;cursor:pointer;">Week</button>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;">
                   <button onclick="{{ todayPrevDay }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:12.5px;font-weight:800;cursor:pointer;" style-hover="border-color:var(--volt);">&lsaquo; Prev</button>
@@ -932,12 +932,12 @@
                   </div>
                 </div>
                 </sc-for>
-                <sc-if value="{{ d.noItems }}"><div style="padding:14px 15px;font-size:12px;color:var(--muted2);font-style:italic;">Tidak ada kelas</div></sc-if>
+                <sc-if value="{{ d.noItems }}"><div style="padding:14px 15px;font-size:12px;color:var(--muted2);font-style:italic;">No classes</div></sc-if>
               </div>
               </sc-for>
             </div>
             </sc-if>
-            <sc-if value="{{ noCheckin }}"><div style="padding:40px 24px;text-align:center;color:var(--muted);">Tidak ada kelas terjadwal pada periode ini.</div></sc-if>
+            <sc-if value="{{ noCheckin }}"><div style="padding:40px 24px;text-align:center;color:var(--muted);">No classes scheduled for this period.</div></sc-if>
           </div>
         </div>
         </sc-if>
@@ -1086,7 +1086,7 @@
               <span style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:100px;background:{{ c.statusBg }};color:{{ c.statusCol }};display:inline-flex;align-items:center;gap:5px;"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.statusCol }};"></span>{{ c.status }}</span>
               <button onclick="{{ c.reset }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--cyan);color:var(--cyan);">Reset Password</button>
               <button onclick="{{ c.toggle }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">{{ c.toggleLabel }}</button>
-              <button onclick="{{ c.remove }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Hapus</button>
+              <button onclick="{{ c.remove }}" style="background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer;" style-hover="border-color:var(--red);color:var(--red);">Remove</button>
             </div>
             </sc-for>
           </div>
@@ -1243,11 +1243,11 @@
       </div>
       <sc-if value="{{ cpCanManageCoach }}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;margin-bottom:16px;">
-        <div><div style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Status Coach</div><div style="font-size:13.5px;font-weight:800;color:{{ cpCoachStatusCol }};margin-top:2px;">{{ cpCoachStatusLabel }}</div></div>
+        <div><div style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Coach Status</div><div style="font-size:13.5px;font-weight:800;color:{{ cpCoachStatusCol }};margin-top:2px;">{{ cpCoachStatusLabel }}</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <sc-if value="{{ cpCoachCanCheckin }}"><button onclick="{{ popupCoachCheckin }}" style="background:var(--volt);border:0;color:#ffffff;border-radius:9px;padding:10px 18px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check In Coach</button></sc-if>
           <sc-if value="{{ cpCoachCanCheckout }}"><button onclick="{{ popupCoachCheckout }}" style="background:var(--green);border:0;color:#ffffff;border-radius:9px;padding:10px 18px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">Check Out Coach</button></sc-if>
-          <sc-if value="{{ cpCoachCheckedOut }}"><span style="align-self:center;font-size:12.5px;font-weight:800;color:var(--green);">&#10003; Sesi selesai</span></sc-if>
+          <sc-if value="{{ cpCoachCheckedOut }}"><span style="align-self:center;font-size:12.5px;font-weight:800;color:var(--green);">&#10003; Session done</span></sc-if>
         </div>
       </div>
       </sc-if>
@@ -1256,7 +1256,7 @@
         <div style="overflow:auto;max-height:52vh;">
           <div style="min-width:990px;font-size:12.5px;">
             <div style="display:grid;grid-template-columns:108px 122px 112px 150px 82px 72px 158px 180px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;">
-              <div style="padding:12px 14px;">BOOKING CODE</div><div style="padding:12px 14px;">NAMA</div><div style="padding:12px 14px;">TELP</div><div style="padding:12px 14px;">EMAIL</div><div style="padding:12px 14px;">STATUS</div><div style="padding:12px 14px;">PAYMENT</div><div style="padding:12px 14px;">ABSENSI</div><div style="padding:12px 14px;">NOTE</div>
+              <div style="padding:12px 14px;">BOOKING CODE</div><div style="padding:12px 14px;">NAME</div><div style="padding:12px 14px;">PHONE</div><div style="padding:12px 14px;">EMAIL</div><div style="padding:12px 14px;">STATUS</div><div style="padding:12px 14px;">PAYMENT</div><div style="padding:12px 14px;">ATTENDANCE</div><div style="padding:12px 14px;">NOTE</div>
             </div>
             <sc-for list="{{ cpParticipants }}" as="p">
             <div style="display:grid;grid-template-columns:108px 122px 112px 150px 82px 72px 158px 180px;border-top:1px solid var(--border);align-items:center;">
@@ -1266,8 +1266,8 @@
               <div style="padding:11px 14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;">{{ p.email }}</div>
               <div style="padding:11px 14px;"><span style="font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:100px;background:{{ p.statusBg }};color:{{ p.statusCol }};">{{ p.statusLabel }}</span></div>
               <div style="padding:11px 14px;font-weight:700;color:{{ p.payCol }};">{{ p.payment }}</div>
-              <div style="padding:9px 14px;"><sc-if value="{{ cpCanCheck }}"><div style="display:flex;gap:5px;"><button onclick="{{ p.markHadir }}" style="border:1px solid var(--border2);background:{{ p.hadirBg }};color:{{ p.hadirFg }};border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Hadir</button><button onclick="{{ p.markTidak }}" style="border:1px solid var(--border2);background:{{ p.tidakBg }};color:{{ p.tidakFg }};border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Tidak Hadir</button></div></sc-if></div>
-              <div style="padding:9px 14px;"><sc-if value="{{ cpCanCheck }}"><input value="{{ p.note }}" onchange="{{ p.saveNote }}" placeholder="Catatan…" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:6px 9px;color:var(--text);font-family:'Hanken Grotesk';font-size:11.5px;outline:0;"></sc-if></div>
+              <div style="padding:9px 14px;"><sc-if value="{{ cpCanCheck }}"><div style="display:flex;gap:5px;"><button onclick="{{ p.markHadir }}" style="border:1px solid var(--border2);background:{{ p.hadirBg }};color:{{ p.hadirFg }};border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Present</button><button onclick="{{ p.markTidak }}" style="border:1px solid var(--border2);background:{{ p.tidakBg }};color:{{ p.tidakFg }};border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">Absent</button></div></sc-if></div>
+              <div style="padding:9px 14px;"><sc-if value="{{ cpCanCheck }}"><input value="{{ p.note }}" onchange="{{ p.saveNote }}" placeholder="Note…" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:6px 9px;color:var(--text);font-family:'Hanken Grotesk';font-size:11.5px;outline:0;"></sc-if></div>
             </div>
             </sc-for>
           </div>
@@ -1284,15 +1284,15 @@
           <sc-if value="{{ p.hasAddon }}"><div style="margin-top:9px;"><span style="background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber);border-radius:100px;padding:3px 11px;font-size:11px;font-weight:700;">&#128717; Add-on: {{ p.addonLabel }}</span></div></sc-if>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;">
             <sc-if value="{{ p.hasPayment }}"><span style="font-size:11px;font-weight:700;color:{{ p.payCol }};border:1px solid var(--border2);border-radius:100px;padding:4px 12px;">Payment: {{ p.payment }}</span></sc-if>
-            <sc-if value="{{ cpCanCheck }}"><div style="display:flex;gap:7px;"><button onclick="{{ p.markHadir }}" style="border:1px solid var(--border2);background:{{ p.hadirBg }};color:{{ p.hadirFg }};border-radius:8px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;">Hadir</button><button onclick="{{ p.markTidak }}" style="border:1px solid var(--border2);background:{{ p.tidakBg }};color:{{ p.tidakFg }};border-radius:8px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;">Tidak Hadir</button></div></sc-if>
+            <sc-if value="{{ cpCanCheck }}"><div style="display:flex;gap:7px;"><button onclick="{{ p.markHadir }}" style="border:1px solid var(--border2);background:{{ p.hadirBg }};color:{{ p.hadirFg }};border-radius:8px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;">Present</button><button onclick="{{ p.markTidak }}" style="border:1px solid var(--border2);background:{{ p.tidakBg }};color:{{ p.tidakFg }};border-radius:8px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;">Absent</button></div></sc-if>
           </div>
-          <sc-if value="{{ cpCanCheck }}"><input value="{{ p.note }}" onchange="{{ p.saveNote }}" placeholder="Catatan (mis. izin, datang telat)…" style="width:100%;box-sizing:border-box;margin-top:10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Hanken Grotesk';font-size:12px;outline:0;"></sc-if>
+          <sc-if value="{{ cpCanCheck }}"><input value="{{ p.note }}" onchange="{{ p.saveNote }}" placeholder="Note (e.g. permission, late)…" style="width:100%;box-sizing:border-box;margin-top:10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'Hanken Grotesk';font-size:12px;outline:0;"></sc-if>
         </div>
         </sc-for>
       </div>
       </sc-if>
-      <sc-if value="{{ cpNoParticipants }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px;text-align:center;color:var(--muted);">Belum ada peserta di kelas ini.</div></sc-if>
-      <button onclick="{{ closeClassPopup }}" style="align-self:flex-end;margin-top:18px;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 26px;font-family:'Archivo';font-weight:800;font-size:13px;cursor:pointer;text-transform:uppercase;">Tutup</button>
+      <sc-if value="{{ cpNoParticipants }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:34px;text-align:center;color:var(--muted);">No participants in this class yet.</div></sc-if>
+      <button onclick="{{ closeClassPopup }}" style="align-self:flex-end;margin-top:18px;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 26px;font-family:'Archivo';font-weight:800;font-size:13px;cursor:pointer;text-transform:uppercase;">Close</button>
     </div>
   </div>
   </sc-if>
@@ -1311,15 +1311,15 @@
         <div style="min-width:0;"><div style="font-family:'Archivo';font-weight:800;font-size:16px;">{{ rsName }}</div><sc-if value="{{ rsHasBookingCode }}"><div style="font-family:'JetBrains Mono';font-size:11px;color:var(--muted2);margin-top:1px;">{{ rsBookingCode }}</div></sc-if></div>
         <sc-if value="{{ rsHasCur }}">
         <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--border);">
-          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Jadwal saat ini</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Current schedule</div>
           <div style="font-size:13.5px;font-weight:700;margin-top:3px;">{{ rsCurClass }}</div>
           <div style="font-size:12.5px;color:var(--muted);margin-top:1px;">{{ rsCurWhen }}<sc-if value="{{ rsCurCoach }}"> · {{ rsCurCoach }}</sc-if></div>
         </div>
         </sc-if>
       </div>
-      <sc-if value="{{ rsLimitReached }}"><div style="background:rgba(228,0,43,.1);border:1px solid rgba(228,0,43,.3);color:var(--red);border-radius:11px;padding:11px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;flex-shrink:0;">Peserta ini sudah mencapai batas maksimum reschedule.</div></sc-if>
+      <sc-if value="{{ rsLimitReached }}"><div style="background:rgba(228,0,43,.1);border:1px solid rgba(228,0,43,.3);color:var(--red);border-radius:11px;padding:11px 14px;font-size:12.5px;font-weight:600;margin-bottom:12px;flex-shrink:0;">This participant has reached the maximum reschedule limit.</div></sc-if>
 
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:8px;flex-shrink:0;">Pilih Jadwal Baru</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:8px;flex-shrink:0;">Pick a New Schedule</div>
       <div style="overflow:auto;flex:1;min-height:80px;margin:0 -2px;padding:0 2px;">
         <sc-if value="{{ rsHasSlots }}">
         <sc-for list="{{ rsSlots }}" as="sl">
@@ -1329,25 +1329,25 @@
           <div style="flex:1;min-width:0;">
             <div style="font-size:13.5px;font-weight:800;letter-spacing:-.01em;">{{ sl.mainLine }}</div>
             <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">{{ sl.subLine }}</div>
-            <sc-if value="{{ sl.curBadge }}"><span style="display:inline-block;margin-top:6px;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);background:var(--panel2);border:1px solid var(--border2);border-radius:100px;padding:2px 9px;">Jadwal saat ini</span></sc-if>
+            <sc-if value="{{ sl.curBadge }}"><span style="display:inline-block;margin-top:6px;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);background:var(--panel2);border:1px solid var(--border2);border-radius:100px;padding:2px 9px;">Current schedule</span></sc-if>
           </div>
           <sc-if value="{{ sl.showRadio }}"><span style="flex-shrink:0;font-size:11px;font-weight:800;padding:4px 11px;border-radius:100px;background:{{ sl.badgeBg }};color:{{ sl.badgeCol }};font-family:'JetBrains Mono';">{{ sl.badge }}</span></sc-if>
         </div>
         </sc-for>
         </sc-if>
-        <sc-if value="{{ rsNoSlots }}"><div style="text-align:center;color:var(--muted);font-size:12.5px;padding:26px 0;">Tidak ada jadwal tersedia.</div></sc-if>
+        <sc-if value="{{ rsNoSlots }}"><div style="text-align:center;color:var(--muted);font-size:12.5px;padding:26px 0;">No schedules available.</div></sc-if>
       </div>
 
       <div style="flex-shrink:0;margin-top:14px;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:7px;">Alasan Reschedule</div>
-        <select onchange="{{ setRsReason }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;cursor:pointer;"><option value="">— Pilih alasan —</option><sc-for list="{{ rsReasonOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
-        <sc-if value="{{ rsShowOther }}"><input value="{{ rsReasonOther }}" onchange="{{ setRsReasonOther }}" placeholder="Tulis alasan lainnya…" style="width:100%;box-sizing:border-box;margin-top:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;outline:0;"></sc-if>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--muted2);text-transform:uppercase;margin-bottom:7px;">Reschedule Reason</div>
+        <select onchange="{{ setRsReason }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;cursor:pointer;"><option value="">— Pick a reason —</option><sc-for list="{{ rsReasonOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
+        <sc-if value="{{ rsShowOther }}"><input value="{{ rsReasonOther }}" onchange="{{ setRsReasonOther }}" placeholder="Write another reason…" style="width:100%;box-sizing:border-box;margin-top:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Hanken Grotesk';font-size:13px;outline:0;"></sc-if>
       </div>
 
       <sc-if value="{{ rsHasSummary }}"><div style="flex-shrink:0;margin-top:14px;background:color-mix(in srgb,var(--volt) 7%,var(--bg));border:1px solid color-mix(in srgb,var(--volt) 28%,transparent);border-radius:11px;padding:12px 14px;font-size:12.5px;font-weight:600;line-height:1.5;">{{ rsSummary }}</div></sc-if>
 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-shrink:0;">
-        <button onclick="{{ closeReschedule }}" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 24px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">Batal</button>
+        <button onclick="{{ closeReschedule }}" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 24px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">Cancel</button>
         <button onclick="{{ submitReschedule }}" disabled="{{ rsSaveDisabled }}" style="background:{{ rsSaveBg }};border:0;color:#ffffff;border-radius:100px;padding:11px 28px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:{{ rsSaveCursor }};text-transform:uppercase;">{{ rsSaveLabel }}</button>
       </div>
     </div>
@@ -1429,15 +1429,15 @@
         <sc-if value="{{ pdHasPhone }}"><div style="font-size:12.5px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono';">&#128222; {{ pdPhone }}</div></sc-if>
         <sc-if value="{{ pdHasEmail }}"><div style="font-size:12.5px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono';">&#9993; {{ pdEmail }}</div></sc-if>
       </div>
-      <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Paket</div>
+      <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Package</div>
       <div style="font-size:14px;font-weight:700;margin-top:3px;">{{ pdPackage }}</div>
       <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
-        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Sesi Terpakai</div><div style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;margin-top:3px;">{{ pdSessions }}</div></div>
-        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Tgl Beli</div><div style="font-size:14px;font-weight:600;margin-top:4px;">{{ pdBuyDate }}</div></div>
+        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Sessions Used</div><div style="font-family:'JetBrains Mono';font-weight:700;font-size:15px;margin-top:3px;">{{ pdSessions }}</div></div>
+        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Purchase Date</div><div style="font-size:14px;font-weight:600;margin-top:4px;">{{ pdBuyDate }}</div></div>
       </div>
       <sc-if value="{{ pdHasVoucher }}"><div style="margin-top:14px;"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Voucher</span><div style="font-family:'JetBrains Mono';font-size:13px;margin-top:3px;">{{ pdVoucher }}</div></div></sc-if>
-      <sc-if value="{{ pdHasNotes }}"><div style="margin-top:14px;"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Catatan</span><div style="font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5;">{{ pdNotes }}</div></div></sc-if>
-      <button onclick="{{ closePkgDetail }}" style="margin-top:20px;width:100%;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">Tutup</button>
+      <sc-if value="{{ pdHasNotes }}"><div style="margin-top:14px;"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted2);text-transform:uppercase;">Notes</span><div style="font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5;">{{ pdNotes }}</div></div></sc-if>
+      <button onclick="{{ closePkgDetail }}" style="margin-top:20px;width:100%;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px;font-family:'Archivo';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">Close</button>
     </div>
   </div>
   </sc-if>

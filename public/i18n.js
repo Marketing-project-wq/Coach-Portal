@@ -180,6 +180,64 @@ window.__I18N = (function () {
     'Invalid session. Please log in again.': 'Sesi tidak valid. Silakan login ulang.', 'Endpoint not found.': 'Endpoint tidak ditemukan.',
     'A server error occurred.': 'Terjadi kesalahan di server.',
     'No completed classes for this phone number yet. Reviews can be submitted after a class is finished.': 'Belum ada kelas yang selesai untuk nomor HP ini. Review bisa diberikan setelah kelas selesai.',
+    // ==== EN/ID coverage audit (all roles): newly localized UI strings ====
+    // -- GRO Schedule: Arena calendar legend + recaps --
+    'Class': 'Kelas', 'Attendance Recap': 'Rekap Absensi',
+    'Note (e.g. permission, late)…': 'Catatan (mis. izin, datang telat)…', 'Note…': 'Catatan…', 'Notes': 'Catatan',
+    '⏱ Coach Teaching Total · this month': '⏱ Total Mengajar Coach · bulan ini',
+    'Total hours become available after the DB migration (checkout_at) is run.': 'Total jam aktif setelah migrasi DB (checkout_at) dijalankan.',
+    'The “Total hours” column becomes available after the DB migration (checkout_at) is run.': 'Kolom “Total jam” aktif setelah migrasi DB (checkout_at) dijalankan.',
+    'Total hours': 'Total jam',
+    'No participant data for this period yet.': 'Belum ada data peserta pada periode ini.',
+    'No participants for this period yet.': 'Belum ada peserta pada periode ini.',
+    'No sessions recorded this month.': 'Belum ada sesi tercatat di bulan ini.',
+    'No arena booking data for this period yet.': 'Belum ada data booking arena pada periode ini.',
+    '⏰ Remember to Check Out': '⏰ Jangan lupa Check Out',
+    'This class is finished but not yet checked out:': 'Kelas ini sudah selesai tapi belum kamu check out:',
+    'Print PDF (full)': 'Cetak PDF (lengkap)',
+    'Done = coach check-in · Completed = check-out. Counted automatically from coach attendance.': 'Terlaksana = coach check-in · Selesai = check-out. Terhitung otomatis dari kehadiran coach.',
+    // -- Assign Venue / venue booking --
+    'Coach (optional)': 'Coach (opsional)', 'No coach': 'Tanpa coach', '+ Set coach': '+ Tetapkan coach',
+    // -- Package Orders / Reschedule tables --
+    'Search participant name or order code…': 'Cari nama peserta atau kode order…',
+    'No matching package orders.': 'Tidak ada package order yang cocok.',
+    'Search name, booking code, or phone…': 'Cari nama, kode booking, atau telp…',
+    'No matching bookings.': 'Tidak ada booking yang cocok.',
+    'Phone': 'Telp', 'Action': 'Aksi', 'Pax': 'Peserta',
+    // -- Team schedule legend --
+    'Coach checked in': 'Coach sudah check-in', 'Not checked in': 'Belum check-in',
+    '· click a class to see participants': '· klik kelas untuk lihat peserta',
+    // -- Check-in day/week toggle + empty states --
+    'Day': 'Hari', 'Week': 'Minggu', 'No classes': 'Tidak ada kelas',
+    'No classes scheduled for this period.': 'Tidak ada kelas terjadwal pada periode ini.',
+    '✓ Session done': '✓ Sesi selesai',
+    // -- Class popup (GRO) --
+    'PHONE': 'TELP', 'ATTENDANCE': 'ABSENSI', 'Present': 'Hadir', 'Absent': 'Tidak Hadir',
+    'No participants in this class yet.': 'Belum ada peserta di kelas ini.', 'Close': 'Tutup',
+    'Coach Status': 'Status Coach',
+    // -- Reschedule modal --
+    'Current schedule': 'Jadwal saat ini',
+    'This participant has reached the maximum reschedule limit.': 'Peserta ini sudah mencapai batas maksimum reschedule.',
+    'Pick a New Schedule': 'Pilih Jadwal Baru', 'No schedules available.': 'Tidak ada jadwal tersedia.',
+    '— Pick a reason —': '— Pilih alasan —', 'Reschedule Reason': 'Alasan Reschedule',
+    'Write another reason…': 'Tulis alasan lainnya…',
+    // -- Reschedule reason options --
+    'Sick': 'Sakit', 'Personal matter': 'Ada acara', 'Work schedule change': 'Perubahan jadwal kerja', 'Other': 'Lainnya',
+    'Checked in': 'Sudah check-in',
+    // -- Package detail modal --
+    'Sessions Used': 'Sesi Terpakai',
+    // -- Toasts (full-string) --
+    'Failed to save attendance.': 'Gagal menyimpan absensi.', 'Failed to load schedule.': 'Gagal memuat jadwal.',
+    'Pick a new schedule first.': 'Pilih jadwal baru dulu.', 'Fill in the reschedule reason.': 'Isi alasan reschedule.',
+    'Pick a reschedule reason.': 'Pilih alasan reschedule.', 'Participant rescheduled successfully.': 'Reschedule peserta berhasil.',
+    'Failed to move the schedule.': 'Gagal memindahkan jadwal.', 'Failed to load sessions.': 'Gagal memuat sesi.',
+    'Failed to save validation.': 'Gagal menyimpan validasi.',
+    'Photo storage is not active yet — run setup first.': 'Storage foto belum aktif — jalankan setup dulu.',
+    'Photo saved': 'Foto tersimpan', 'Failed to upload photo': 'Gagal upload foto', 'Photo deleted': 'Foto dihapus',
+    'Notes column is not active yet — run the DB migration first.': 'Kolom catatan belum aktif — jalankan migrasi DB dulu.',
+    'Preparing PDF (loading photos)…': 'Menyiapkan PDF (memuat foto)…',
+    'Participant marked present': 'Peserta ditandai hadir', 'Participant marked absent': 'Peserta ditandai absen',
+    'Attendance cleared': 'Absensi dibatalkan', 'Coach cleared': 'Coach dikosongkan', 'Failed to save coach.': 'Gagal menyimpan coach.',
   };
 
   // Whole-word date replacements — applied only to text that contains a digit
@@ -199,6 +257,10 @@ window.__I18N = (function () {
     [/\bSCHEDULE\b/g, 'JADWAL'], [/Schedule All Coach/g, 'Jadwal Semua Coach'],
     [/upcoming classes/g, 'kelas mendatang'], [/classes today/g, 'kelas hari ini'], [/class today/g, 'kelas hari ini'],
     [/ cls\b/g, ' kls'], [/\bUPCOMING\b/g, 'MENDATANG'],
+    // EN/ID audit: headings/labels that share a text node with a dynamic value (date/count)
+    [/Arena Calendar/g, 'Kalender Arena'], [/Coach Session Recap/g, 'Rekap Sesi Coach'],
+    [/sessions done/g, 'sesi selesai'], [/Pick a participant to reschedule/g, 'Pilih peserta yang mau dipindah jadwalnya'],
+    [/Last rental:/g, 'Terakhir sewa:'], [/\bSched /g, 'Jadwal '], [/ classes\b/g, ' kelas'],
   ];
 
   // Toast prefixes/phrases (concatenated with dynamic values).
@@ -208,6 +270,8 @@ window.__I18N = (function () {
     ['Coach added · user: ', 'Coach ditambahkan · user: '],
     ['Password reset: ', 'Password direset: '],
     ['Status of ', 'Status '], [' updated', ' diperbarui'], [' participants', ' peserta'],
+    [' is already in the list.', ' sudah ada di daftar.'],
+    ['Account ', 'Akun '], [' deleted', ' dihapus'], ['Coach set', 'Coach di-set'],
   ];
 
   // ---- Keyed bilingual table (key -> {id, en}) ----
@@ -263,6 +327,13 @@ window.__I18N = (function () {
     summary_hint:          { id: 'Lihat ringkasan validasi (terkunci)', en: 'View validation summary (locked)' },
     session_cancelled:     { id: 'Sesi dibatalkan — tidak bisa divalidasi', en: 'Session cancelled — cannot be validated' },
     before_cutoff_hint:    { id: 'Validasi hanya untuk sesi mulai 1 September 2026', en: 'Validation is only for sessions from 1 September 2026' },
+    // ---- EN/ID audit: coach check-in/out status labels + attendance suffixes ----
+    coach_checked_in:      { id: 'Coach sudah check-in',  en: 'Coach checked in' },
+    coach_checked_out:     { id: 'Coach sudah check-out', en: 'Coach checked out' },
+    coach_not_checked_in:  { id: 'Coach belum check-in',  en: 'Coach not checked in' },
+    not_yet:               { id: 'belum',                 en: 'not yet' },
+    att_attended:          { id: 'hadir',                 en: 'attended' },
+    att_absent:            { id: 'tidak hadir',           en: 'absent' },
   };
 
   return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl, T: T };
