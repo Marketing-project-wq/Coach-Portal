@@ -249,7 +249,7 @@ class Component extends DCLogic {
     else if (screen === 'schedule') this.api('/api/gro/calendar' + (this.state.teamCalYm ? ('?ym=' + this.state.teamCalYm) : '')).then((r) => this.setD({ teamCalCells: r.cells || [], teamCalLabel: r.monthLabel || '', teamCalYm: r.ym || '', teamCalPrevYm: r.prevYm || '', teamCalNextYm: r.nextYm || '' })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
-    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
+    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [], statSummary: d.summary || null })).catch(fail); } }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
   }
@@ -1589,6 +1589,12 @@ class Component extends DCLogic {
     const reportAttendedCap = bookedN ? (isID ? attPctN + '% datang' : attPctN + '% came') : (isID ? 'belum ada data' : 'no data yet');
     const reportNoShowCap = bookedN ? (isID ? nsPctN + '% tidak datang' : nsPctN + '% didn\'t come') : (isID ? 'belum ada data' : 'no data yet');
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 0, attended: 0, attPct: '—', attCol: C.muted2, subs: 0, photo: '', hasPhoto: false };
+    // Stat cards read the selected-month summary (same source as the breakdown), not `sel`
+    // (which is the current-month monitoring aggregate — that made past months show 0).
+    const _ss = D.statSummary || null;
+    const _ssAttOf = _ss ? (_ss.attendedOf || 0) : 0, _ssAtt = _ss ? (_ss.attended || 0) : 0;
+    const _ssPct = _ssAttOf ? Math.round((_ssAtt / _ssAttOf) * 100) : 0;
+    const statCards = { classes: _ss ? _ss.classes : 0, peserta: _ss ? _ss.participants : 0, attended: _ssAtt, attendedOf: _ssAttOf, attPct: _ssAttOf ? (_ssPct + '%') : '—', attCol: !_ssAttOf ? C.muted2 : (_ssPct >= 90 ? C.green : (_ssPct >= 50 ? C.amber : C.red)), coverage: _ss ? _ss.coverage : 0 };
     // Per-Class Breakdown sort: by date (default), most participants, or least.
     const statRowSort = st.statRowSort || 'date';
     let statRowsArr = (D.stats || []).slice();
@@ -1959,7 +1965,7 @@ class Component extends DCLogic {
       teamCalCells, hasTeamCal, teamCalLabel: D.teamCalLabel || '', teamCalPrev: () => this.teamCalPrev(), teamCalNext: () => this.teamCalNext(),
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
       schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
-      coaches, reportRows, sel, statRows, statMonth, templates, perms,
+      coaches, reportRows, sel, statCards, statRows, statMonth, templates, perms,
       statWeeks, hasStatWeeks, statDays, hasStatDays,
       srDate, srMost, srLeast, sortStatDate: () => this.setStatRowSort('date'), sortStatMost: () => this.setStatRowSort('pax_desc'), sortStatLeast: () => this.setStatRowSort('pax_asc'),
       statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
