@@ -572,6 +572,13 @@
         <button onclick="{{ goReschedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ reschedNavBg }};color:var(--text);font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="font-size:16px;line-height:1;">&#128197;</span><span style="flex:1;min-width:0;">Reschedule</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
         <button onclick="{{ goValidateCoach }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ validateNavBg }};color:var(--text);font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="font-size:16px;line-height:1;">&#9989;</span><span style="flex:1;min-width:0;">{{ vcTitle }}</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
         </sc-if>
+        <sc-if value="{{ showUnitSwitch }}">
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--muted2);padding:2px 10px 9px;">SWITCH UNIT</div>
+          <button onclick="{{ setUnitArena }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin-bottom:4px;border-radius:10px;border:0;border-left:3px solid {{ unitArena.bar }};cursor:pointer;background:{{ unitArena.bg }};color:{{ unitArena.fg }};font-family:'Hanken Grotesk';font-weight:{{ unitArena.weight }};font-size:13px;text-align:left;letter-spacing:.03em;text-transform:uppercase;transition:background .15s;" style-hover="background:var(--panel2);"><span style="width:6px;height:6px;border-radius:50%;background:{{ unitArena.bar }};flex-shrink:0;"></span>Arena</button>
+          <button onclick="{{ setUnitGym }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid {{ unitGym.bar }};cursor:pointer;background:{{ unitGym.bg }};color:{{ unitGym.fg }};font-family:'Hanken Grotesk';font-weight:{{ unitGym.weight }};font-size:13px;text-align:left;letter-spacing:.03em;text-transform:uppercase;transition:background .15s;" style-hover="background:var(--panel2);"><span style="width:6px;height:6px;border-radius:50%;background:{{ unitGym.bar }};flex-shrink:0;"></span>Gym</button>
+        </div>
+        </sc-if>
       </nav>
 
       <div style="padding:14px;border-top:1px solid var(--border);">

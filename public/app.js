@@ -27,6 +27,7 @@ class Component extends DCLogic {
       reviewCoach: '', boardSort: 'pax',
       toast: '',
       lang: (window.localStorage && localStorage.getItem('arena_lang')) || 'id',
+      unit: (window.localStorage && localStorage.getItem('arena_unit')) || 'arena',
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -50,7 +51,8 @@ class Component extends DCLogic {
     }
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '' };
+    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '',
+      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0 };
   }
   // ---- per-tab session token (multi-tab fix) ----
   // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
@@ -135,6 +137,7 @@ class Component extends DCLogic {
     opts = opts || {};
     const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
     if (this.state.token) headers.Authorization = 'Bearer ' + this.state.token;
+    headers['X-Unit'] = this.state.unit || 'arena';
     return fetch(path, Object.assign({}, opts, { headers })).then(async (r) => {
       const data = await r.json().catch(() => ({}));
       if (r.status === 401 && path.indexOf('/auth/login') < 0) { this.logout(); throw new Error('unauthorized'); }
@@ -219,10 +222,29 @@ class Component extends DCLogic {
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
     // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
     if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
+    // Unit switcher: if the Gym unit was last selected, land on the Gym view (admin & coach & HC).
+    if (this.state.unit === 'gym' && ['coach', 'hc', 'admin'].indexOf(role) >= 0) screen = 'gymview';
     this.screenSet(screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
   }
+  // ---------- unit switcher (Arena <-> Gym) ----------
+  setUnit(u) {
+    if (this.state.unit === u) return;
+    if (window.localStorage) localStorage.setItem('arena_unit', u);
+    this.setState({ unit: u });
+    if (this.MOCK) return;
+    this.go(u === 'gym' ? 'gymview' : 'dash');
+  }
+  loadGymView() {
+    if (this.MOCK) return;
+    const ym = this.state.gymCalYm || '';
+    this.api('/api/unit/gym/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ gymCalCells: r.cells || [], gymCalLabel: r.monthLabel || '', gymCalYm: r.ym || '', gymCalPrevYm: r.prevYm || '', gymCalNextYm: r.nextYm || '' })).catch(() => {});
+    this.gymShowDay(this.state.gymSelDate || this.todayISO());
+    this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0 })).catch(() => {});
+  }
+  gymShowDay(date) { this.setState({ gymSelDate: date }); if (this.MOCK) return; this.api('/api/unit/gym/day?date=' + encodeURIComponent(date)).then((r) => this.setD({ gymDayClasses: r.classes || [], gymDayLabel: r.dateLabel || '' })).catch(() => {}); }
+  gymCalNav(ym) { if (!ym) return; this.setState({ gymCalYm: ym }); if (!this.MOCK) this.loadGymView(); }
   setRole(role) {
     const rank = { coach: 0, hc: 1, admin: 2 };
     if (rank[role] > rank[this.accountRole]) return this.toastMsg('You do not have access to this area.');
@@ -231,6 +253,7 @@ class Component extends DCLogic {
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Failed to load.'); };
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); }
+    else if (screen === 'gymview') this.loadGymView();
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -1158,7 +1181,9 @@ class Component extends DCLogic {
     if (scr === 'packageorders') tt = titles.packageorders;
     if (scr === 'reschedule') tt = titles.reschedule;
     if (scr === 'validatecoach') tt = titles.validatecoach;
-    const s = { dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
+    titles.gymview = ['20FIT Gym', 'Jadwal & Klien'];
+    if (scr === 'gymview') tt = titles.gymview;
+    const s = { gymview: scr === 'gymview', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1842,9 +1867,31 @@ class Component extends DCLogic {
       }
     }
 
+    // ---- unit switcher (Arena / Gym) + Gym view ----
+    const unitSeg = (on) => ({ bg: on ? 'var(--raised)' : 'transparent', fg: on ? 'var(--text)' : 'var(--muted)', bar: on ? 'var(--volt)' : 'transparent', weight: on ? '800' : '600' });
+    const gymDow = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((x) => ({ lbl: x }));
+    const gymCells = (D.gymCalCells || []).map((c) => c.blank ? { blank: true } : {
+      blank: false, day: c.day, date: c.date,
+      bg: c.isToday ? 'var(--volt-dim)' : (D.gymSelDate === c.date ? 'var(--raised)' : 'transparent'),
+      border: D.gymSelDate === c.date ? 'var(--volt)' : (c.teach ? 'var(--border2)' : 'var(--border)'),
+      col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach, pick: () => this.gymShowDay(c.date),
+    });
+    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: x.color || 'var(--cyan)', cancelled: !!x.cancelled }));
+    const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
+
     return {
       isGro, goReschedule: () => this.go('reschedule'),
       goValidateCoach: () => this.go('validatecoach'),
+      // Unit switcher — shown for admin & coach; picks which unit's data the view shows.
+      showUnitSwitch: isAdmin || st.role === 'coach', unitArena: unitSeg(st.unit === 'arena'), unitGym: unitSeg(st.unit === 'gym'),
+      setUnitArena: () => this.setUnit('arena'), setUnitGym: () => this.setUnit('gym'),
+      // Gym view (calendar + day list + clients)
+      gymCalLabel: D.gymCalLabel || '', gymDow,
+      gymPrev: () => this.gymCalNav(D.gymCalPrevYm), gymNext: () => this.gymCalNav(D.gymCalNextYm),
+      gymCells, gymHasCells: gymCells.length > 0,
+      gymDayLabel: D.gymDayLabel || '', gymDay, gymDayHas: gymDay.length > 0, gymDayEmpty: gymDay.length === 0,
+      gymClients, gymClientsHas: gymClients.length > 0, gymClientsEmpty: gymClients.length === 0,
+      gymClientsTotal: D.gymClientsTotal || 0, gymClientsActive: D.gymClientsActive || 0,
       // These two open modal-style flows, so they never take the red active-page state.
       // A light-grey ground marks the one whose flow is currently open.
       reschedNavBg: scr === 'reschedule' ? 'var(--raised)' : 'transparent',
