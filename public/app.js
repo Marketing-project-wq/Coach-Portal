@@ -16,7 +16,7 @@ class Component extends DCLogic {
     this.isExternal = false;
     this._t = null;
     this.state = {
-      loggedIn: false, role: 'coach', screen: 'dash', token: (window.localStorage && localStorage.getItem('arena_token')) || '',
+      loggedIn: false, role: 'coach', screen: 'dash', token: this.tokenGet(),
       user: { name: '', role: '', first: '', initials: '' },
       absen: false, absenClass: null, checkoutModal: false, checkoutClass: null, checkoutData: null, reset: null, resetId: null, resetPwd: '', selSub: '', selCoachName: '', currentClass: null,
       rschSearch: '', rschStatus: '', vcEdit: {},
@@ -52,6 +52,22 @@ class Component extends DCLogic {
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '' };
   }
+  // ---- per-tab session token (multi-tab fix) ----
+  // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
+  // overwriting each other. localStorage is only a SEED so a brand-new tab still opens logged-in as
+  // the last account; on first read we copy that seed into this tab and "pin" it here.
+  tokenGet() {
+    try {
+      let t = window.sessionStorage ? (sessionStorage.getItem('arena_token') || '') : '';
+      if (!t && window.localStorage) { t = localStorage.getItem('arena_token') || ''; if (t && window.sessionStorage) sessionStorage.setItem('arena_token', t); }
+      return t;
+    } catch (_e) { return ''; }
+  }
+  tokenSet(t) { try { if (window.sessionStorage) sessionStorage.setItem('arena_token', t); if (window.localStorage) localStorage.setItem('arena_token', t); } catch (_e) {} }
+  tokenClear() { try { if (window.sessionStorage) sessionStorage.removeItem('arena_token'); if (window.localStorage) localStorage.removeItem('arena_token'); } catch (_e) {} }
+  // Last-screen restore is also per-tab, so each tab reopens on its own last screen.
+  screenGet() { try { return (window.sessionStorage && sessionStorage.getItem('arena_screen')) || ''; } catch (_e) { return ''; } }
+  screenSet(s) { try { if (window.sessionStorage) sessionStorage.setItem('arena_screen', s); } catch (_e) {} }
   boot() {
     if (this.MOCK) {
       const role = (location.search.match(/role=(\w+)/) || [])[1] || 'coach';
@@ -190,20 +206,20 @@ class Component extends DCLogic {
       ['placeholder', 'title'].forEach((a) => { const val = el.getAttribute(a); if (val && d[val.trim()] != null) el.setAttribute(a, d[val.trim()]); });
     }
   }
-  go(screen) { if (window.localStorage) localStorage.setItem('arena_screen', screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
+  go(screen) { this.screenSet(screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
   applyRole(role, restore) {
     const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : role === 'gro' ? 'dash' : 'accounts';
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
-    if (restore) { const saved = (window.localStorage && localStorage.getItem('arena_screen')) || ''; if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
+    if (restore) { const saved = this.screenGet(); if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
     // External coaches may reach Schedule, Monitoring, Coverage, Venue Booking, Class Menu, the
     // class Detail (participant names + level), and their own Account Settings.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
     // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
     if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
-    if (window.localStorage) localStorage.setItem('arena_screen', screen);
+    this.screenSet(screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
   }
@@ -233,7 +249,7 @@ class Component extends DCLogic {
     else if (screen === 'schedule') this.api('/api/gro/calendar' + (this.state.teamCalYm ? ('?ym=' + this.state.teamCalYm) : '')).then((r) => this.setD({ teamCalCells: r.cells || [], teamCalLabel: r.monthLabel || '', teamCalYm: r.ym || '', teamCalPrevYm: r.prevYm || '', teamCalNextYm: r.nextYm || '' })).catch(fail);
     else if (screen === 'subrev') { if (this.state.role === 'coach') this.loadRotations(); else this.api('/api/hc/subs').then((d) => this.setD({ subs: d })).catch(fail); }
     else if (screen === 'reports') { this.api('/api/hc/coaches?range=' + (this.state.reportRange || 'month')).then((d) => this.setD({ coaches: d.coaches, reportPeriod: d.periodLabel, reportTotalClasses: d.totalClasses, reportTotalPax: d.totalPax, reportBooked: d.bookedTotal, reportAttended: d.attendedTotal, reportNoShow: d.noShowTotal, reportCoverage: d.coverage, reportInsights: d.insights || null, reportClassList: d.classList || [] })).catch(fail); this.loadRegister(); this.loadCoachSessions(); }
-    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [] })).catch(fail); } }
+    else if (screen === 'stats') { const nm = this.state.selCoachName; if (nm) { const qs = this.state.statYm ? ('?month=' + encodeURIComponent(this.state.statYm)) : ''; this.api('/api/hc/coach/' + encodeURIComponent(nm) + '/stats' + qs).then((d) => this.setD({ stats: d.stats, statMonth: d.monthLabel, statWeeks: d.weeks || [], statDays: d.days || [], statMonths: d.months || [], statSummary: d.summary || null })).catch(fail); } }
     else if (screen === 'accounts') this.api('/api/admin/coaches').then((d) => this.setD({ coaches: d.coaches })).catch(fail);
     else if (screen === 'templates') this.api('/api/templates').then((d) => this.setD({ templates: d.templates })).catch(fail);
   }
@@ -245,14 +261,14 @@ class Component extends DCLogic {
     if (!email || !pw) return this.toastMsg('Email/username & password are required.');
     this.api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: email.trim(), password: pw }) })
       .then((res) => {
-        if (window.localStorage) localStorage.setItem('arena_token', res.token);
+        this.tokenSet(res.token);
         this.accountRole = res.coach.role;
         this.isExternal = !!res.coach.external || (res.coach.role === 'coach' && isExternalName(res.coach.coach_name || res.coach.display_name));
         this.setState({ token: res.token, loggedIn: true, user: this.userObj(res.coach) });
         this.applyRole(res.coach.role);
       }).catch((e) => this.toastMsg(e.message || 'Login failed.'));
   }
-  logout() { if (window.localStorage) localStorage.removeItem('arena_token'); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
+  logout() { this.tokenClear(); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
   // Coverage/"Change Coach" straight from a class card — sets the class context then opens Coverage.
   // Lets external coaches (who can't open the participant-detail screen) still request a substitute.
   changeCoach(c) {
@@ -296,8 +312,8 @@ class Component extends DCLogic {
     this.setState({ classPopup: Object.assign({}, cp, { participants }) });
     if (this.MOCK) return;
     this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
-      .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : status === 'no_show' ? 'Peserta ditandai absen' : 'Absensi dibatalkan'); })
-      .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Gagal menyimpan absensi'); });
+      .then(() => { this.toastMsg(status === 'checked_in' ? 'Participant marked present' : status === 'no_show' ? 'Participant marked absent' : 'Attendance cleared'); })
+      .catch((e) => { const c = this.state.classPopup; if (c) this.setState({ classPopup: Object.assign({}, c, { participants: prev }) }); this.toastMsg(e.message || 'Failed to save attendance.'); });
   }
   // ---- RESCHEDULE (GRO) — a full page of class bookings (step 1) + a slot-picker modal (step 2) ----
   setRschSearch(e) { this._rschFocus = true; this.setState({ rschSearch: e && e.target ? e.target.value : '' }); }
@@ -309,7 +325,7 @@ class Component extends DCLogic {
     if (this.MOCK) return;
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId))
       .then((d) => this.setState({ reschedule: Object.assign({}, d, { bookingId }) }))
-      .catch((e) => this.toastMsg(e.message || 'Gagal memuat jadwal.'));
+      .catch((e) => this.toastMsg(e.message || 'Failed to load schedule.'));
   }
   closeReschedule() { this.setState({ reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false }); }
   setRsSlot(scheduleId) { if (this.state.rsSaving) return; this.setState({ rsSlot: scheduleId }); }
@@ -317,14 +333,14 @@ class Component extends DCLogic {
   setRsReasonOther(e) { this.setState({ rsReasonOther: e && e.target ? e.target.value : '' }); }
   submitReschedule() {
     const st = this.state; const rs = st.reschedule; if (!rs || st.rsSaving) return;
-    if (!st.rsSlot) return this.toastMsg('Pilih jadwal baru dulu.');
+    if (!st.rsSlot) return this.toastMsg('Pick a new schedule first.');
     const reason = st.rsReason === 'Lainnya' ? String(st.rsReasonOther || '').trim() : st.rsReason;
-    if (!reason) return this.toastMsg(st.rsReason === 'Lainnya' ? 'Isi alasan reschedule.' : 'Pilih alasan reschedule.');
+    if (!reason) return this.toastMsg(st.rsReason === 'Lainnya' ? 'Fill in the reschedule reason.' : 'Pick a reschedule reason.');
     const bookingId = rs.bookingId;
     this.setState({ rsSaving: true });
     this.api('/api/gro/reschedule/' + encodeURIComponent(bookingId), { method: 'POST', body: JSON.stringify({ schedule_id: st.rsSlot, reason }) })
-      .then(() => { this.toastMsg('Reschedule peserta berhasil.'); this.closeReschedule(); if (this.state.screen === 'reschedule') this.loadScreen('reschedule'); else this.autoRefresh(); })
-      .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Gagal memindahkan jadwal.'); });
+      .then(() => { this.toastMsg('Participant rescheduled successfully.'); this.closeReschedule(); if (this.state.screen === 'reschedule') this.loadScreen('reschedule'); else this.autoRefresh(); })
+      .catch((e) => { this.setState({ rsSaving: false }); this.toastMsg(e.message || 'Failed to move the schedule.'); });
   }
   // ---------- GRO coach validation ----------
   loadVcSessions() {
@@ -332,7 +348,7 @@ class Component extends DCLogic {
     const date = this.state.vcDate || this.todayISO();
     this.api('/api/gro/validation/sessions?date=' + encodeURIComponent(date))
       .then((r) => this.setD({ vcSessions: r.sessions || [], vcAssignable: r.assignable || [], vcBeforeCutoff: !!r.beforeCutoff, vcValidationFrom: r.validationFrom || '' }))
-      .catch((e) => this.toastMsg(e.message || 'Gagal memuat sesi.'));
+      .catch((e) => this.toastMsg(e.message || 'Failed to load sessions.'));
   }
   setVcDate(e) { const v = e && e.target ? e.target.value : ''; this.setState({ vcDate: v }); if (!this.MOCK) this.loadVcSessions(); }
   // Open the validation modal for one session, seeding coach rows from any existing
@@ -340,8 +356,10 @@ class Component extends DCLogic {
   openValidate(key) {
     const sess = (this.state.d.vcSessions || []).find((x) => x.key === key);
     if (!sess) return;
-    if (!sess.started) return this.toastMsg(this.t('cannot_validate_future'));
+    // Task 1: no longer blocked before the session starts. Still only Sept 2026+ sessions.
     if (this.state.d.vcBeforeCutoff) return this.toastMsg(this.t('cannot_validate_future'));
+    // Task 2: an already-validated slot is locked — open it read-only (view the summary only).
+    const readonly = !!sess.validation;
     let coaches, held = true, noCoach = false;
     if (sess.validation) {
       held = sess.validation.held !== false; noCoach = !!sess.validation.noCoach;
@@ -351,7 +369,7 @@ class Component extends DCLogic {
     }
     // late validation: the session's date is before today.
     const late = String(this.state.vcDate || this.todayISO()) < this.todayISO();
-    this.setState({ vcModal: { key, kind: sess.kind, id: sess.id, label: sess.label, time: sess.time, classType: sess.classType, pax: sess.pax, sessionType: sess.sessionType || (sess.kind === 'venue' ? 'arena_with_coach' : 'regular_class'), coaches, held, noCoach, late, step: 'edit' }, vcSaving: false });
+    this.setState({ vcModal: { key, kind: sess.kind, id: sess.id, label: sess.label, time: sess.time, classType: sess.classType, pax: sess.pax, sessionType: sess.sessionType || (sess.kind === 'venue' ? 'arena_with_coach' : 'regular_class'), coaches, held, noCoach, late, step: readonly ? 'summary' : 'edit', readonly }, vcSaving: false });
   }
   closeValidate() { this.setState({ vcModal: null, vcSaving: false }); }
   _vcPatch(patch) { this.setState({ vcModal: Object.assign({}, this.state.vcModal, patch) }); }
@@ -361,7 +379,7 @@ class Component extends DCLogic {
   vcAddCoach(e) {
     const m = this.state.vcModal; if (!m) return; const name = e && e.target ? e.target.value : ''; if (!name) return;
     if (e && e.target) e.target.value = '';
-    if (m.coaches.some((c) => String(c.name).toLowerCase() === String(name).toLowerCase())) return this.toastMsg(name + ' sudah ada di daftar.');
+    if (m.coaches.some((c) => String(c.name).toLowerCase() === String(name).toLowerCase())) return this.toastMsg(name + ' is already in the list.');
     this._vcPatch({ coaches: m.coaches.concat([{ name, present: true, offSchedule: true, reason: '' }]) });
   }
   vcToggleHeld() { const m = this.state.vcModal; if (!m) return; this._vcPatch({ held: !m.held }); }
@@ -377,13 +395,13 @@ class Component extends DCLogic {
   }
   vcBackToEdit() { this._vcPatch({ step: 'edit' }); }
   vcSave() {
-    const m = this.state.vcModal; if (!m || this.state.vcSaving) return;
+    const m = this.state.vcModal; if (!m || m.readonly || this.state.vcSaving) return;
     this.setState({ vcSaving: true });
     const payload = { kind: m.kind, id: m.id, held: m.held, no_coach: m.noCoach, session_type: m.sessionType, late: m.late,
       coaches: (m.held && !m.noCoach) ? m.coaches.map((c) => ({ name: c.name, present: c.present, off_schedule: c.offSchedule, reason: c.reason })) : [] };
     this.api('/api/gro/validation/save', { method: 'POST', body: JSON.stringify(payload) })
       .then(() => { this.toastMsg(this.t('validation_saved')); this.closeValidate(); this.loadVcSessions(); })
-      .catch((e) => { this.setState({ vcSaving: false }); this.toastMsg(e.message || 'Gagal menyimpan validasi.'); });
+      .catch((e) => { this.setState({ vcSaving: false }); this.toastMsg(e.message || 'Failed to save validation.'); });
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
   _compressImage(file, maxDim, quality) {
@@ -413,14 +431,14 @@ class Component extends DCLogic {
     this.toastMsg('Mengupload foto…');
     this._compressImage(file, 1000, 0.7)
       .then((dataUrl) => this.api('/api/coach/class/' + encodeURIComponent(sid) + '/photo', { method: 'POST', body: JSON.stringify({ image: dataUrl }) }))
-      .then((r) => { if (r && r.needsMigration) return this.toastMsg('Storage foto belum aktif — jalankan setup dulu.'); this.toastMsg('Foto tersimpan'); this.openClassPopup(sid); })
-      .catch((err) => this.toastMsg(err.message || 'Gagal upload foto'));
+      .then((r) => { if (r && r.needsMigration) return this.toastMsg('Photo storage is not active yet — run setup first.'); this.toastMsg('Photo saved'); this.openClassPopup(sid); })
+      .catch((err) => this.toastMsg(err.message || 'Failed to upload photo'));
   }
   deleteClassPhoto() {
     const cp = this.state.classPopup; const sid = cp && cp.schedule && cp.schedule.schedule_id;
     if (!sid) return;
     if (this.MOCK) { this.setState({ classPopup: Object.assign({}, cp, { schedule: Object.assign({}, cp.schedule, { photo: '' }) }) }); return; }
-    this.api('/api/coach/class/' + encodeURIComponent(sid) + '/photo/delete', { method: 'POST' }).then(() => { this.toastMsg('Foto dihapus'); this.openClassPopup(sid); }).catch((e) => this.toastMsg(e.message));
+    this.api('/api/coach/class/' + encodeURIComponent(sid) + '/photo/delete', { method: 'POST' }).then(() => { this.toastMsg('Photo deleted'); this.openClassPopup(sid); }).catch((e) => this.toastMsg(e.message));
   }
   openAbsen(cls) { this.setState({ absen: true, absenClass: cls || (this.state.d.classDetail && this.state.d.classDetail.schedule) }); }
   openVenueAbsen(v) { this.setState({ absen: true, absenClass: { venueId: v.id, type: 'Arena + Coach · ' + (v.customer || 'Arena booking'), time: v.time || '' } }); }
@@ -509,12 +527,12 @@ class Component extends DCLogic {
     if (!scheduleId || !bookingId) return;
     if (this.MOCK) return;
     this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/note', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, note: note || '' }) })
-      .then((r) => { if (r && r.needsMigration) this.toastMsg('Kolom catatan belum aktif — jalankan migrasi DB dulu.'); if (refresh === 'register') this.loadRegister(); })
+      .then((r) => { if (r && r.needsMigration) this.toastMsg('Notes column is not active yet — run the DB migration first.'); if (refresh === 'register') this.loadRegister(); })
       .catch((e) => this.toastMsg(e.message));
   }
   exportAttendancePdf() {
     const rows = this.state.d.registerRows || [];
-    if (!rows.length) return this.toastMsg('Belum ada data untuk di-export.');
+    if (!rows.length) return this.toastMsg('No data to export.');
     const monthLbl = (this.state.d.registerMonths || []).find((m) => m.picked);
     const title = 'Laporan Absensi Arena · ' + (monthLbl ? monthLbl.label : 'Semua bulan');
     const order = []; const by = {};
@@ -533,7 +551,7 @@ class Component extends DCLogic {
     const thead = '<tr>' + headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>';
     const blocks = groups.map((g) => {
       const photo = g.photo ? '<img class="ph" src="' + esc(g.photo) + '">' : '';
-      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + (g.coachIn ? '&#10003; ' + esc(g.coachIn) : 'belum') + ' &middot; check-out: ' + (g.coachOut ? '&#10003; ' + esc(g.coachOut) : 'belum') + '</div></div></div>';
+      const head = '<div class="clshead">' + photo + '<div><div class="clstitle">' + esc(g.date) + ' &middot; ' + esc(g.time) + ' &middot; ' + esc(g.className) + '</div><div class="clssub">Coach: ' + esc(g.coach || '—') + ' &middot; GRO: ' + esc(g.gro || '—') + '</div><div class="clssub">Coach check-in: ' + (g.coachIn ? '&#10003; ' + esc(g.coachIn) : this.t('not_yet')) + ' &middot; check-out: ' + (g.coachOut ? '&#10003; ' + esc(g.coachOut) : this.t('not_yet')) + '</div></div></div>';
       const tbody = g.rows.map((r) => '<tr>' + r.map((c, i) => '<td class="' + (i === 3 ? (String(c) === 'Hadir' ? 'hadir' : 'absen') : '') + '">' + esc(c) + '</td>').join('') + '</tr>').join('');
       return '<div class="clsblock">' + head + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div>';
     }).join('');
@@ -549,7 +567,7 @@ class Component extends DCLogic {
     ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
     document.body.appendChild(ifr);
     const win = ifr.contentWindow; const doc = win.document; doc.open(); doc.write(html); doc.close();
-    this.toastMsg('Menyiapkan PDF (memuat foto)…');
+    this.toastMsg('Preparing PDF (loading photos)…');
     const doPrint = () => { try { win.focus(); win.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); };
     // Wait for every photo to finish loading (max 8s) so the images are actually in the PDF.
     const settle = () => {
@@ -583,7 +601,7 @@ class Component extends DCLogic {
   }
   exportCoachSessionsPdf() {
     const cs = this.state.d.coachSess || {}; const rows = cs.rows || [];
-    if (!rows.length) return this.toastMsg('Belum ada data untuk di-export.');
+    if (!rows.length) return this.toastMsg('No data to export.');
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
     const sumHead = ['Coach', 'Terjadwal', 'Done (check-in)', 'Selesai (check-out)', 'Peserta', 'Total jam', 'Status'];
     const sumRows = rows.map((r) => '<tr><td>' + esc(r.name) + (r.role === 'Head Coach' ? ' <span class="tag">HC</span>' : '') + '</td><td class="c">' + r.scheduled + '</td><td class="c hi">' + r.conducted + '</td><td class="c">' + r.completed + '</td><td class="c">' + (r.pax || 0) + '</td><td class="c">' + esc(r.hours) + '</td><td>' + esc(r.note) + '</td></tr>').join('');
@@ -609,7 +627,7 @@ class Component extends DCLogic {
   exportMonthlyPdf() {
     const cs = this.state.d.coachSess || {}; const csRows = cs.rows || [];
     const regRows = this.state.d.registerRows || []; const totals = this.state.d.coachTotals || [];
-    if (!csRows.length && !regRows.length) return this.toastMsg('Belum ada data untuk di-export.');
+    if (!csRows.length && !regRows.length) return this.toastMsg('No data to export.');
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
     const monthLbl = cs.monthLabel || ((this.state.d.registerMonths || []).find((m) => m.picked) || {}).label || '';
     // Section 1 — Rekap Sesi Coach (summary)
@@ -662,7 +680,7 @@ class Component extends DCLogic {
       return;
     }
     this.api('/api/coach/class/' + encodeURIComponent(scheduleId) + '/attend', { method: 'POST', body: JSON.stringify({ booking_id: bookingId, status }) })
-      .then(() => { this.toastMsg(status === 'checked_in' ? 'Peserta ditandai hadir' : 'Peserta ditandai absen'); this.loadRegister(); })
+      .then(() => { this.toastMsg(status === 'checked_in' ? 'Participant marked present' : 'Participant marked absent'); this.loadRegister(); })
       .catch((e) => this.toastMsg(e.message));
   }
   setClassMenu(menuId) {
@@ -863,10 +881,10 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg('Status of ' + c.name + ' updated'); this.loadScreen('accounts'); }).catch((e) => this.toastMsg(e.message));
   }
   removeCoach(c) {
-    if (!window.confirm('Hapus akun "' + c.name + '" secara permanen? Tindakan ini tidak bisa dibatalkan.')) return;
-    if (this.MOCK) return this.toastMsg('Akun ' + c.name + ' dihapus');
+    if (!window.confirm(this.state.lang === 'id' ? ('Hapus akun "' + c.name + '" secara permanen? Tindakan ini tidak bisa dibatalkan.') : ('Permanently delete account "' + c.name + '"? This action cannot be undone.'))) return;
+    if (this.MOCK) return this.toastMsg('Account ' + c.name + ' deleted');
     this.api('/api/admin/coaches/' + encodeURIComponent(c.id) + '/delete', { method: 'POST' })
-      .then(() => { this.toastMsg('Akun ' + c.name + ' dihapus'); this.loadScreen('accounts'); }).catch((e) => this.toastMsg(e.message));
+      .then(() => { this.toastMsg('Account ' + c.name + ' deleted'); this.loadScreen('accounts'); }).catch((e) => this.toastMsg(e.message));
   }
   submitAddCoach() {
     const byPh = (ph) => { const els = document.querySelectorAll('#app input'); for (const e of els) if ((e.placeholder || '').indexOf(ph) >= 0) return e.value; return ''; };
@@ -928,10 +946,10 @@ class Component extends DCLogic {
   // Set/clear the optional coach on a venue booking (arena_bookings.coach_id). Empty = Tanpa coach.
   // The server blocks a pick that clashes with the coach's other class/venue at that time.
   setBookingCoach(id, coachId) {
-    if (this.MOCK) return this.toastMsg(coachId ? 'Coach di-set' : 'Coach dikosongkan');
+    if (this.MOCK) return this.toastMsg(coachId ? 'Coach set' : 'Coach cleared');
     this.api('/api/venue/bookings/' + encodeURIComponent(id) + '/coach', { method: 'POST', body: JSON.stringify({ coach_id: coachId }) })
-      .then((r) => { this.toastMsg(r && r.coach ? ('Coach di-set: ' + r.coach) : 'Coach dikosongkan'); this.loadScreen(this.state.screen); })
-      .catch((e) => { this.toastMsg(e.message || 'Gagal menyimpan coach.'); this.loadScreen(this.state.screen); });
+      .then((r) => { this.toastMsg(r && r.coach ? ('Coach set: ' + r.coach) : 'Coach cleared'); this.loadScreen(this.state.screen); })
+      .catch((e) => { this.toastMsg(e.message || 'Failed to save coach.'); this.loadScreen(this.state.screen); });
   }
   // ---- Package Orders (GRO, read-only) — client-side search + status filter over the fetched list ----
   setPkgSearch(e) { this._pkgFocus = true; this.setState({ pkgSearch: e && e.target ? e.target.value : '' }); }
@@ -1076,7 +1094,7 @@ class Component extends DCLogic {
         const rows = mine.map((c, i) => [i + 1, c.date, c.time || '—', c.day || '', c.type, c.pax]);
         const totalPax = mine.reduce((s, c) => s + (c.pax || 0), 0);
         sections.push({ heading: nm, headers: ['#', 'Date', 'Time', 'Day', 'Class', 'Pax'], rows,
-          totalRow: ['', 'TOTAL', '', '', mine.length + ' kelas', totalPax] });
+          totalRow: ['', 'TOTAL', '', '', mine.length + ' classes', totalPax] });
       }
     }
     if (!sections.reduce((n, s) => n + s.rows.length, 0)) return this.toastMsg('No data to export.');
@@ -1113,7 +1131,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile'), checkin: A('checkin'), packageorders: A('packageorders') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile'), checkin: A('checkin'), packageorders: A('packageorders'), reschedule: A('reschedule'), validatecoach: A('validatecoach') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -1148,9 +1166,9 @@ class Component extends DCLogic {
       const menuOpts = (D.menuOptions || []).map((m) => ({ id: m.id, label: m.title + (m.category ? ' · ' + m.category : ''), picked: c.menuId === m.id }));
       // For the GRO: an at-a-glance line showing whether the coach has checked in for this class,
       // and a clearer label on the button they use to check the coach in on their behalf.
-      const groCheck = c.checkedOut ? { label: 'Coach sudah check-out', col: 'var(--green)' }
-        : c.started ? { label: 'Coach sudah check-in', col: 'var(--green)' }
-          : { label: 'Coach belum check-in', col: 'var(--amber)' };
+      const groCheck = c.checkedOut ? { label: this.t('coach_checked_out'), col: 'var(--green)' }
+        : c.started ? { label: this.t('coach_checked_in'), col: 'var(--green)' }
+          : { label: this.t('coach_not_checked_in'), col: 'var(--amber)' };
       const checkinLabel = isGro ? 'Check In Coach' : 'Check In';
       const checkoutLabel = isGro ? 'Check Out Coach' : 'Check Out';
       return Object.assign({}, c, { statusBg: p.bg, statusCol: p.col, groCheckLabel: groCheck.label, groCheckCol: groCheck.col, checkinLabel, checkoutLabel, openClass: () => this.openClass(c.schedule_id), openAbsen: () => this.openAbsen(c), checkOut: () => this.openCheckout(c), changeCoach: () => this.changeCoach(c), menuOpts, hasMenuPick: menuOpts.length > 0, setMenu: (e) => this.pickClassMenu(c.schedule_id, e && e.target ? e.target.value : ''), addCal: () => this.addToCalendar({ id: c.schedule_id, date: c.date, start: c.time, end: c.end, title: c.type }) });
@@ -1262,7 +1280,7 @@ class Component extends DCLogic {
     const hasVenueHidden = venueHidden.length > 0;
     const venueUnassignedCount = venueDispatch.filter((b) => b.needsCoach && !b.assigned).length;
     // Package Orders (GRO, read-only) — client-side search + status filter over the fetched list.
-    const PKG_STATUS = [{ v: '', l: 'Semua status' }, { v: 'aktif', l: 'Aktif' }, { v: 'habis', l: 'Habis' }, { v: 'pending', l: 'Pending' }, { v: 'batal', l: 'Batal' }];
+    const PKG_STATUS = [{ v: '', l: 'All Status' }, { v: 'aktif', l: 'Active' }, { v: 'habis', l: 'Used up' }, { v: 'pending', l: 'Pending' }, { v: 'batal', l: 'Cancelled' }];
     const pkgTerm = (st.pkgSearch || '').trim().toLowerCase();
     const pkgStatusMeta = (k) => k === 'aktif' ? { bg: 'rgba(28,138,75,.14)', col: C.green } : (k === 'pending' ? { bg: 'rgba(199,122,0,.16)', col: C.amber } : (k === 'batal' ? { bg: 'rgba(228,0,43,.14)', col: C.red } : { bg: 'rgba(136,143,156,.18)', col: C.muted }));
     const pkgOrders = (D.packageOrders || []).filter((o) => {
@@ -1320,9 +1338,9 @@ class Component extends DCLogic {
     // coach's check-in status explicitly so the GRO can see, and act, at a glance.
     const detailCheckinLabel = isGro ? 'Check In Coach' : 'Check In';
     const detailCheckoutLabel = isGro ? 'Check Out Coach' : 'Check Out';
-    const detailGroCheck = detailCheckedOut ? { label: 'Coach sudah check-out', col: 'var(--green)' }
-      : detailStarted ? { label: 'Coach sudah check-in', col: 'var(--green)' }
-        : { label: 'Coach belum check-in', col: 'var(--amber)' };
+    const detailGroCheck = detailCheckedOut ? { label: this.t('coach_checked_out'), col: 'var(--green)' }
+      : detailStarted ? { label: this.t('coach_checked_in'), col: 'var(--green)' }
+        : { label: this.t('coach_not_checked_in'), col: 'var(--amber)' };
     const showGroCheck = isGro;
     const showParticipantList = true; // participant names are now visible to every coach (internal + external)
     // Class Menu attached to this class (Option B) — internal/HC only (external don't see the detail)
@@ -1370,8 +1388,8 @@ class Component extends DCLogic {
       const kc = { ok: ['rgba(28,138,75,.14)', C.green, '✓ '], warn: ['rgba(199,122,0,.14)', C.amber, '⚠ '], live: [C.voltDim, C.volt, ''], idle: ['rgba(136,143,156,.1)', C.muted, ''] }[t.kind] || ['rgba(136,143,156,.1)', C.muted, ''];
       const ciDone = !!t.checkedIn, coDone = !!t.checkedOut;
       return Object.assign({}, t, { bg: kc[0], col: kc[1], dot: t.kind === 'live' ? '● ' : kc[2],
-        ciText: 'Check-in ' + (ciDone ? t.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
-        coText: 'Check-out ' + (coDone ? t.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' });
+        ciText: 'Check-in ' + (ciDone ? t.coachIn : this.t('not_yet')), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
+        coText: 'Check-out ' + (coDone ? t.coachOut : this.t('not_yet')), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' });
     });
     const hasTodayAll = todayAll.length > 0;
     const noTodayAll = !hasTodayAll;
@@ -1395,8 +1413,8 @@ class Component extends DCLogic {
       items: (dg.items || []).map((t) => {
         const ciDone = !!t.checkedIn, coDone = !!t.checkedOut;
         return { time: t.time, coach: t.coach, type: String(t.type || '').replace('HYROX ', ''),
-          ciText: 'Check-in ' + (ciDone ? t.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
-          coText: 'Check-out ' + (coDone ? t.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' };
+          ciText: 'Check-in ' + (ciDone ? t.coachIn : this.t('not_yet')), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
+          coText: 'Check-out ' + (coDone ? t.coachOut : this.t('not_yet')), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' };
       }),
     }));
     const hasCheckin = checkinDays.some((d) => d.items.length > 0);
@@ -1430,8 +1448,8 @@ class Component extends DCLogic {
       const comp = String(x.type).includes('Complete');
       const ciDone = !!x.coachIn, coDone = !!x.coachOut;
       return { time: x.time, coach: x.coach, type: String(x.type).replace('HYROX ', ''), pax: x.pax, initials: this.ini(x.coach), photo: x.photo || '', hasPhoto: !!x.photo, accent: comp ? C.volt : C.cyan, bg: comp ? 'rgba(228,0,43,.06)' : 'rgba(0,104,201,.06)',
-        ciText: 'Check-in ' + (ciDone ? x.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
-        coText: 'Check-out ' + (coDone ? x.coachOut : 'belum'), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' };
+        ciText: 'Check-in ' + (ciDone ? x.coachIn : this.t('not_yet')), ciCol: ciDone ? C.green : C.muted, ciDot: ciDone ? '✓' : '○',
+        coText: 'Check-out ' + (coDone ? x.coachOut : this.t('not_yet')), coCol: coDone ? C.green : (ciDone ? C.amber : C.muted), coDot: coDone ? '✓' : '○' };
     });
     const hasSchedule = scheduleList.length > 0;
     const noSchedule = !hasSchedule;
@@ -1571,6 +1589,12 @@ class Component extends DCLogic {
     const reportAttendedCap = bookedN ? (isID ? attPctN + '% datang' : attPctN + '% came') : (isID ? 'belum ada data' : 'no data yet');
     const reportNoShowCap = bookedN ? (isID ? nsPctN + '% tidak datang' : nsPctN + '% didn\'t come') : (isID ? 'belum ada data' : 'no data yet');
     const sel = coaches.find((c) => c.name === st.selCoachName) || coaches[0] || { name: st.selCoachName || '—', initials: this.ini(st.selCoachName || 'C'), classes: 0, peserta: 0, punctual: 0, attended: 0, attPct: '—', attCol: C.muted2, subs: 0, photo: '', hasPhoto: false };
+    // Stat cards read the selected-month summary (same source as the breakdown), not `sel`
+    // (which is the current-month monitoring aggregate — that made past months show 0).
+    const _ss = D.statSummary || null;
+    const _ssAttOf = _ss ? (_ss.attendedOf || 0) : 0, _ssAtt = _ss ? (_ss.attended || 0) : 0;
+    const _ssPct = _ssAttOf ? Math.round((_ssAtt / _ssAttOf) * 100) : 0;
+    const statCards = { classes: _ss ? _ss.classes : 0, peserta: _ss ? _ss.participants : 0, attended: _ssAtt, attendedOf: _ssAttOf, attPct: _ssAttOf ? (_ssPct + '%') : '—', attCol: !_ssAttOf ? C.muted2 : (_ssPct >= 90 ? C.green : (_ssPct >= 50 ? C.amber : C.red)), coverage: _ss ? _ss.coverage : 0 };
     // Per-Class Breakdown sort: by date (default), most participants, or least.
     const statRowSort = st.statRowSort || 'date';
     let statRowsArr = (D.stats || []).slice();
@@ -1642,7 +1666,7 @@ class Component extends DCLogic {
         payment: r.payment || '', hasPayment: !!r.payment, payCol: r.payment === 'Lunas' ? C.green : (r.payment === 'Belum' ? C.amber : C.muted),
         addonLabel: r.addonLabel || '', hasAddon: !!r.addonLabel,
         latePaid: !!r.latePaid, latePaidLabel: r.latePaidLabel || '',
-        attLabel: on ? 'Hadir' : 'Tidak hadir', attCol: on ? C.green : C.amber,
+        attLabel: on ? this.t('present') : this.t('absent'), attCol: on ? C.green : C.amber,
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted,
         toggle: () => this.registerAttend(r.scheduleId, r.bookingId, on ? 'none' : 'checked_in'),
         note: r.note || '', hasNote: !!r.note, saveNote: (e) => this.saveNote(r.scheduleId, r.bookingId, e && e.target ? e.target.value : '', 'register'),
@@ -1653,9 +1677,9 @@ class Component extends DCLogic {
     const registerGroups = _byDate.map((d) => ({ dateLabel: d.dateLabel, classes: d.classes.map((c) => {
       const ciDone = !!c.coachIn, coDone = !!c.coachOut;
       const lt = ciDone ? _lateInfo(c.time, c.coachIn) : { text: '', col: C.muted };
-      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' hadir', absentLabel: Math.max(0, c.pax - c.attended) + ' tidak hadir', schedTime: c.time,
-        ciIcon: ciDone ? '✓' : '○', ciText: 'Check-in ' + (ciDone ? c.coachIn : 'belum'), ciCol: ciDone ? C.green : C.muted, ciTag: lt.text, ciTagCol: lt.col,
-        coIcon: coDone ? '✓' : '○', coText: 'Check-out ' + (coDone ? c.coachOut : 'belum'), coCol: coDone ? C.green : C.amber,
+      return { time: c.time, className: c.className, coach: c.coach, photo: c.photo, hasPhoto: !!c.photo, paxLabel: c.pax + ' pax', attendedLabel: c.attended + ' ' + this.t('att_attended'), absentLabel: Math.max(0, c.pax - c.attended) + ' ' + this.t('att_absent'), schedTime: c.time,
+        ciIcon: ciDone ? '✓' : '○', ciText: 'Check-in ' + (ciDone ? c.coachIn : this.t('not_yet')), ciCol: ciDone ? C.green : C.muted, ciTag: lt.text, ciTagCol: lt.col,
+        coIcon: coDone ? '✓' : '○', coText: 'Check-out ' + (coDone ? c.coachOut : this.t('not_yet')), coCol: coDone ? C.green : C.amber,
         participants: c.participants };
     }) }));
     const registerCoachTotals = (D.coachTotals || []).map((t) => ({ coach: t.coach, sessions: t.sessions, completed: t.completed, hours: t.hours }));
@@ -1675,9 +1699,9 @@ class Component extends DCLogic {
     const cp = st.classPopup;
     const cpSched = cp ? (cp.schedule || {}) : {};
     const cpStarted = !!cpSched.started, cpCheckedOut = !!cpSched.checkedOut, cpCanCheckout = !!cpSched.canCheckout;
-    const cpCoachStatus = cpCheckedOut ? { label: 'Coach sudah check-out', col: C.green }
-      : cpStarted ? { label: 'Coach sudah check-in', col: C.green }
-        : { label: 'Coach belum check-in', col: C.amber };
+    const cpCoachStatus = cpCheckedOut ? { label: this.t('coach_checked_out'), col: C.green }
+      : cpStarted ? { label: this.t('coach_checked_in'), col: C.green }
+        : { label: this.t('coach_not_checked_in'), col: C.amber };
     const cpParts = cp ? (cp.participants || []) : [];
     const cpConfirmed = cpParts.filter((p) => p.bookingStatus === 'confirmed').length;
     const cpPending = cpParts.filter((p) => p.bookingStatus === 'pending_payment').length;
@@ -1699,7 +1723,7 @@ class Component extends DCLogic {
     });
 
     // RESCHEDULE (GRO) — step 1 is a full page of class bookings (table); step 2 is the slot-picker modal.
-    const RSCH_STATUS = [{ v: '', l: 'Semua Status' }, { v: 'confirmed', l: 'Confirmed' }, { v: 'pending', l: 'Pending' }, { v: 'checkedin', l: 'Sudah check-in' }];
+    const RSCH_STATUS = [{ v: '', l: 'All Status' }, { v: 'confirmed', l: 'Confirmed' }, { v: 'pending', l: 'Pending' }, { v: 'checkedin', l: 'Checked in' }];
     const rschTerm = (st.rschSearch || '').trim().toLowerCase();
     const rschRows = (D.rschBookings || []).filter((p) => {
       if (rschTerm && ((p.name || '') + ' ' + (p.bookingCode || '') + ' ' + (p.phone || '')).toLowerCase().indexOf(rschTerm) < 0) return false;
@@ -1750,14 +1774,15 @@ class Component extends DCLogic {
       };
     });
     const RS_REASONS = ['Sakit', 'Ada acara', 'Perubahan jadwal kerja', 'Lainnya'];
-    const rsReasonOpts = RS_REASONS.map((r) => ({ value: r, label: r, picked: st.rsReason === r }));
+    const RS_REASON_EN = { 'Sakit': 'Sick', 'Ada acara': 'Personal matter', 'Perubahan jadwal kerja': 'Work schedule change', 'Lainnya': 'Other' };
+    const rsReasonOpts = RS_REASONS.map((r) => ({ value: r, label: isID ? r : (RS_REASON_EN[r] || r), picked: st.rsReason === r }));
     const rsShowOther = st.rsReason === 'Lainnya';
     const rsSelSlot = st.rsSlot ? rsAllSlots.find((x) => x.scheduleId === st.rsSlot && !x.isCurrent) : null;
     const rsReasonFilled = st.rsReason && (st.rsReason !== 'Lainnya' || String(st.rsReasonOther || '').trim());
     const rsCanSave = !!rsSelSlot && !!rsReasonFilled && !rsLimit && !st.rsSaving;
     let rsSummary = '';
     if (rsSelSlot && rsCur) {
-      rsSummary = (rsPart.name || 'Peserta') + ': '
+      rsSummary = (rsPart.name || (isID ? 'Peserta' : 'Participant')) + ': '
         + rsCur.classShort + ' ' + shortD(rsCur.dateLabel) + ' ' + (rsCur.start || '')
         + '  →  ' + rsSelSlot.classShort + ' ' + shortD(rsSelSlot.dateLabel) + ' ' + rsSelSlot.start;
     }
@@ -1770,14 +1795,27 @@ class Component extends DCLogic {
     }[status] || { label: this.t('not_validated'), bg: 'rgba(234,179,8,.16)', fg: '#a16207' });
     const vcRows = (D.vcSessions || []).map((x, i) => {
       const meta = vcStatusMeta(x.status);
-      const canValidate = x.started && !D.vcBeforeCutoff && !x.cancelled;
+      const validated = !!x.validation;
+      // Task 1: no longer requires the session to have started — only the Sept-2026 cutoff + not cancelled.
+      const canValidate = !D.vcBeforeCutoff && !x.cancelled;
+      // Task 2: a validated slot turns green and opens read-only ("Ringkasan Validasi") — it is locked.
+      const active = validated || canValidate;
+      const coachesText = (x.scheduledCoaches || []).join(', ') || '—';
+      const paxText = (x.pax == null ? '—' : String(x.pax));
+      // Tooltip explaining the button state — especially WHY a disabled one can't be clicked.
+      const actTitle = validated ? this.t('summary_hint')
+        : canValidate ? this.t('validate_hint')
+        : (x.cancelled ? this.t('session_cancelled') : this.t('before_cutoff_hint'));
       return {
         no: i + 1,
         key: x.key, time: x.time || '—', label: x.label, typeLabel: this.t(x.sessionType || (x.kind === 'venue' ? 'arena_with_coach' : 'regular_class')),
-        coaches: (x.scheduledCoaches || []).join(', ') || '—', pax: (x.pax == null ? '—' : String(x.pax)),
+        // A "—" means "not applicable" for this row (e.g. arena rental) — render it faded so it
+        // reads as N/A, not missing data.
+        coaches: coachesText, coachesCol: coachesText === '—' ? 'var(--muted2)' : 'var(--text)',
+        pax: paxText, paxCol: paxText === '—' ? 'var(--muted2)' : 'var(--text)',
         statusLabel: meta.label, statusBg: meta.bg, statusFg: meta.fg,
-        actLabel: x.validation ? this.t('validation_summary') : this.t('validate_coach'),
-        actDisabled: !canValidate, actBg: canValidate ? 'var(--volt)' : 'var(--border2)', actFg: canValidate ? '#fff' : 'var(--muted)', actCursor: canValidate ? 'pointer' : 'not-allowed',
+        actLabel: validated ? this.t('validation_summary') : this.t('validate_coach'), actTitle,
+        actDisabled: !active, actBg: validated ? '#16a34a' : (canValidate ? 'var(--volt)' : 'var(--border2)'), actFg: active ? '#fff' : 'var(--muted)', actCursor: active ? 'pointer' : 'not-allowed',
         act: () => this.openValidate(x.key),
       };
     });
@@ -1820,6 +1858,7 @@ class Component extends DCLogic {
       showVc: !!vcm, closeValidate: () => this.closeValidate(),
       vcmTitle: vcm ? (vcm.time + ' · ' + vcm.label) : '', vcmTypeLabel: vcm ? this.t(vcm.sessionType) : '',
       vcIsEdit: !!(vcm && vcm.step === 'edit'), vcIsSummary: !!(vcm && vcm.step === 'summary'),
+      vcReadonly: !!(vcm && vcm.readonly), vcCanSave: !!(vcm && !vcm.readonly),
       vcHeld: !!(vcm && vcm.held), vcNoCoach: !!(vcm && vcm.noCoach), vcLate: !!(vcm && vcm.late),
       vcToggleHeld: () => this.vcToggleHeld(), vcToggleNoCoach: () => this.vcToggleNoCoach(), vcToggleLate: () => this.vcToggleLate(),
       vcNotRunningChip: vcChip(!!(vcm && !vcm.held)), vcNoCoachChip: vcChip(!!(vcm && vcm.noCoach)), vcLateChip: vcChip(!!(vcm && vcm.late)),
@@ -1828,7 +1867,7 @@ class Component extends DCLogic {
       vcAssignOpts, vcAddCoach: (e) => this.vcAddCoach(e), vcAddCoachLabel: this.t('add_coach'), vcReasonPlaceholder: this.t('reason'),
       vcSummaryText, vcSummaryLabel: this.t('validation_summary'),
       vcGoSummary: () => this.vcGoSummary(), vcBackToEdit: () => this.vcBackToEdit(), vcSave: () => this.vcSave(),
-      vcSaveLabel: st.vcSaving ? 'Menyimpan…' : this.t('save'), vcCancelLabel: this.t('cancel'), vcBackLabel: this.t('back'), vcNextLabel: this.t('validation_summary'),
+      vcSaveLabel: st.vcSaving ? (isID ? 'Menyimpan…' : 'Saving…') : this.t('save'), vcCancelLabel: this.t('cancel'), vcBackLabel: this.t('back'), vcNextLabel: this.t('validation_summary'),
       // step 1 — the Reschedule page (table of class bookings)
       rschSearchVal: st.rschSearch || '', setRschSearch: (e) => this.setRschSearch(e),
       rschStatusOpts: RSCH_STATUS.map((o) => ({ value: o.v, label: o.l, picked: st.rschStatus === o.v })), setRschStatus: (e) => this.setRschStatus(e),
@@ -1842,21 +1881,21 @@ class Component extends DCLogic {
       rsReasonOpts, setRsReason: (e) => this.setRsReason(e), rsShowOther, rsReasonOther: st.rsReasonOther || '', setRsReasonOther: (e) => this.setRsReasonOther(e),
       rsHasSummary: !!rsSummary, rsSummary,
       rsCanSave, rsSaveDisabled: !rsCanSave, rsSaveBg: rsCanSave ? 'var(--volt)' : 'var(--border2)', rsSaveCursor: rsCanSave ? 'pointer' : 'not-allowed',
-      rsSaveLabel: st.rsSaving ? 'Menyimpan…' : 'Simpan', submitReschedule: () => this.submitReschedule(),
+      rsSaveLabel: st.rsSaving ? (isID ? 'Menyimpan…' : 'Saving…') : this.t('save'), submitReschedule: () => this.submitReschedule(),
       showClassPopup: !!cp, closeClassPopup: () => this.closeClassPopup(),
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
-      cpConfirmed: cpConfirmed + ' Confirmed', cpPending: cpPending + ' Pending', cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + ' Kuota',
+      cpConfirmed: cpConfirmed + (isID ? ' Terkonfirmasi' : ' Confirmed'), cpPending: cpPending + (isID ? ' Menunggu' : ' Pending'), cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + (isID ? ' Kuota' : ' Quota'),
       cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
-      cpHasLatePaid: (cpSched.latePaidCount || 0) > 0, cpLatePaidNote: (cpSched.latePaidCount || 0) + ' peserta bayar setelah kelas',
+      cpHasLatePaid: (cpSched.latePaidCount || 0) > 0, cpLatePaidNote: (cpSched.latePaidCount || 0) + (isID ? ' peserta bayar setelah kelas' : ' participants paid after class'),
       cpCanManageCoach: isGro, cpCoachStatusLabel: cpCoachStatus.label, cpCoachStatusCol: cpCoachStatus.col,
       cpCoachCanCheckin: isGro && !cpStarted, cpCoachCanCheckout: isGro && cpCanCheckout, cpCoachCheckedOut: cpCheckedOut,
       popupCoachCheckin: () => this.popupCoachCheckin(), popupCoachCheckout: () => this.popupCoachCheckout(),
-      cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? 'Ganti Foto' : 'Ambil / Upload',
+      cpPhoto: cpSched.photo || '', cpHasPhoto: !!cpSched.photo, cpPhotoBtnLabel: cpSched.photo ? (isID ? 'Ganti Foto' : 'Change Photo') : (isID ? 'Ambil / Upload' : 'Take / Upload'),
       onUploadPhoto: (e) => this.uploadClassPhoto(e), removeClassPhoto: () => this.deleteClassPhoto(),
       showRegister, registerCanCheck, registerReadonly: !registerCanCheck, registerGroups,
       registerCoachTotals, hasRegisterTotals: registerCoachTotals.length > 0, registerHoursOff: D.registerHoursAvail === false,
       showCoachSess: showRegister, coachSessRows, noCoachSess: coachSessRows.length === 0,
-      coachSessMonths: _cs.months || [], coachSessMonthLabel: _cs.monthLabel || '', coachSessHoursOff: _cs.hoursAvailable === false,
+      coachSessMonths: _cs.months || [], coachSessMonthLabel: _cs.monthLabel || '', coachSessHoursOff: _cs.hoursAvailable === false, csConducted: isID ? 'Terlaksana' : 'Done',
       setCoachSessMonth: (e) => this.setCoachSessMonth(e), exportCoachSess: () => this.exportCoachSessionsPdf(), exportMonthly: () => this.exportMonthlyPdf(),
       hasPendingCheckout: pendingCheckout.length > 0, pendingCheckout,
       hasRegister: registerGroups.length > 0, noRegister: registerGroups.length === 0,
@@ -1930,7 +1969,7 @@ class Component extends DCLogic {
       teamCalCells, hasTeamCal, teamCalLabel: D.teamCalLabel || '', teamCalPrev: () => this.teamCalPrev(), teamCalNext: () => this.teamCalNext(),
       scheduleDateLabel, hasSchedule, noSchedule, scheduleList, scheduleNotToday,
       schedulePrevDay: () => this.shiftScheduleDay(-1), scheduleNextDay: () => this.shiftScheduleDay(1), scheduleGoToday: () => this.scheduleGoToday(),
-      coaches, reportRows, sel, statRows, statMonth, templates, perms,
+      coaches, reportRows, sel, statCards, statRows, statMonth, templates, perms,
       statWeeks, hasStatWeeks, statDays, hasStatDays,
       srDate, srMost, srLeast, sortStatDate: () => this.setStatRowSort('date'), sortStatMost: () => this.setStatRowSort('pax_desc'), sortStatLeast: () => this.setStatRowSort('pax_asc'),
       statMonthOpts, hasStatMonths: statMonthOpts.length > 0, setStatMonth: (e) => this.setStatMonth(e && e.target ? e.target.value : ''),
@@ -1947,7 +1986,7 @@ class Component extends DCLogic {
       sortMonitorPax: () => this.setMonitorSort('pax'), sortMonitorName: () => this.setMonitorSort('name'),
       openAbsen: () => this.openAbsen(), showAbsen: st.absen, closeAbsen: () => this.setState({ absen: false }), confirmAbsen: () => this.confirmAbsen(),
       detailStarted, detailCheckedOut, detailCanCheckout, detailCanCheckin, detailCheckinLabel, detailCheckoutLabel, detailGroCheckLabel: detailGroCheck.label, detailGroCheckCol: detailGroCheck.col, showGroCheck, detailCheckOut: () => this.openCheckout(), showParticipantList, showCheckin, showCoachName: isGro || isAdmin,
-      detailHasLatePaid: (cd.latePaidCount || 0) > 0, detailLatePaidNote: (cd.latePaidCount || 0) + ' peserta bayar setelah kelas berjalan',
+      detailHasLatePaid: (cd.latePaidCount || 0) > 0, detailLatePaidNote: (cd.latePaidCount || 0) + (isID ? ' peserta bayar setelah kelas berjalan' : ' participants paid after class started'),
       cdShowMenu, cdMenuOptions, cdHasLinkedMenu, cdLinkedMenuTitle, cdLinkedMenuContent, setClassMenu: (e) => this.setClassMenu(e && e.target ? e.target.value : ''),
       showCheckout: st.checkoutModal, checkoutHasRecap, checkoutConfirm: st.checkoutModal && !checkoutHasRecap, checkoutLabel, closeCheckout: () => this.closeCheckout(), confirmCheckout: () => this.confirmCheckout(),
       coType, coDate, coCheckin, coCheckout, coDuration, coParticipants, coAttended, coAbsent,
