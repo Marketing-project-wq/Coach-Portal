@@ -1910,13 +1910,19 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
   if (!sess) return send(res, 400, { error: 'Check in first before you can check out.' });
   const nowIso = new Date().toISOString();
   // Persist the check-out time so the monthly report can total actual teaching hours.
-  const where = `arena_class_sessions?schedule_id=eq.${enc(params.id)}`;
+  // Flip the session ongoing -> completed ATOMICALLY: the filter only matches a not-yet
+  // completed row, and `return=representation` reports the rows actually changed. The first
+  // check-out wins; a duplicate/double-tapped check-out matches zero rows, so `didCheckout`
+  // is false and the "thank you + voucher" email is NEVER sent more than once per class.
+  const where = `arena_class_sessions?schedule_id=eq.${enc(params.id)}&status=neq.completed`;
+  let updated;
   try {
-    await sb(where, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(_checkoutAtOk ? { status: 'completed', checkout_at: nowIso } : { status: 'completed' }) });
+    updated = await sb(where, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(_checkoutAtOk ? { status: 'completed', checkout_at: nowIso } : { status: 'completed' }) });
   } catch (_e) {
     _checkoutAtOk = false;
-    await sb(where, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'completed' }) });
+    updated = await sb(where, { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'completed' }) });
   }
+  const didCheckout = Array.isArray(updated) && updated.length > 0;
   const participants = await sbCount(`arena_class_bookings?select=id&status=eq.confirmed&schedule_id=eq.${enc(params.id)}`);
   // Attendance the GRO recorded for this class — the count of guests actually present.
   const attended = await sbCount(`arena_class_attendance?select=booking_id&status=eq.checked_in&schedule_id=eq.${enc(params.id)}`);
@@ -1925,15 +1931,23 @@ route('POST', '/api/coach/class/:id/checkout', async (req, res, s, q, params) =>
   const durationMin = Math.max(0, Math.round((new Date(nowIso) - new Date(checkinIso)) / 60000));
   const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
   send(res, 200, { ok: true, recap: { type: shortType((types[sc.class_type_id] || {}).name), dateLabel: dLabel(sc.schedule_date), checkin: hm(checkinIso), checkout: hm(nowIso), durationMin, participants, attended } });
-  // First check-out of this class → email the "thank you + recovery voucher" to everyone who
-  // actually attended (was marked Hadir). Skip if the session was already completed (no re-send).
-  if (sess.status !== 'completed') {
+  // Only the request that actually performed the check-out (ongoing -> completed) emails the
+  // "thank you + recovery voucher" to everyone who attended (was marked Hadir). Recipients are
+  // de-duplicated by email so a guest with more than one booking still gets a single message.
+  if (didCheckout) {
     (async () => {
       const att = await sb(`arena_class_attendance?select=booking_id&status=eq.checked_in&schedule_id=eq.${enc(params.id)}`).catch(() => null);
       const ids = (att || []).map((a) => a.booking_id).filter(Boolean);
       if (!ids.length) return;
       const bks = await sb(`arena_class_bookings?select=full_name,email&id=in.(${ids.map(enc).join(',')})`).catch(() => null);
-      for (const b of bks || []) { if (isEmail(b.email)) await sendCheckoutEmail(b.email, b.full_name); }
+      const sent = new Set();
+      for (const b of bks || []) {
+        if (!isEmail(b.email)) continue;
+        const key = String(b.email).trim().toLowerCase();
+        if (sent.has(key)) continue;
+        sent.add(key);
+        await sendCheckoutEmail(b.email, b.full_name);
+      }
     })().catch(() => {});
   }
   return;
