@@ -2408,7 +2408,21 @@ route('GET', '/api/hc/coach/:name/stats', async (req, res, s, q, params) => {
     dayMap[key].classes++; dayMap[key].pax += (counts[r.id] || {}).confirmed || 0;
   }
   const days = Object.values(dayMap).sort((a, b) => a.date < b.date ? -1 : 1).map((d) => ({ label: d.label, day: d.day, classes: d.classes, pax: d.pax }));
-  return send(res, 200, { stats, monthLabel, weeks, days, ym, months, pendingCount });
+  // Month-scoped summary for the stat cards — computed from the SAME data as the breakdown
+  // above (this selected month + coach), not the current-month monitoring aggregate the cards
+  // used to read. `attended` = regular classes actually checked-in (Start Class) / regular classes.
+  const startedIds = await startedSet((rows || []).map((r) => r.id));
+  const attendedClasses = (rows || []).filter((r) => startedIds.has(r.id)).length;
+  const subsMonth = (await sb(`arena_coach_substitutions?select=from_coach,created_at&created_at=gte.${monthStart}T00:00:00&created_at=lte.${monthEndFull}T23:59:59`).catch(() => [])) || [];
+  const coverageCount = subsMonth.filter((su) => normCoach(su.from_coach) === normCoach(params.name)).length;
+  const summary = {
+    classes: stats.length,
+    participants: stats.reduce((a, r) => a + (r.peserta || 0), 0),
+    attended: attendedClasses,
+    attendedOf: (rows || []).length,
+    coverage: coverageCount,
+  };
+  return send(res, 200, { stats, monthLabel, weeks, days, ym, months, pendingCount, summary });
 });
 
 // ===== ADMIN =====
