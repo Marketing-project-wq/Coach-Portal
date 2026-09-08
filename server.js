@@ -1371,10 +1371,19 @@ route('POST', '/api/venue/bookings/:id/coach', async (req, res, s, q, params) =>
 });
 // The assigned coach starts (absen) their Arena + Coach session — GPS-checked like a class.
 route('POST', '/api/venue/bookings/:id/start', async (req, res, s, q, params) => {
-  const asg = await sb(`arena_venue_assignments?select=coach_name&booking_id=eq.${enc(params.id)}&limit=1`);
-  const a = asg && asg[0];
-  if (!a) return send(res, 404, { error: 'This booking has not been assigned to a coach.' });
-  if (a.coach_name !== s.c) return send(res, 403, { error: 'This is not your booking.' });
+  // Resolve the assigned coach from EITHER the dispatch flow (arena_venue_assignments) OR the
+  // booking's coach_id (the optional "Coach" field). The coach's schedule shows both kinds, so
+  // check-in must accept both — otherwise a coach_id-assigned booking appears but can't be started.
+  const asgRows = (await sb(`arena_venue_assignments?select=coach_name,started_at&booking_id=eq.${enc(params.id)}&limit=1`)) || [];
+  const asg = asgRows[0];
+  const dispatchName = (asg && asg.coach_name && asg.coach_name !== NO_COACH) ? asg.coach_name : '';
+  let assignedName = dispatchName;
+  if (!assignedName) {
+    const bk = ((await sb(`arena_bookings?select=coach_id&id=eq.${enc(params.id)}&limit=1`)) || [])[0];
+    if (bk && bk.coach_id) { const dir = await coachDirectory(); assignedName = dir.byId[bk.coach_id] || ''; }
+  }
+  if (!assignedName) return send(res, 404, { error: 'This booking has not been assigned to a coach.' });
+  if (normCoach(assignedName) !== normCoach(s.c)) return send(res, 403, { error: 'This is not your booking.' });
   const body = (await readBody(req)) || {};
   const loc = await arenaLocation();
   if (loc) {
@@ -1382,7 +1391,15 @@ route('POST', '/api/venue/bookings/:id/start', async (req, res, s, q, params) =>
     const dist = haversineM(Number(body.lat), Number(body.lng), loc.lat, loc.lng);
     if (dist > loc.radius_m) return send(res, 403, { error: `You must be at the arena to start the class (you are ~${Math.round(dist)} m away from the arena).`, tooFar: true });
   }
-  await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ started_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
+  const nowIso = new Date().toISOString();
+  if (dispatchName) {
+    // Dispatch flow (unchanged): record the start on the existing assignment row.
+    await sb(`arena_venue_assignments?booking_id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ started_at: nowIso, updated_at: nowIso }) });
+  } else {
+    // coach_id-assigned booking with no dispatch row — create one so the check-in is recorded
+    // (started_at lives on this table). Upsert keyed on booking_id.
+    await sb('arena_venue_assignments', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ booking_id: params.id, coach_name: assignedName, started_at: nowIso, updated_at: nowIso, assigned_by: 'check-in · ' + (s.d || s.c) }) });
+  }
   return send(res, 200, { ok: true, started: true });
 });
 
