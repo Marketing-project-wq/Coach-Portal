@@ -352,7 +352,10 @@ function instructorHasCoach(instructor, coach) {
 }
 
 // GRO (Guest Relations Officer): read-only over the whole arena + can check participants in.
-function isGro(s) { return s && s.r === 'gro'; }
+// A GRO counts as an Arena GRO only if their account is locked to Arena. Gym-locked GROs
+// get no Arena access (isGro is used solely to grant Arena-side GRO features). Gym gating
+// uses `s.r === 'gro'` + unitAllowed(s,'gym') instead, so Gym GROs keep their Gym access.
+function isGro(s) { return s && s.r === 'gro' && unitAllowed(s, 'arena'); }
 function roleLabel(role) { return role === 'hc' ? 'Head Coach' : role === 'admin' ? 'Admin' : role === 'gro' ? 'GRO' : 'Coach'; }
 // All classes in a date range (every coach) — used by GRO's team-wide schedule/check-in view.
 async function allSchedules(from, to) {
@@ -576,10 +579,12 @@ route('POST', '/api/auth/login', async (req, res) => {
   }
   if (!u || !u.is_active || !verifyPassword(body.password, u.password_hash)) return send(res, 401, { error: 'Incorrect username or password.' });
   sb(`arena_coach_users?id=eq.${enc(u.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ last_login: new Date().toISOString() }) }).catch(() => {});
-  const token = signToken({ u: u.username, c: u.coach_name, d: u.display_name || u.coach_name, r: u.role || 'coach' });
-  return send(res, 200, { token, coach: { coach_name: u.coach_name, display_name: u.display_name || u.coach_name, role: u.role || 'coach', external: (u.role || 'coach') === 'coach' && isExternalCoach(u.coach_name) } });
+  // GRO accounts are locked to one unit (arena|gym) so Arena & Gym GRO never mix; carried in the token.
+  const gUnit = (u.role || 'coach') === 'gro' ? (u.unit === 'gym' ? 'gym' : 'arena') : (u.unit || null);
+  const token = signToken({ u: u.username, c: u.coach_name, d: u.display_name || u.coach_name, r: u.role || 'coach', unit: gUnit });
+  return send(res, 200, { token, coach: { coach_name: u.coach_name, display_name: u.display_name || u.coach_name, role: u.role || 'coach', unit: gUnit, external: (u.role || 'coach') === 'coach' && isExternalCoach(u.coach_name) } });
 });
-route('GET', '/api/coach/me', async (req, res, s) => { const pm = await coachPhotoMap(); return send(res, 200, { coach_name: s.c, display_name: s.d, role: s.r, photo: coachPhoto(pm, s.c), external: isExternalSession(s) }); });
+route('GET', '/api/coach/me', async (req, res, s) => { const pm = await coachPhotoMap(); return send(res, 200, { coach_name: s.c, display_name: s.d, role: s.r, unit: s.unit || null, photo: coachPhoto(pm, s.c), external: isExternalSession(s) }); });
 
 // ===== COACH: dashboard =====
 route('GET', '/api/coach/dashboard', async (req, res, s, q) => {
@@ -734,6 +739,9 @@ const PORTAL_UNIT_CODES = ['arena', 'gym'];
 function allowedUnitCodes(s) {
   if (!s) return ['arena'];
   if (isExternalSession(s)) return ['arena']; // external coaches stay Arena-only
+  // GRO is locked to a single unit (Arena or Gym) so the two never mix. Default Arena
+  // when unset (legacy accounts). Admin / coach / HC keep access to both units.
+  if (s.r === 'gro') return [s.unit === 'gym' ? 'gym' : 'arena'];
   return ['arena', 'gym'];
 }
 function unitAllowed(s, code) { return allowedUnitCodes(s).indexOf(String(code || 'arena')) >= 0; }
