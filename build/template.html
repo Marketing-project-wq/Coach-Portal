@@ -1481,6 +1481,28 @@
   </div>
   </sc-if>
 
+  <!-- ===== GYM MEMBER BARCODE CARD MODAL ===== -->
+  <sc-if value="{{ showGymCard }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeGymCard }}">
+    <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:24px 26px;max-width:420px;width:100%;max-height:90vh;overflow:auto;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;">
+        <div style="font-family:'Archivo';font-weight:900;font-size:19px;letter-spacing:-.01em;text-transform:uppercase;">{{ tMemberCard }}</div>
+        <button onclick="{{ closeGymCard }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--muted);border-radius:9px;width:30px;height:30px;flex-shrink:0;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="border-color:var(--red);color:var(--red);">✕</button>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px;">{{ tShowToGro }}</div>
+      <div style="background:#fff;color:#111;border-radius:16px;padding:20px 22px;text-align:center;">
+        <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#888;margin-bottom:10px;font-family:'Archivo';font-weight:700;">20FIT Gym &#183; Personal Trainer</div>
+        <div style="font-family:'Archivo';font-weight:800;font-size:20px;color:#111;">{{ gymCardMember }}</div>
+        <div style="font-size:12.5px;color:#555;margin-top:3px;">Coach: {{ gymCardCoach }}</div>
+        <div style="font-size:12.5px;color:#555;margin-top:2px;">{{ gymCardUsed }} / {{ gymCardTotal }} sesi &#183; sisa {{ gymCardRemaining }}</div>
+        <div style="margin-top:14px;"><svg id="gymCardBarcode" data-barcode="{{ gymCardCode }}"></svg></div>
+        <div style="font-family:'JetBrains Mono';font-size:12px;letter-spacing:1px;color:#333;margin-top:6px;">{{ gymCardCode }}</div>
+      </div>
+      <button onclick="{{ printGymCard }}" style="margin-top:18px;width:100%;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:'Archivo';font-weight:800;font-size:13.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;">&#128424; {{ tPrintCard }}</button>
+    </div>
+  </div>
+  </sc-if>
+
   <!-- ===== TOAST ===== -->
   <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
   <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:60;background:var(--raised);border:1px solid var(--border2);border-left:4px solid var(--volt);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:11px;box-shadow:0 18px 50px -12px rgba(0,0,0,.7);font-weight:600;font-size:14px;">

@@ -519,7 +519,30 @@ const gymSoon = (flag, heading) => '<sc-if value="{{ ' + flag + ' }}"><div style
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">' + heading + '</div>'
   + '<div style="font-size:13px;color:var(--muted);">{{ comingSoonText }}</div>'
 + '</div></sc-if>';
-template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymSoon('s.gympackages', '20FIT Gym &#183; Package Orders') + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+const gymPkgCols = 'grid-template-columns:1.6fr 1fr 96px 92px 140px;';
+const gymPackagesScreen = '<sc-if value="{{ s.gympackages }}"><div style="max-width:1000px;margin:0 auto;">'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">20FIT Gym &#183; {{ tPtPackages }}</div>'
+  + '</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:14px;">{{ tBarcodeCard }}</div>'
+  + '<input value="{{ gymPkgQVal }}" oninput="{{ setGymPkgSearch }}" placeholder="{{ gymSearchPlaceholder }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;outline:0;margin-bottom:14px;">'
+  + '<sc-if value="{{ gymHasPkg }}"><div style="' + cardBox + 'overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:680px;">'
+    + '<div style="display:grid;' + gymPkgCols + 'background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">'
+      + '<div style="padding:11px 14px;">Member</div><div style="padding:11px 14px;">Coach</div><div style="padding:11px 14px;text-align:right;">Sesi</div><div style="padding:11px 14px;">Status</div><div style="padding:11px 14px;"></div>'
+    + '</div>'
+    + '<sc-for list="{{ gymPkgRows }}" as="r">'
+      + '<div style="display:grid;' + gymPkgCols + 'border-top:1px solid var(--border);align-items:center;">'
+        + '<div style="padding:10px 14px;font-weight:700;font-size:13px;">{{ r.member }}<div style="font-family:\'JetBrains Mono\';font-size:10.5px;color:var(--muted);font-weight:400;">{{ r.code }}</div></div>'
+        + '<div style="padding:10px 14px;font-size:12.5px;color:var(--muted);">{{ r.coach }}</div>'
+        + '<div style="padding:10px 14px;text-align:right;font-family:\'JetBrains Mono\';font-weight:700;font-size:12.5px;">{{ r.used }}/{{ r.total }}</div>'
+        + '<div style="padding:10px 14px;"><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;background:{{ r.statusBg }};color:{{ r.statusFg }};white-space:nowrap;">{{ r.statusLabel }}</span></div>'
+        + '<div style="padding:9px 14px;"><button onclick="{{ r.openCard }}" style="width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:9px;padding:8px 6px;font-family:\'Archivo\';font-weight:800;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" style-hover="border-color:var(--volt);">&#128424; {{ tBarcodeCard }}</button></div>'
+      + '</div>'
+    + '</sc-for>'
+  + '</div></div></div></sc-if>'
+  + '<sc-if value="{{ gymNoPkg }}"><div style="' + cardBox + 'padding:40px 24px;text-align:center;color:var(--muted);">{{ gymNoPkgText }}</div></sc-if>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymPackagesScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
 // ---- Gym GRO: Scan Member ----
 const gymScanScreen = '<sc-if value="{{ s.gymscan }}"><div style="max-width:640px;margin:0 auto;">'

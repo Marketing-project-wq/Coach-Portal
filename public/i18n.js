@@ -311,6 +311,13 @@ window.__I18N = (function () {
     from_date:             { id: 'Dari',                      en: 'From' },
     to_date:               { id: 'Sampai',                    en: 'To' },
     no_visits:             { id: 'Belum ada kunjungan pada rentang ini', en: 'No visits in this range' },
+    // Gym PT packages + printable member barcode card
+    pt_packages:           { id: 'Paket PT',                  en: 'PT Packages' },
+    barcode_card:          { id: 'Kartu Barcode',             en: 'Barcode Card' },
+    print_card:            { id: 'Cetak Kartu',               en: 'Print Card' },
+    member_card:           { id: 'Kartu Member',              en: 'Member Card' },
+    no_packages:           { id: 'Belum ada paket PT',        en: 'No PT packages yet' },
+    show_to_gro:           { id: 'Tunjukkan kartu ini ke GRO untuk scan tiap kedatangan', en: 'Show this card to the GRO to scan on each visit' },
     select_session:        { id: 'Pilih Sesi',                en: 'Select Session' },
     validation_summary:    { id: 'Ringkasan Validasi',        en: 'Validation Summary' },
     save:                  { id: 'Simpan',                    en: 'Save' },
