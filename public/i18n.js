@@ -281,6 +281,12 @@ window.__I18N = (function () {
   var T = {
     // buttons & titles
     validate_coach:        { id: 'Validasi Coach',            en: 'Validate Coach' },
+    // unit switcher + Gym GRO menu
+    switch_unit:           { id: 'PILIH UNIT',                en: 'SWITCH UNIT' },
+    members:               { id: 'Members',                   en: 'Members' },
+    scan_member:           { id: 'Scan Member',               en: 'Scan Member' },
+    visit_history:         { id: 'Riwayat Kunjungan',         en: 'Visit History' },
+    coming_soon:           { id: 'Segera hadir',              en: 'Coming soon' },
     select_session:        { id: 'Pilih Sesi',                en: 'Select Session' },
     validation_summary:    { id: 'Ringkasan Validasi',        en: 'Validation Summary' },
     save:                  { id: 'Simpan',                    en: 'Save' },

@@ -723,6 +723,94 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
   });
 });
 
+// ===== UNIT: GYM (dedicated read-only views for the Arena <-> Gym unit switcher) =====
+// The Coach Portal is Arena-first. These isolated endpoints let admin & coach view the Gym
+// unit's calendar and clients WITHOUT touching any arena_* logic — they read gym_* tables only,
+// so the switcher can never affect Arena data. Phase 1 covers the calendar + client list.
+// Units this portal implements. The switcher never hardcodes the list — it asks /api/units,
+// which returns the active rb_units the caller's role may access (Arena-first; GRO/admin/coach/HC
+// may also access Gym). Clinic/Recovery Center are intentionally absent here.
+const PORTAL_UNIT_CODES = ['arena', 'gym'];
+function allowedUnitCodes(s) {
+  if (!s) return ['arena'];
+  if (isExternalSession(s)) return ['arena']; // external coaches stay Arena-only
+  return ['arena', 'gym'];
+}
+function unitAllowed(s, code) { return allowedUnitCodes(s).indexOf(String(code || 'arena')) >= 0; }
+async function portalUnits(s) {
+  const rows = await sb('rb_units?select=code,name,active').catch(() => []);
+  const byCode = {}; for (const r of rows || []) byCode[r.code] = r;
+  const allow = allowedUnitCodes(s);
+  return PORTAL_UNIT_CODES
+    .filter((c) => allow.indexOf(c) >= 0 && byCode[c] && byCode[c].active !== false)
+    .map((c) => ({ code: c, name: byCode[c].name || c }));
+}
+// The allowed-unit list for the sidebar switcher (never hardcoded client-side).
+route('GET', '/api/units', async (req, res, s) => { const u = String(req.headers['x-unit'] || 'arena'); return send(res, 200, { units: await portalUnits(s), current: unitAllowed(s, u) ? u : 'arena' }); });
+function gymUnitAllowed(s) { return s && unitAllowed(s, 'gym') && (s.r === 'admin' || s.r === 'coach' || s.r === 'hc' || s.r === 'gro'); }
+async function gymClassTypes() {
+  const rows = await sb('gym_class_types?select=id,name,color').catch(() => []);
+  const m = {}; for (const r of rows || []) m[r.id] = r; return m;
+}
+async function gymBookingCounts(ids) {
+  const c = {};
+  if (!ids.length) return c;
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100).map(enc).join(',');
+    const rows = await sb(`gym_class_bookings?select=schedule_id,status&schedule_id=in.(${chunk})&status=in.(confirmed,pending_payment)`).catch(() => []);
+    for (const r of rows || []) { c[r.schedule_id] = c[r.schedule_id] || { confirmed: 0, pending: 0 }; if (r.status === 'confirmed') c[r.schedule_id].confirmed++; else c[r.schedule_id].pending++; }
+  }
+  return c;
+}
+// Month grid of Gym classes — same cell shape as /api/coach/calendar so the UI reuses its renderer.
+route('GET', '/api/unit/gym/calendar', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const today = todayJakarta();
+  const ym = (q.ym && /^\d{4}-\d{2}$/.test(q.ym)) ? q.ym : today.slice(0, 7);
+  const year = parseInt(ym.slice(0, 4), 10), month = parseInt(ym.slice(5, 7), 10);
+  const lastDay = new Date(year, month, 0).getDate();
+  const rows = (await sb(`gym_class_schedules?select=schedule_date&is_cancelled=eq.false&schedule_date=gte.${ym}-01&schedule_date=lte.${ym}-${String(lastDay).padStart(2, '0')}`).catch(() => [])) || [];
+  const cnt = {}; for (const x of rows) cnt[x.schedule_date] = (cnt[x.schedule_date] || 0) + 1;
+  const firstDow = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push({ blank: true });
+  for (let d = 1; d <= lastDay; d++) { const ds = `${ym}-${String(d).padStart(2, '0')}`; const c = cnt[ds] || 0; cells.push({ blank: false, day: d, date: ds, count: c, teach: c > 0, isToday: ds === today }); }
+  const pm = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
+  const nm = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  return send(res, 200, { ym, monthLabel: `${MON_FULL[month - 1]} ${year}`, cells, prevYm: `${pm.y}-${String(pm.m).padStart(2, '0')}`, nextYm: `${nm.y}-${String(nm.m).padStart(2, '0')}` });
+});
+// Gym classes on one date (day view when a calendar day is clicked).
+route('GET', '/api/unit/gym/day', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : todayJakarta();
+  const types = await gymClassTypes();
+  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&order=start_time.asc`).catch(() => [])) || [];
+  const counts = await gymBookingCounts(scheds.map((x) => x.id));
+  const classes = scheds.map((x) => { const t = types[x.class_type_id] || {}; return { time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', color: t.color || null, coach: x.instructor || '', pax: (counts[x.id] || {}).confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled }; });
+  return send(res, 200, { date, dateLabel: dLabel(date), classes });
+});
+// Gym clients — confirmed bookers in the month window, ranked by visit count.
+route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const today = todayJakarta();
+  const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : '';
+  const w = monthWindow(ym, today);
+  const scheds = (await sbAll(`gym_class_schedules?select=id,schedule_date&is_cancelled=eq.false&schedule_date=gte.${w.from}&schedule_date=lte.${w.to}`)) || [];
+  const byId = {}; for (const x of scheds) byId[x.id] = x.schedule_date;
+  const ids = scheds.map((x) => x.id);
+  const map = {};
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100).map(enc).join(',');
+    if (!chunk) break;
+    const bks = (await sb(`gym_class_bookings?select=full_name,phone,schedule_id,status&schedule_id=in.(${chunk})&status=eq.confirmed`).catch(() => [])) || [];
+    for (const b of bks) { const nm = String(b.full_name || '').trim(); if (!nm) continue; const k = nm.toLowerCase(); const d = byId[b.schedule_id] || ''; if (!map[k]) map[k] = { name: nm, phone: b.phone || '', visits: 0, last: '' }; map[k].visits++; if (d > map[k].last) map[k].last = d; }
+  }
+  const clients = Object.values(map).sort((a, b) => b.visits - a.visits || (a.last < b.last ? 1 : -1)).map((x, i) => ({ rank: i + 1, name: x.name, phone: x.phone, visits: x.visits, lastVisit: x.last ? fmtDMon(x.last) : '-', daysSince: daysSinceISO(x.last, today) }));
+  const active30 = clients.filter((c) => c.daysSince != null && c.daysSince <= 30).length;
+  const floor = await earliestYm('gym_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7)).catch(() => today.slice(0, 7));
+  return send(res, 200, { clients, total: clients.length, active30, months: monthOptions(today, floor), ym });
+});
+
 // ===== GRO/HC: full-month "Kalender Arena" — each day lists its class bars (with pax) + venue bookings =====
 route('GET', '/api/gro/calendar', async (req, res, s, q) => {
   if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Not available for this role.' });
