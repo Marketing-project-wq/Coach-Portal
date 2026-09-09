@@ -576,11 +576,13 @@
         </sc-if>
         <sc-if value="{{ inGym }}" hint-placeholder-val="{{ true }}">
         <button onclick="{{ goGymSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymSchedNav.bg }};color:{{ gymSchedNav.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymSchedNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Schedule</button>
+        <sc-if value="{{ showGymGroMenu }}" hint-placeholder-val="{{ true }}">
         <button onclick="{{ goGymMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymMembersNav.bg }};color:{{ gymMembersNav.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymMembersNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">{{ gymMembersLabel }}</button>
         <button onclick="{{ goGymPackages }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymPackagesNav.bg }};color:{{ gymPackagesNav.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymPackagesNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Package Orders</button>
         <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 14px;"></div>
         <button onclick="{{ goGymScan }}" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;border:0;cursor:pointer;background:var(--volt);color:#08090B;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;text-align:left;transition:filter .15s;" style-hover="filter:brightness(1.08);"><span style="font-size:16px;line-height:1;">&#128246;</span>{{ gymScanLabel }}</button>
         <button onclick="{{ goGymVisits }}" style="display:flex;align-items:center;gap:11px;margin-top:4px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymVisitsNav.bg }};color:{{ gymVisitsNav.fg }};font-family:'Hanken Grotesk';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymVisitsNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">{{ gymVisitsLabel }}</button>
+        </sc-if>
         </sc-if>
         <sc-if value="{{ showUnitSwitch }}">
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">

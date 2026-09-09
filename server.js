@@ -811,6 +811,105 @@ route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
   return send(res, 200, { clients, total: clients.length, active30, months: monthOptions(today, floor), ym });
 });
 
+// ===== GYM GRO: Scan Member (PT package check-in) — quota lives on pt_package_vouchers =====
+function gymScanAllowed(s) { return s && (s.r === 'gro' || s.r === 'admin') && unitAllowed(s, 'gym'); }
+function gymCoachAllowed(s) { return s && (s.r === 'coach' || s.r === 'admin') && unitAllowed(s, 'gym'); }
+async function ptVoucherByCode(code) {
+  const rows = await sb(`pt_package_vouchers?select=id,voucher_code,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active&voucher_code=eq.${enc(code)}&limit=1`).catch(() => []);
+  return (rows || [])[0] || null;
+}
+async function ptVisitCard(v) {
+  const o = ((await sb(`pt_package_orders?select=full_name,phone,order_code&id=eq.${enc(v.order_id)}&limit=1`).catch(() => [])) || [])[0] || {};
+  const total = v.total_sessions || 0, used = v.used_sessions || 0;
+  const recent = ((await sb(`pt_visits?select=visit_at&voucher_id=eq.${enc(v.id)}&status=eq.active&visit_at=gte.${new Date(Date.now() - 3600e3).toISOString()}&order=visit_at.desc&limit=1`).catch(() => [])) || [])[0];
+  return { voucherId: v.id, voucherCode: v.voucher_code, member: o.full_name || '(tanpa nama)', phone: o.phone || '', coach: v.coach_name || '', total, used, remaining: Math.max(0, total - used), expired: !!(v.expires_at && v.expires_at < todayJakarta()), inactive: v.is_active === false, recentVisitAt: recent ? recent.visit_at : null };
+}
+// Preview a scanned/typed barcode (voucher_code) for the confirmation card.
+route('GET', '/api/unit/gym/scan/lookup', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const code = String(q.code || '').trim();
+  if (!code) return send(res, 400, { error: 'Kode kosong.' });
+  const v = await ptVoucherByCode(code);
+  if (!v) return send(res, 404, { error: 'unknown_barcode' });
+  return send(res, 200, await ptVisitCard(v));
+});
+// Manual member search (barcode unreadable / card left at home).
+route('GET', '/api/unit/gym/scan/search', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const term = String(q.q || '').trim();
+  if (term.length < 2) return send(res, 200, { results: [] });
+  const orders = (await sb(`pt_package_orders?select=id,full_name,phone&full_name=ilike.*${enc(term)}*&limit=25`).catch(() => [])) || [];
+  const results = [];
+  for (const o of orders) {
+    const vs = (await sb(`pt_package_vouchers?select=id,voucher_code,coach_name,total_sessions,used_sessions,is_active&order_id=eq.${enc(o.id)}`).catch(() => [])) || [];
+    for (const v of vs) results.push({ voucherCode: v.voucher_code, member: o.full_name, phone: o.phone || '', coach: v.coach_name || '', remaining: Math.max(0, (v.total_sessions || 0) - (v.used_sessions || 0)), total: v.total_sessions || 0 });
+  }
+  return send(res, 200, { results });
+});
+// Record the visit + deduct one session (atomic, row-locked, via the DB function).
+route('POST', '/api/unit/gym/scan', async (req, res, s) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  const code = String(body.code || '').trim();
+  if (!code) return send(res, 400, { error: 'Kode kosong.' });
+  const r = await sb('rpc/pt_scan_visit', { method: 'POST', body: JSON.stringify({ p_code: code, p_actor: (s.d || s.c || 'gro'), p_allow_over: !!body.over_quota, p_reason: body.reason ? String(body.reason).slice(0, 300) : null }) }).catch(() => null);
+  if (!r) return send(res, 500, { error: 'Gagal mencatat kunjungan.' });
+  if (r.ok !== true) return send(res, 400, r);
+  return send(res, 200, r);
+});
+// Cancel a scan within 15 minutes (refund the session, mark cancelled).
+route('POST', '/api/unit/gym/scan/cancel', async (req, res, s) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  if (!body.visit_id) return send(res, 400, { error: 'Kunjungan tidak valid.' });
+  const r = await sb('rpc/pt_cancel_visit', { method: 'POST', body: JSON.stringify({ p_visit_id: String(body.visit_id), p_actor: (s.d || s.c || 'gro'), p_reason: body.reason ? String(body.reason).slice(0, 300) : null }) }).catch(() => null);
+  if (!r || r.ok !== true) return send(res, 400, r || { error: 'Gagal membatalkan.' });
+  return send(res, 200, r);
+});
+// Visit history (GRO): date range + name search; cancelled & over-quota flagged.
+route('GET', '/api/unit/gym/visits', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  const from = isoRe.test(q.from || '') ? q.from : `${today.slice(0, 7)}-01`;
+  const to = isoRe.test(q.to || '') ? q.to : today;
+  let rows = (await sbAll(`pt_visits?select=id,voucher_id,visit_at,visit_date,member_name,voucher_code,coach_name,status,over_quota,sessions_after,reason,coach_checked_in&visit_date=gte.${from}&visit_date=lte.${to}&order=visit_at.desc`).catch(() => [])) || [];
+  const term = String(q.q || '').trim().toLowerCase();
+  if (term) rows = rows.filter((r) => String(r.member_name || '').toLowerCase().indexOf(term) >= 0);
+  // remaining after each visit = voucher total - sessions_after
+  const vids = [...new Set(rows.map((r) => r.voucher_id).filter(Boolean))];
+  const totals = {};
+  for (let i = 0; i < vids.length; i += 100) {
+    const vs = (await sb(`pt_package_vouchers?select=id,total_sessions&id=in.(${vids.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const v of vs) totals[v.id] = v.total_sessions || 0;
+  }
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  const visits = rows.map((r) => ({ id: r.id, date: fmtDMon(r.visit_date), dateISO: r.visit_date, time: r.visit_at ? hm(r.visit_at) : '', member: r.member_name || '', voucherCode: r.voucher_code || '', coach: r.coach_name || '—', status: r.status, overQuota: !!r.over_quota, remainingAfter: (r.sessions_after != null && totals[r.voucher_id] != null) ? Math.max(0, totals[r.voucher_id] - r.sessions_after) : null, reason: r.reason || '', coachCheckedIn: !!r.coach_checked_in }));
+  return send(res, 200, { visits, from, to, count: visits.length });
+});
+// Coach side (Gym): the bookings created by GRO scans, for the assigned coach to check in.
+route('GET', '/api/unit/gym/coach/bookings', async (req, res, s, q) => {
+  if (!gymCoachAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const today = todayJakarta();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : today;
+  const rows = (await sb(`pt_visits?select=id,visit_at,member_name,voucher_code,coach_name,status,coach_checked_in&visit_date=eq.${date}&status=eq.active&order=visit_at.asc`).catch(() => [])) || [];
+  const mine = (s.r === 'admin') ? rows : rows.filter((r) => instructorHasCoach(r.coach_name, s.c));
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  const bookings = mine.map((r) => ({ id: r.id, time: r.visit_at ? hm(r.visit_at) : '', member: r.member_name || '', coach: r.coach_name || '', checkedIn: !!r.coach_checked_in }));
+  return send(res, 200, { date, bookings });
+});
+// Coach check-in on a scanned gym booking (attendance only — never touches quota).
+route('POST', '/api/unit/gym/coach/checkin', async (req, res, s) => {
+  if (!gymCoachAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  if (!body.visit_id) return send(res, 400, { error: 'Kunjungan tidak valid.' });
+  const vis = ((await sb(`pt_visits?select=id,coach_name,status&id=eq.${enc(String(body.visit_id))}&limit=1`).catch(() => [])) || [])[0];
+  if (!vis) return send(res, 404, { error: 'Kunjungan tidak ditemukan.' });
+  if (s.r !== 'admin' && !instructorHasCoach(vis.coach_name, s.c)) return send(res, 403, { error: 'Bukan kelas Anda.' });
+  await sb(`pt_visits?id=eq.${enc(String(body.visit_id))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ coach_checked_in: true, coach_checkin_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
+  return send(res, 200, { ok: true });
+});
+
 // ===== GRO/HC: full-month "Kalender Arena" — each day lists its class bars (with pax) + venue bookings =====
 route('GET', '/api/gro/calendar', async (req, res, s, q) => {
   if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Not available for this role.' });
