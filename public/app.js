@@ -1911,8 +1911,11 @@ class Component extends DCLogic {
       showUnitSwitch: (isAdmin || st.role === 'coach' || isGro) && (st.units || []).length > 1,
       switchUnitLabel: this.t('switch_unit'),
       unitOpts: (st.units || []).map((u) => { const on = st.unit === u.code; const seg = unitSeg(on); return { code: u.code, label: String(u.name || u.code).replace(/^20FIT\s+/i, ''), on, bg: seg.bg, fg: seg.fg, bar: seg.bar, weight: seg.weight, pick: () => this.setUnit(u.code) }; }),
-      // GRO per-unit menu gating. notGroGym hides Arena items when GRO is in Gym mode (no leak);
-      // non-GRO roles keep notGroGym=true so their menus are byte-identical.
+      // Per-unit menu gating. In Gym mode EVERY role's dashboard becomes Gym-only: all Arena
+      // sections hide and only the Gym menu shows. In Arena mode every gate below is identical
+      // to before (inArena is true), so the Arena workspace is byte-identical for every role.
+      inArena: st.unit !== 'gym', inGym: st.unit === 'gym',
+      hcArena: isHC && st.unit !== 'gym', adminArena: isAdmin && st.unit !== 'gym',
       notGroGym: !(isGro && st.unit === 'gym'), showGroArena: isGro && st.unit === 'arena', showGroGym: isGro && st.unit === 'gym',
       goGymSchedule: () => this.go('gymview'), goGymMembers: () => this.go('gymmembers'), goGymPackages: () => this.go('gympackages'), goGymScan: () => this.go('gymscan'), goGymVisits: () => this.go('gymvisits'),
       gymMembersLabel: this.t('members'), gymScanLabel: this.t('scan_member'), gymVisitsLabel: this.t('visit_history'), comingSoonText: this.t('coming_soon'),
@@ -1986,7 +1989,7 @@ class Component extends DCLogic {
       langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',
       langIdBg: st.lang === 'id' ? 'var(--volt)' : 'transparent', langIdFg: st.lang === 'id' ? '#ffffff' : 'var(--muted)',
       isHC, isAdmin, user, nav, rseg, s, canHC, canAdmin, showRoleToggle: !isGro,
-      showCoachHeader: !isGro, // GRO's sidebar isn't grouped by role, so it drops the "COACH" header
+      showCoachHeader: !isGro && st.unit !== 'gym', // no role headers in Gym mode (Gym-only menu)
       // Package Orders (GRO, read-only)
       pkgSearchVal: st.pkgSearch || '', setPkgSearch: (e) => this.setPkgSearch(e),
       pkgStatusOpts: PKG_STATUS.map((o) => ({ value: o.v, label: o.l, picked: st.pkgStatus === o.v })), setPkgStatus: (e) => this.setPkgStatus(e),
@@ -2012,7 +2015,7 @@ class Component extends DCLogic {
       venueRenters, hasVenueRenters, noVenueRenters, venueLbMonthOpts, hasVenueLbMonths: venueLbMonthOpts.length > 0, setVenueLbMonth: (e) => this.setVenueLbMonth(e && e.target ? e.target.value : ''), goRenters: () => this.go('renters'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       boardSortPax: seg(boardSort === 'pax'), boardSortRating: seg(boardSort === 'rating'), sortByPax: () => this.setBoardSort('pax'), sortByRating: () => this.setBoardSort('rating'),
-      showVenueNav: !(isGro && st.unit === 'gym'), goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
+      showVenueNav: st.unit !== 'gym', goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
       showGuide: !isGro, goGuide: () => { if (this.MOCK) return this.toastMsg('Membuka panduan…'); window.open(this.isExternal ? '/panduan-freelance.html' : '/panduan-internal.html', '_blank'); },
       venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts,
       venueOwn, noVenueOwn, hasVenueOwn: !noVenueOwn,
@@ -2022,7 +2025,7 @@ class Component extends DCLogic {
       showDayCards: !isGro, showSimpleCal: !isGro,
       showArenaCal, arenaCalCells, arenaCalLabel: D.arenaCalLabel || '',
       arenaCalPrev: () => this.loadArenaCalendar(this.state.d.arenaCalPrevYm), arenaCalNext: () => this.loadArenaCalendar(this.state.d.arenaCalNextYm),
-      showMenuNav: !isGro, goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
+      showMenuNav: !isGro && st.unit !== 'gym', goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
       openMenuModal: () => this.openMenuModal(),
       showMenuModal: !!st.menuModal, menuModalTitle: (mb && mb.id) ? 'Edit Menu' : 'Add Menu',
       mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbCategoryOpts, mbNote: mb ? mb.note : '', mbNoteBottom: mb ? mb.noteBottom : '', mbBlocks,
