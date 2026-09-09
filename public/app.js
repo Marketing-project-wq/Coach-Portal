@@ -235,7 +235,20 @@ class Component extends DCLogic {
       ['placeholder', 'title'].forEach((a) => { const val = el.getAttribute(a); if (val && d[val.trim()] != null) el.setAttribute(a, d[val.trim()]); });
     }
   }
-  go(screen) { this.screenSet(screen); this.setState({ screen, menuOpen: false }); if (!this.MOCK) this.loadScreen(screen); }
+  // GA4 SPA page_view — fired on every in-app screen change (client-side nav records
+  // only the first load otherwise). Path/title carry the screen key only — never a
+  // member/coach name or any other PII.
+  gaPageView(screen) {
+    try {
+      if (typeof window === 'undefined' || typeof window.gtag !== 'function' || !screen) return;
+      window.gtag('event', 'page_view', {
+        page_title: '20FIT Coach Workspace — ' + screen,
+        page_location: window.location.origin + window.location.pathname + '#' + screen,
+        page_path: '/' + screen,
+      });
+    } catch (e) { /* analytics must never break the app */ }
+  }
+  go(screen) { this.screenSet(screen); this.setState({ screen, menuOpen: false }); this.gaPageView(screen); if (!this.MOCK) this.loadScreen(screen); }
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
   applyRole(role, restore) {
@@ -254,6 +267,7 @@ class Component extends DCLogic {
     if (this.state.unit === 'gym' && ['coach', 'hc', 'admin', 'gro'].indexOf(role) >= 0 && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview';
     this.screenSet(screen);
     this.setState({ role, screen });
+    this.gaPageView(screen);
     if (!this.MOCK) this.loadScreen(screen);
   }
   // ---------- unit switcher (Arena <-> Gym) ----------

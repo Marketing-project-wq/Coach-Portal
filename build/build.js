@@ -12,6 +12,18 @@ const assetVer = crypto.createHash('md5')
   .update(fs.readFileSync(path.join(ROOT, 'public', 'app.js')) + fs.readFileSync(path.join(ROOT, 'public', 'sc-runtime.js')) + fs.readFileSync(path.join(ROOT, 'public', 'i18n.js')))
   .digest('hex').slice(0, 8);
 
+// GA4 — same Measurement ID as the rest of *.20fit.id so cross-subdomain traffic
+// counts as one user journey. cookie_domain:'auto' sets the cookie at .20fit.id level.
+const GA_ID = process.env.GA_MEASUREMENT_ID || 'G-70JD631GZC';
+const gaSnippet = `<!-- Google Analytics 4 (GA4) — unify traffic across *.20fit.id -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_ID}', { cookie_domain: 'auto' });
+</script>`;
+
 const xdcStart = design.indexOf('<x-dc>');
 const xdcEnd = design.indexOf('</x-dc>');
 let xdcInner = design.slice(xdcStart + '<x-dc>'.length, xdcEnd);
@@ -889,6 +901,7 @@ const out = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>20FIT Coach Workspace</title>
+${gaSnippet}
 ${googleFonts}
 <style>
 ${baseCss}
