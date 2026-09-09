@@ -30,7 +30,7 @@ class Component extends DCLogic {
       unit: (window.localStorage && localStorage.getItem('arena_unit')) || 'arena',
       units: [],
       gymScanResult: null, gymScanBusy: false, gymScanSaved: null, gymScanReason: '', gymSearchResults: [],
-      gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '',
+      gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '', gymPkgQ: '', gymCard: null,
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -42,7 +42,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.gymCard) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -55,7 +55,7 @@ class Component extends DCLogic {
   }
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '',
-      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymVisits: [], gymCoachBookings: [] };
+      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [] };
   }
   // ---- per-tab session token (multi-tab fix) ----
   // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
@@ -352,6 +352,25 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(this.t('checkin_recorded')); this.loadGymCoachBookings(); })
       .catch((err) => this.toastMsg((err && err.message) || 'Gagal check-in.'));
   }
+  // ---------- Gym GRO: PT packages + printable member barcode card ----------
+  loadGymPackages() { if (this.MOCK) return; const q = this.state.gymPkgQ ? ('?q=' + encodeURIComponent(this.state.gymPkgQ)) : ''; this.api('/api/unit/gym/packages' + q).then((r) => this.setD({ gymPackages: r.packages || [] })).catch(() => {}); }
+  setGymPkgSearch(e) { this._gymPkgFocus = true; this.setState({ gymPkgQ: e && e.target ? e.target.value : '' }); clearTimeout(this._gpT); this._gpT = setTimeout(() => { if (!this.MOCK) this.loadGymPackages(); }, 300); }
+  openGymCard(code) { const p = (this.state.d.gymPackages || []).find((x) => x.voucherCode === code); if (p) this.setState({ gymCard: p }); }
+  closeGymCard() { this.setState({ gymCard: null }); }
+  printGymCard() {
+    const c = this.state.gymCard; if (!c) return;
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    const svg = document.querySelector('#gymCardBarcode');
+    const bc = svg ? svg.outerHTML : ('<div style="font-family:monospace;font-size:20px;">' + esc(c.voucherCode) + '</div>');
+    const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(c.member) + '</title>'
+      + '<style>body{font-family:Arial,Helvetica,sans-serif;text-align:center;padding:28px;color:#111;}.card{display:inline-block;border:2px solid #111;border-radius:16px;padding:22px 34px;}h1{font-size:20px;margin:0 0 2px;}p{margin:2px 0;color:#444;font-size:13px;}.code{font-family:monospace;font-size:13px;margin-top:8px;letter-spacing:1px;}.brand{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#888;margin-bottom:10px;}</style></head>'
+      + '<body><div class="card"><div class="brand">20FIT Gym · Personal Trainer</div><h1>' + esc(c.member) + '</h1><p>Coach: ' + esc(c.coach || '-') + '</p><p>' + esc(c.used) + ' / ' + esc(c.total) + ' sesi</p><div style="margin-top:14px;">' + bc + '</div><div class="code">' + esc(c.voucherCode) + '</div></div></body></html>';
+    const ifr = document.createElement('iframe');
+    ifr.setAttribute('style', 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;');
+    document.body.appendChild(ifr);
+    const doc = ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
+    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) { /* ignore */ } setTimeout(() => ifr.remove(), 60000); }, 350);
+  }
   setRole(role) {
     const rank = { coach: 0, hc: 1, admin: 2 };
     if (rank[role] > rank[this.accountRole]) return this.toastMsg('You do not have access to this area.');
@@ -362,6 +381,7 @@ class Component extends DCLogic {
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); }
     else if (screen === 'gymview' || screen === 'gymmembers') this.loadGymView();
     else if (screen === 'gymvisits') this.loadGymVisits();
+    else if (screen === 'gympackages') this.loadGymPackages();
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -2043,6 +2063,17 @@ class Component extends DCLogic {
       showGymCoachPanel: (st.role === 'coach' || isAdmin) && st.unit === 'gym' && scr === 'gymview',
       gymCoachRows: (D.gymCoachBookings || []).map((b) => ({ id: b.id, time: b.time, member: b.member, checkedIn: b.checkedIn, notCheckedIn: !b.checkedIn, checkin: () => this.gymCoachCheckin(b.id) })),
       gymHasCoachBookings: (D.gymCoachBookings || []).length > 0, gymNoCoachBookings: (D.gymCoachBookings || []).length === 0, tTodaysPt: this.t('todays_pt_sessions'), tCheckInCoach: this.t('check_in_coach'), tCheckedIn: this.t('checked_in'),
+      // Gym PT packages + printable member barcode card
+      gymPkgRows: (D.gymPackages || []).map((p) => ({ code: p.voucherCode, member: p.member, coach: p.coach || '—', used: p.used, total: p.total, remaining: p.remaining,
+        statusLabel: !p.active ? this.t('not_validated') : (p.expired ? this.t('cancelled_tag') : (p.remaining <= 0 ? this.t('over_quota_tag') : this.t('present'))),
+        statusBg: (!p.active || p.expired || p.remaining <= 0) ? 'rgba(148,163,184,.2)' : 'rgba(62,213,152,.15)', statusFg: (!p.active || p.expired || p.remaining <= 0) ? 'var(--muted)' : '#16a34a',
+        openCard: () => this.openGymCard(p.voucherCode) })),
+      gymHasPkg: (D.gymPackages || []).length > 0, gymNoPkg: (D.gymPackages || []).length === 0, gymNoPkgText: this.t('no_packages'),
+      gymPkgQVal: st.gymPkgQ || '', setGymPkgSearch: (e) => this.setGymPkgSearch(e), tPtPackages: this.t('pt_packages'), tBarcodeCard: this.t('barcode_card'),
+      showGymCard: !!st.gymCard, closeGymCard: () => this.closeGymCard(), printGymCard: () => this.printGymCard(),
+      gymCardMember: st.gymCard ? st.gymCard.member : '', gymCardCoach: st.gymCard ? (st.gymCard.coach || '—') : '', gymCardCode: st.gymCard ? st.gymCard.voucherCode : '',
+      gymCardUsed: st.gymCard ? st.gymCard.used : 0, gymCardTotal: st.gymCard ? st.gymCard.total : 0, gymCardRemaining: st.gymCard ? st.gymCard.remaining : 0,
+      tMemberCard: this.t('member_card'), tPrintCard: this.t('print_card'), tShowToGro: this.t('show_to_gro'),
       gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'),
       // Gym view (calendar + day list + clients)
       gymCalLabel: D.gymCalLabel || '', gymDow,

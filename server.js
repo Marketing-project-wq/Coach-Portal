@@ -909,6 +909,22 @@ route('POST', '/api/unit/gym/coach/checkin', async (req, res, s) => {
   await sb(`pt_visits?id=eq.${enc(String(body.visit_id))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ coach_checked_in: true, coach_checkin_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
+// PT packages list (GRO/admin) — one row per voucher, for the printable member barcode cards.
+route('GET', '/api/unit/gym/packages', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const vs = (await sbAll('pt_package_vouchers?select=id,voucher_code,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active&order=created_at.desc')) || [];
+  const orderIds = [...new Set(vs.map((v) => v.order_id).filter(Boolean))];
+  const omap = {};
+  for (let i = 0; i < orderIds.length; i += 100) {
+    const os = (await sb(`pt_package_orders?select=id,full_name,phone,order_code&id=in.(${orderIds.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const o of os) omap[o.id] = o;
+  }
+  const term = String(q.q || '').trim().toLowerCase();
+  let packages = vs.map((v) => { const o = omap[v.order_id] || {}; const total = v.total_sessions || 0, used = v.used_sessions || 0; return { voucherCode: v.voucher_code, member: o.full_name || '(tanpa nama)', phone: o.phone || '', coach: v.coach_name || '', total, used, remaining: Math.max(0, total - used), expired: !!(v.expires_at && v.expires_at < today), active: v.is_active !== false }; });
+  if (term) packages = packages.filter((p) => p.member.toLowerCase().indexOf(term) >= 0 || String(p.voucherCode).toLowerCase().indexOf(term) >= 0);
+  return send(res, 200, { packages });
+});
 
 // ===== GRO/HC: full-month "Kalender Arena" — each day lists its class bars (with pax) + venue bookings =====
 route('GET', '/api/gro/calendar', async (req, res, s, q) => {
