@@ -513,16 +513,109 @@ const gymMembersScreen = '<sc-if value="{{ s.gymmembers }}"><div style="max-widt
 + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymMembersScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
-// ---- Gym GRO: placeholders for phase-2 screens (Package Orders, Scan Member, Visit History). ----
+// ---- Gym GRO: Package Orders placeholder (phase 2). ----
 const gymSoon = (flag, heading) => '<sc-if value="{{ ' + flag + ' }}"><div style="max-width:720px;margin:48px auto;text-align:center;">'
   + '<div style="font-size:40px;line-height:1;margin-bottom:12px;">&#128679;</div>'
   + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">' + heading + '</div>'
   + '<div style="font-size:13px;color:var(--muted);">{{ comingSoonText }}</div>'
 + '</div></sc-if>';
-const gymSoonScreens = gymSoon('s.gympackages', '20FIT Gym &#183; Package Orders')
-  + '\n        ' + gymSoon('s.gymscan', '20FIT Gym &#183; {{ gymScanLabel }}')
-  + '\n        ' + gymSoon('s.gymvisits', '20FIT Gym &#183; {{ gymVisitsLabel }}');
-template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymSoonScreens + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymSoon('s.gympackages', '20FIT Gym &#183; Package Orders') + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Gym GRO: Scan Member ----
+const gymScanScreen = '<sc-if value="{{ s.gymscan }}"><div style="max-width:640px;margin:0 auto;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:4px;">20FIT Gym &#183; {{ gymScanLabel }}</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:16px;">{{ gymScanHint }}</div>'
+  // scan / type input (hardware scanner types the code then Enter -> submit)
+  + '<form onsubmit="{{ gymScanSubmit }}" style="display:flex;gap:10px;margin-bottom:14px;">'
+    + '<input id="gymScanInput" name="code" autofocus autocomplete="off" placeholder="{{ gymScanPlaceholder }}" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:11px;padding:13px 15px;color:var(--text);font-family:\'JetBrains Mono\';font-size:15px;outline:0;box-sizing:border-box;">'
+    + '<button type="submit" style="background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:0 22px;font-family:\'Archivo\';font-weight:800;font-size:14px;cursor:pointer;">&#128269;</button>'
+  + '</form>'
+  // confirmation card
+  + '<sc-if value="{{ showGymScanCard }}"><div style="' + cardBox + 'padding:18px 20px;margin-bottom:14px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:19px;">{{ gymScanMember }}</div>'
+    + '<div style="font-size:12.5px;color:var(--muted);margin-top:2px;">Coach: {{ gymScanCoach }} &#183; <span style="font-family:\'JetBrains Mono\';">{{ gymScanCode }}</span></div>'
+    + '<div style="display:flex;gap:22px;margin:14px 0 4px;">'
+      + '<div><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">{{ tSessionsUsed }}</div><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">{{ gymScanUsed }} / {{ gymScanTotal }}</div></div>'
+      + '<div><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">{{ tSessionsLeft }}</div><div style="font-family:\'Archivo\';font-weight:800;font-size:22px;color:var(--volt);">{{ gymScanRemaining }}</div></div>'
+    + '</div>'
+    + '<sc-if value="{{ gymScanNeedReason }}">'
+      + '<div style="background:rgba(255,82,71,.1);border:1px solid rgba(255,82,71,.35);color:var(--red);border-radius:10px;padding:10px 13px;font-size:12.5px;font-weight:600;margin:12px 0 10px;">{{ gymScanWarnText }}</div>'
+      + '<input value="{{ gymScanReasonVal }}" oninput="{{ setGymScanReason }}" placeholder="{{ reasonPlaceholder }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;outline:0;margin-bottom:12px;">'
+      + '<button onclick="{{ doGymScanOver }}" style="width:100%;background:var(--red);border:0;color:#fff;border-radius:11px;padding:13px;font-family:\'Archivo\';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">{{ recordAnywayLabel }}</button>'
+    + '</sc-if>'
+    + '<sc-if value="{{ showGymScanConfirmBtn }}"><button onclick="{{ doGymScanConfirm }}" style="width:100%;margin-top:12px;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:13px;font-family:\'Archivo\';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">{{ gymScanConfirmLabel }}</button></sc-if>'
+  + '</div></sc-if>'
+  // success card + cancel + barcode
+  + '<sc-if value="{{ showGymScanSaved }}"><div style="' + cardBox + 'padding:18px 20px;margin-bottom:14px;border-color:rgba(62,213,152,.4);">'
+    + '<div style="display:flex;align-items:center;gap:9px;color:var(--green);font-weight:800;font-size:14px;"><span style="font-size:18px;">&#10003;</span>{{ gymScanSavedText }}</div>'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:18px;margin-top:8px;">{{ gymSavedMember }}</div>'
+    + '<div style="font-size:12.5px;color:var(--muted);margin-top:2px;">{{ tSessionsUsed }}: {{ gymSavedUsed }} / {{ gymSavedTotal }}</div>'
+    + '<sc-if value="{{ gymSavedOver }}"><div style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(255,82,71,.15);color:#dc2626;">{{ overQuotaTag }}</div></sc-if>'
+    + '<div style="margin-top:14px;background:#fff;border-radius:10px;padding:12px;text-align:center;"><svg data-barcode="{{ gymSavedCode }}"></svg></div>'
+    + '<div style="display:flex;gap:10px;margin-top:14px;">'
+      + '<button onclick="{{ doGymScanCancel }}" style="flex:1;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px;font-family:\'Archivo\';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">{{ gymScanCancelLabel }}</button>'
+      + '<button onclick="{{ gymScanNewBtn }}" style="flex:1;background:var(--volt);border:0;color:#08090B;border-radius:11px;padding:12px;font-family:\'Archivo\';font-weight:800;font-size:12.5px;cursor:pointer;text-transform:uppercase;">{{ gymScanLabel }}</button>'
+    + '</div>'
+  + '</div></sc-if>'
+  // manual search
+  + '<div style="' + cardBox + 'padding:14px 16px;">'
+    + '<div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">{{ gymSearchPlaceholder }}</div>'
+    + '<input oninput="{{ gymScanSearch }}" placeholder="{{ gymSearchPlaceholder }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;outline:0;">'
+    + '<sc-if value="{{ gymHasSearch }}"><div style="margin-top:10px;"><sc-for list="{{ gymSearchRows }}" as="r">'
+      + '<div onclick="{{ r.pick }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:7px;cursor:pointer;" style-hover="border-color:var(--volt);">'
+        + '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13px;">{{ r.member }}</div><div style="font-size:11.5px;color:var(--muted);">Coach: {{ r.coach }}</div></div>'
+        + '<span style="font-family:\'JetBrains Mono\';font-size:12px;font-weight:700;color:var(--muted);">{{ r.remaining }}/{{ r.total }}</span>'
+      + '</div>'
+    + '</sc-for></div></sc-if>'
+  + '</div>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymScanScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Gym GRO: Visit History (Riwayat Kunjungan) ----
+const gymVisitCols = 'grid-template-columns:110px 66px 1.3fr 1fr 80px 120px;';
+const gymVisitsScreen = '<sc-if value="{{ s.gymvisits }}"><div style="max-width:1100px;margin:0 auto;">'
+  + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">'
+    + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;">20FIT Gym &#183; {{ gymVisitsLabel }}</div>'
+    + '<button onclick="{{ exportGymVisits }}" style="background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 15px;font-family:\'Hanken Grotesk\';font-weight:700;font-size:12.5px;cursor:pointer;">{{ exportCsvLabel }}</button>'
+  + '</div>'
+  + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">'
+    + '<label style="font-size:11px;color:var(--muted);">{{ tFromDate }} <input type="date" value="{{ gymVisitFromVal }}" onchange="{{ setGymVisitFrom }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:8px 11px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;margin-left:4px;"></label>'
+    + '<label style="font-size:11px;color:var(--muted);">{{ tToDate }} <input type="date" value="{{ gymVisitToVal }}" onchange="{{ setGymVisitTo }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:8px 11px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;margin-left:4px;"></label>'
+    + '<input id="gymVisitSearch" value="{{ gymVisitQVal }}" oninput="{{ setGymVisitQ }}" placeholder="{{ gymSearchPlaceholder }}" style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:8px 12px;color:var(--text);font-family:\'Hanken Grotesk\';font-size:13px;outline:0;box-sizing:border-box;">'
+  + '</div>'
+  + '<sc-if value="{{ gymHasVisits }}"><div style="' + cardBox + 'overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:760px;">'
+    + '<div style="display:grid;' + gymVisitCols + 'background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">'
+      + '<div style="padding:11px 14px;">Tanggal</div><div style="padding:11px 14px;">Jam</div><div style="padding:11px 14px;">Member</div><div style="padding:11px 14px;">Coach</div><div style="padding:11px 14px;text-align:right;">Sisa</div><div style="padding:11px 14px;">Status</div>'
+    + '</div>'
+    + '<sc-for list="{{ gymVisitRows }}" as="v">'
+      + '<div style="display:grid;' + gymVisitCols + 'border-top:1px solid var(--border);align-items:center;">'
+        + '<div style="padding:10px 14px;font-size:12.5px;">{{ v.date }}</div>'
+        + '<div style="padding:10px 14px;font-family:\'JetBrains Mono\';font-size:12px;">{{ v.time }}</div>'
+        + '<div style="padding:10px 14px;font-weight:700;font-size:13px;">{{ v.member }}</div>'
+        + '<div style="padding:10px 14px;font-size:12.5px;color:var(--muted);">{{ v.coach }}</div>'
+        + '<div style="padding:10px 14px;text-align:right;font-family:\'JetBrains Mono\';font-weight:700;">{{ v.remainingAfter }}</div>'
+        + '<div style="padding:10px 14px;"><span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;background:{{ v.statusBg }};color:{{ v.statusFg }};white-space:nowrap;">{{ v.statusLabel }}</span></div>'
+      + '</div>'
+    + '</sc-for>'
+  + '</div></div></div></sc-if>'
+  + '<sc-if value="{{ gymNoVisits }}"><div style="' + cardBox + 'padding:40px 24px;text-align:center;color:var(--muted);">{{ gymNoVisitsText }}</div></sc-if>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymVisitsScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Gym coach: today's PT sessions (from GRO scans) with arena-style check-in. Shows on the gym Schedule screen. ----
+const gymCoachPanel = '<sc-if value="{{ showGymCoachPanel }}"><div style="max-width:1100px;margin:0 auto 18px;"><div style="' + cardBox + 'padding:16px;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:15px;margin-bottom:12px;">{{ tTodaysPt }}</div>'
+  + '<sc-if value="{{ gymHasCoachBookings }}"><sc-for list="{{ gymCoachRows }}" as="b">'
+    + '<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border);">'
+      + '<span style="font-family:\'JetBrains Mono\';font-weight:700;font-size:13px;min-width:48px;">{{ b.time }}</span>'
+      + '<div style="flex:1;min-width:0;font-weight:700;font-size:13px;">{{ b.member }}</div>'
+      + '<sc-if value="{{ b.checkedIn }}"><span style="font-size:11px;font-weight:700;color:var(--green);">&#10003; {{ tCheckedIn }}</span></sc-if>'
+      + '<sc-if value="{{ b.notCheckedIn }}"><button onclick="{{ b.checkin }}" style="background:var(--volt);border:0;color:#08090B;border-radius:9px;padding:8px 16px;font-family:\'Archivo\';font-weight:800;font-size:12px;cursor:pointer;text-transform:uppercase;">{{ tCheckInCoach }}</button></sc-if>'
+    + '</div>'
+  + '</sc-for></sc-if>'
+  + '<sc-if value="{{ gymNoCoachBookings }}"><div style="color:var(--muted);font-size:12.5px;padding:8px 0;">&#8212;</div></sc-if>'
++ '</div></div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymCoachPanel + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
 // Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
 const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'
@@ -783,6 +876,7 @@ ${responsiveCss}
 <body>
 <div id="app"></div>
 <template id="tpl">${template}</template>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="i18n.js?v=${assetVer}"></script>
 <script src="sc-runtime.js?v=${assetVer}"></script>
 <script src="app.js?v=${assetVer}"></script>
