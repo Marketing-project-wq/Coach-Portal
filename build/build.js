@@ -281,7 +281,7 @@ template = template.replace(/(<button onclick="\{\{ goDash \}\}"[\s\S]*?<\/butto
 // standalone URL <domain>/tutorial (public/tutorial.html → panduan-internal/freelance.html).
 // GRO-only "Participants" nav — lives in the always-visible COACH area (the HC membersNav
 // is inside the isHC block, invisible to GRO). Anchored on the always-shown goVenue button.
-const groMembersNav = '<sc-if value="{{ isGro }}"><button onclick="{{ goMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.members.bg }};color:{{ nav.members.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.members.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Participants</button></sc-if>';
+const groMembersNav = '<sc-if value="{{ showGroArena }}"><button onclick="{{ goMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.members.bg }};color:{{ nav.members.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.members.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Participants</button></sc-if>';
 template = template.replace(/(<button onclick="\{\{ goVenue \}\}"[\s\S]*?<\/button>)/, '$1' + groMembersNav);
 // Head-coach-only "Assign Venue" nav (dispatch bookings to other coaches) — added inside the HEAD COACH section.
 const venueAssignNav = '<button onclick="{{ goVenueAssign }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.venueassign.bg }};color:{{ nav.venueassign.fg }};font-family:\'Hanken Grotesk\';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.venueassign.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Assign Venue</button>';
@@ -490,6 +490,39 @@ const gymScreen = '<sc-if value="{{ s.gymview }}"><div style="max-width:1100px;m
   + '</div>'
 + '</div></sc-if>';
 template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Gym GRO: Members (client list) — reuses the gym clients data. ----
+const gymMembersScreen = '<sc-if value="{{ s.gymmembers }}"><div style="max-width:900px;margin:0 auto;">'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:4px;">20FIT Gym &#183; {{ gymMembersLabel }}</div>'
+  + '<div style="font-size:13px;color:var(--muted);margin-bottom:16px;">{{ gymClientsTotal }} &#183; {{ gymClientsActive }} aktif 30 hari</div>'
+  + '<sc-if value="{{ gymClientsHas }}"><div style="' + cardBox + 'overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:560px;">'
+    + '<div style="display:grid;' + gymCliCols + 'background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">'
+      + '<div style="padding:11px 14px;text-align:center;">No</div><div style="padding:11px 14px;">Nama</div><div style="padding:11px 14px;">Telp</div><div style="padding:11px 14px;text-align:right;">Kunjungan</div><div style="padding:11px 14px;">Terakhir</div>'
+    + '</div>'
+    + '<sc-for list="{{ gymClients }}" as="c">'
+      + '<div style="display:grid;' + gymCliCols + 'border-top:1px solid var(--border);align-items:center;">'
+        + '<div style="padding:10px 14px;text-align:center;font-family:\'JetBrains Mono\';color:var(--muted);">{{ c.rank }}</div>'
+        + '<div style="padding:10px 14px;font-weight:700;font-size:13px;">{{ c.name }}</div>'
+        + '<div style="padding:10px 14px;font-family:\'JetBrains Mono\';font-size:11.5px;color:var(--muted);">{{ c.phone }}</div>'
+        + '<div style="padding:10px 14px;text-align:right;font-family:\'JetBrains Mono\';font-weight:700;">{{ c.visits }}</div>'
+        + '<div style="padding:10px 14px;font-size:12px;color:var(--muted);">{{ c.lastVisit }}</div>'
+      + '</div>'
+    + '</sc-for>'
+  + '</div></div></div></sc-if>'
+  + '<sc-if value="{{ gymClientsEmpty }}"><div style="' + cardBox + 'padding:40px 24px;text-align:center;color:var(--muted);">Belum ada klien Gym pada periode ini.</div></sc-if>'
++ '</div></sc-if>';
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymMembersScreen + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
+
+// ---- Gym GRO: placeholders for phase-2 screens (Package Orders, Scan Member, Visit History). ----
+const gymSoon = (flag, heading) => '<sc-if value="{{ ' + flag + ' }}"><div style="max-width:720px;margin:48px auto;text-align:center;">'
+  + '<div style="font-size:40px;line-height:1;margin-bottom:12px;">&#128679;</div>'
+  + '<div style="font-family:\'Archivo\';font-weight:800;font-size:22px;margin-bottom:6px;">' + heading + '</div>'
+  + '<div style="font-size:13px;color:var(--muted);">{{ comingSoonText }}</div>'
++ '</div></sc-if>';
+const gymSoonScreens = gymSoon('s.gympackages', '20FIT Gym &#183; Package Orders')
+  + '\n        ' + gymSoon('s.gymscan', '20FIT Gym &#183; {{ gymScanLabel }}')
+  + '\n        ' + gymSoon('s.gymvisits', '20FIT Gym &#183; {{ gymVisitsLabel }}');
+template = template.replace('<!-- ===== CLASS DETAIL ===== -->', gymSoonScreens + '\n\n        <!-- ===== CLASS DETAIL ===== -->');
 
 // Admin-only "Arena Renters" leaderboard screen — customers who book the arena most (month-filterable).
 const rentersScreen = '<sc-if value="{{ s.renters }}"><div style="max-width:760px;margin:0 auto;">'

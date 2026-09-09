@@ -727,7 +727,27 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
 // The Coach Portal is Arena-first. These isolated endpoints let admin & coach view the Gym
 // unit's calendar and clients WITHOUT touching any arena_* logic — they read gym_* tables only,
 // so the switcher can never affect Arena data. Phase 1 covers the calendar + client list.
-function gymUnitAllowed(s) { return s && (s.r === 'admin' || s.r === 'coach' || s.r === 'hc'); }
+// Units this portal implements. The switcher never hardcodes the list — it asks /api/units,
+// which returns the active rb_units the caller's role may access (Arena-first; GRO/admin/coach/HC
+// may also access Gym). Clinic/Recovery Center are intentionally absent here.
+const PORTAL_UNIT_CODES = ['arena', 'gym'];
+function allowedUnitCodes(s) {
+  if (!s) return ['arena'];
+  if (isExternalSession(s)) return ['arena']; // external coaches stay Arena-only
+  return ['arena', 'gym'];
+}
+function unitAllowed(s, code) { return allowedUnitCodes(s).indexOf(String(code || 'arena')) >= 0; }
+async function portalUnits(s) {
+  const rows = await sb('rb_units?select=code,name,active').catch(() => []);
+  const byCode = {}; for (const r of rows || []) byCode[r.code] = r;
+  const allow = allowedUnitCodes(s);
+  return PORTAL_UNIT_CODES
+    .filter((c) => allow.indexOf(c) >= 0 && byCode[c] && byCode[c].active !== false)
+    .map((c) => ({ code: c, name: byCode[c].name || c }));
+}
+// The allowed-unit list for the sidebar switcher (never hardcoded client-side).
+route('GET', '/api/units', async (req, res, s) => { const u = String(req.headers['x-unit'] || 'arena'); return send(res, 200, { units: await portalUnits(s), current: unitAllowed(s, u) ? u : 'arena' }); });
+function gymUnitAllowed(s) { return s && unitAllowed(s, 'gym') && (s.r === 'admin' || s.r === 'coach' || s.r === 'hc' || s.r === 'gro'); }
 async function gymClassTypes() {
   const rows = await sb('gym_class_types?select=id,name,color').catch(() => []);
   const m = {}; for (const r of rows || []) m[r.id] = r; return m;

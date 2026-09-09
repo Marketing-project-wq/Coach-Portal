@@ -28,6 +28,7 @@ class Component extends DCLogic {
       toast: '',
       lang: (window.localStorage && localStorage.getItem('arena_lang')) || 'id',
       unit: (window.localStorage && localStorage.getItem('arena_unit')) || 'arena',
+      units: [],
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -88,6 +89,7 @@ class Component extends DCLogic {
         this.isExternal = !!me.external;
         this.state.user = this.userObj(me); this.state.loggedIn = true;
         this.applyRole(me.role, true);
+        this.loadUnits();
       }).catch(() => this.logout());
     }
   }
@@ -221,20 +223,34 @@ class Component extends DCLogic {
     // class Detail (participant names + level), and their own Account Settings.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
     // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
-    if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
-    // Unit switcher: if the Gym unit was last selected, land on the Gym view (admin & coach & HC).
-    if (this.state.unit === 'gym' && ['coach', 'hc', 'admin'].indexOf(role) >= 0) screen = 'gymview';
+    const GYM_SCREENS = ['gymview', 'gymmembers', 'gympackages', 'gymscan', 'gymvisits'];
+    if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].concat(GYM_SCREENS).indexOf(screen) < 0) screen = 'dash';
+    // Unit switcher: in Gym mode land on a Gym screen (admin, coach, HC & GRO), unless a Gym
+    // screen was already restored.
+    if (this.state.unit === 'gym' && ['coach', 'hc', 'admin', 'gro'].indexOf(role) >= 0 && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview';
     this.screenSet(screen);
     this.setState({ role, screen });
     if (!this.MOCK) this.loadScreen(screen);
   }
   // ---------- unit switcher (Arena <-> Gym) ----------
+  // The allowed-unit list comes from the backend (/api/units), never hardcoded here.
+  loadUnits() {
+    if (this.MOCK) return;
+    this.api('/api/units').then((r) => {
+      const units = r.units || [];
+      // If the persisted unit is no longer allowed, fall back to arena.
+      const codes = units.map((u) => u.code);
+      if (this.state.unit !== 'arena' && codes.indexOf(this.state.unit) < 0) this.setUnit('arena');
+      this.setState({ units });
+    }).catch(() => this.setState({ units: [] }));
+  }
+  unitHome(code) { return code === 'arena' ? (this.state.role === 'hc' ? 'schedule' : 'dash') : 'gymview'; }
   setUnit(u) {
     if (this.state.unit === u) return;
     if (window.localStorage) localStorage.setItem('arena_unit', u);
     this.setState({ unit: u });
     if (this.MOCK) return;
-    this.go(u === 'gym' ? 'gymview' : 'dash');
+    this.go(this.unitHome(u));
   }
   loadGymView() {
     if (this.MOCK) return;
@@ -253,7 +269,7 @@ class Component extends DCLogic {
   loadScreen(screen) {
     const fail = (e) => { if (e && e.message !== 'unauthorized') this.toastMsg(e.message || 'Failed to load.'); };
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); }
-    else if (screen === 'gymview') this.loadGymView();
+    else if (screen === 'gymview' || screen === 'gymmembers') this.loadGymView();
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
     else if (screen === 'subreq') this.api('/api/coach/subs/options').then((d) => this.setD({ subOptions: d.options })).catch(fail);
@@ -1181,9 +1197,17 @@ class Component extends DCLogic {
     if (scr === 'packageorders') tt = titles.packageorders;
     if (scr === 'reschedule') tt = titles.reschedule;
     if (scr === 'validatecoach') tt = titles.validatecoach;
-    titles.gymview = ['20FIT Gym', 'Jadwal & Klien'];
+    titles.gymview = ['20FIT Gym', 'Schedule'];
+    titles.gymmembers = ['20FIT Gym', this.t('members')];
+    titles.gympackages = ['20FIT Gym', 'Package Orders'];
+    titles.gymscan = ['20FIT Gym', this.t('scan_member')];
+    titles.gymvisits = ['20FIT Gym', this.t('visit_history')];
     if (scr === 'gymview') tt = titles.gymview;
-    const s = { gymview: scr === 'gymview', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
+    if (scr === 'gymmembers') tt = titles.gymmembers;
+    if (scr === 'gympackages') tt = titles.gympackages;
+    if (scr === 'gymscan') tt = titles.gymscan;
+    if (scr === 'gymvisits') tt = titles.gymvisits;
+    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1883,8 +1907,16 @@ class Component extends DCLogic {
       isGro, goReschedule: () => this.go('reschedule'),
       goValidateCoach: () => this.go('validatecoach'),
       // Unit switcher — shown for admin & coach; picks which unit's data the view shows.
-      showUnitSwitch: isAdmin || st.role === 'coach', unitArena: unitSeg(st.unit === 'arena'), unitGym: unitSeg(st.unit === 'gym'),
-      setUnitArena: () => this.setUnit('arena'), setUnitGym: () => this.setUnit('gym'),
+      // Units-driven switcher (list from /api/units, never hardcoded). Shown to admin, coach & GRO.
+      showUnitSwitch: (isAdmin || st.role === 'coach' || isGro) && (st.units || []).length > 1,
+      switchUnitLabel: this.t('switch_unit'),
+      unitOpts: (st.units || []).map((u) => { const on = st.unit === u.code; const seg = unitSeg(on); return { code: u.code, label: String(u.name || u.code).replace(/^20FIT\s+/i, ''), on, bg: seg.bg, fg: seg.fg, bar: seg.bar, weight: seg.weight, pick: () => this.setUnit(u.code) }; }),
+      // GRO per-unit menu gating. notGroGym hides Arena items when GRO is in Gym mode (no leak);
+      // non-GRO roles keep notGroGym=true so their menus are byte-identical.
+      notGroGym: !(isGro && st.unit === 'gym'), showGroArena: isGro && st.unit === 'arena', showGroGym: isGro && st.unit === 'gym',
+      goGymSchedule: () => this.go('gymview'), goGymMembers: () => this.go('gymmembers'), goGymPackages: () => this.go('gympackages'), goGymScan: () => this.go('gymscan'), goGymVisits: () => this.go('gymvisits'),
+      gymMembersLabel: this.t('members'), gymScanLabel: this.t('scan_member'), gymVisitsLabel: this.t('visit_history'), comingSoonText: this.t('coming_soon'),
+      gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'),
       // Gym view (calendar + day list + clients)
       gymCalLabel: D.gymCalLabel || '', gymDow,
       gymPrev: () => this.gymCalNav(D.gymCalPrevYm), gymNext: () => this.gymCalNav(D.gymCalNextYm),
@@ -1980,7 +2012,7 @@ class Component extends DCLogic {
       venueRenters, hasVenueRenters, noVenueRenters, venueLbMonthOpts, hasVenueLbMonths: venueLbMonthOpts.length > 0, setVenueLbMonth: (e) => this.setVenueLbMonth(e && e.target ? e.target.value : ''), goRenters: () => this.go('renters'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
       boardSortPax: seg(boardSort === 'pax'), boardSortRating: seg(boardSort === 'rating'), sortByPax: () => this.setBoardSort('pax'), sortByRating: () => this.setBoardSort('rating'),
-      showVenueNav: true, goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
+      showVenueNav: !(isGro && st.unit === 'gym'), goVenue: () => this.go('venue'), goVenueAssign: () => this.go('venueassign'),
       showGuide: !isGro, goGuide: () => { if (this.MOCK) return this.toastMsg('Membuka panduan…'); window.open(this.isExternal ? '/panduan-freelance.html' : '/panduan-internal.html', '_blank'); },
       venueIsHC, venueIsCoach: !venueIsHC, venueCoachOpts,
       venueOwn, noVenueOwn, hasVenueOwn: !noVenueOwn,
