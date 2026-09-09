@@ -14,6 +14,7 @@ class Component extends DCLogic {
     this.C = { volt: '#E4002B', voltDim: 'rgba(228,0,43,.12)', green: '#1C8A4B', amber: '#C77A00', red: '#E4002B', cyan: '#0068C9', muted: '#6E6E73', muted2: '#9A9A9E', raised: 'rgba(255,255,255,.55)', border2: 'rgba(17,17,20,.15)', text: '#1D1D1F' };
     this.accountRole = 'coach';
     this.isExternal = false;
+    this.accountUnit = 'arena'; // GRO accounts are locked to one unit (arena|gym)
     this._t = null;
     this.state = {
       loggedIn: false, role: 'coach', screen: 'dash', token: this.tokenGet(),
@@ -89,6 +90,7 @@ class Component extends DCLogic {
       this.api('/api/coach/me').then((me) => {
         this.accountRole = me.role;
         this.isExternal = !!me.external;
+        this.accountUnit = me.unit || 'arena';
         this.state.user = this.userObj(me); this.state.loggedIn = true;
         this.applyRole(me.role, true);
         this.loadUnits();
@@ -252,19 +254,29 @@ class Component extends DCLogic {
   toggleMenu() { this.setState({ menuOpen: !this.state.menuOpen }); }
   closeMenu() { this.setState({ menuOpen: false }); }
   applyRole(role, restore) {
-    const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : role === 'gro' ? 'dash' : 'accounts';
+    // GRO is locked to a single unit (Arena or Gym) so the two never mix — force it.
+    if (role === 'gro') {
+      const gu = this.accountUnit === 'gym' ? 'gym' : 'arena';
+      this.state.unit = gu;
+      try { if (window.localStorage) localStorage.setItem('arena_unit', gu); } catch (_e) {}
+    }
+    const groGym = role === 'gro' && this.state.unit === 'gym';
+    const def = role === 'coach' ? 'dash' : role === 'hc' ? 'schedule' : role === 'gro' ? (groGym ? 'gymview' : 'dash') : 'accounts';
     let screen = def;
     // On first load, return to the screen the user was last on (not always the role default).
     if (restore) { const saved = this.screenGet(); if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
     // External coaches may reach Schedule, Monitoring, Coverage, Venue Booking, Class Menu, the
     // class Detail (participant names + level), and their own Account Settings.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
-    // GRO: schedule/check-in, venue bookings, class detail and the participants list only.
     const GYM_SCREENS = ['gymview', 'gymmembers', 'gympackages', 'gymscan', 'gymvisits'];
-    if (role === 'gro' && ['dash', 'detail', 'venue', 'members'].concat(GYM_SCREENS).indexOf(screen) < 0) screen = 'dash';
-    // Unit switcher: in Gym mode land on a Gym screen (admin, coach, HC & GRO), unless a Gym
-    // screen was already restored.
-    if (this.state.unit === 'gym' && ['coach', 'hc', 'admin', 'gro'].indexOf(role) >= 0 && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview';
+    // GRO screen scope depends on the unit they are locked to — Gym GRO gets only Gym screens,
+    // Arena GRO only the Arena GRO screens (schedule/check-in, venue, class detail, members).
+    if (role === 'gro') {
+      if (groGym) { if (GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview'; }
+      else if (['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
+    }
+    // Gym mode for the roles that can still switch units (coach, HC, admin) — GRO handled above.
+    if (this.state.unit === 'gym' && ['coach', 'hc', 'admin'].indexOf(role) >= 0 && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview';
     this.screenSet(screen);
     this.setState({ role, screen });
     this.gaPageView(screen);
@@ -429,6 +441,7 @@ class Component extends DCLogic {
         this.tokenSet(res.token);
         this.accountRole = res.coach.role;
         this.isExternal = !!res.coach.external || (res.coach.role === 'coach' && isExternalName(res.coach.coach_name || res.coach.display_name));
+        this.accountUnit = res.coach.unit || 'arena';
         this.setState({ token: res.token, loggedIn: true, user: this.userObj(res.coach) });
         this.applyRole(res.coach.role);
       }).catch((e) => this.toastMsg(e.message || 'Login failed.'));
@@ -2035,7 +2048,7 @@ class Component extends DCLogic {
       goValidateCoach: () => this.go('validatecoach'),
       // Unit switcher — shown for admin & coach; picks which unit's data the view shows.
       // Units-driven switcher (list from /api/units, never hardcoded). Shown to admin, coach & GRO.
-      showUnitSwitch: (isAdmin || st.role === 'coach' || isGro) && (st.units || []).length > 1,
+      showUnitSwitch: (isAdmin || st.role === 'coach') && (st.units || []).length > 1,
       switchUnitLabel: this.t('switch_unit'),
       unitOpts: (st.units || []).map((u) => { const on = st.unit === u.code; const seg = unitSeg(on); return { code: u.code, label: String(u.name || u.code).replace(/^20FIT\s+/i, ''), on, bg: seg.bg, fg: seg.fg, bar: seg.bar, weight: seg.weight, pick: () => this.setUnit(u.code) }; }),
       // Per-unit menu gating. In Gym mode EVERY role's dashboard becomes Gym-only: all Arena
