@@ -2039,7 +2039,7 @@ class Component extends DCLogic {
       border: D.gymSelDate === c.date ? 'var(--volt)' : (c.teach ? 'var(--border2)' : 'var(--border)'),
       col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach, pick: () => this.gymShowDay(c.date),
     });
-    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: x.color || 'var(--cyan)', cancelled: !!x.cancelled }));
+    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: (x.cap > 0 && x.pax >= x.cap) ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled }));
     const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
     const gsc = st.gymScanResult, gss = st.gymScanSaved;
 
