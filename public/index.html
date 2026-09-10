@@ -210,14 +210,14 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
         <img src="https://media.20fit.id/wp-content/uploads/2026/05/Copy-of-new-logo-20fit-putih-3.png" alt="20FIT" style="height:72px;width:auto;max-width:320px;display:block;" onerror="this.style.display='none'">
       </div>
       <div style="position:relative;">
-        <div style="display:inline-flex;align-items:center;gap:9px;padding:7px 15px;border:1px solid rgba(255,255,255,.16);border-radius:100px;font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#fff;margin-bottom:26px;"><span style="width:7px;height:7px;border-radius:50%;background:#E4002B;box-shadow:0 0 10px 1px rgba(228,0,43,.85);"></span>Official HYROX Training Club</div>
-        <h1 style="font-family:'Barlow Condensed';font-weight:900;font-size:62px;line-height:.95;letter-spacing:-.03em;margin:0 0 12px;text-transform:uppercase;color:#fff;">Coach<br><span style="color:#E4002B;">Portal</span></h1>
-        <div style="font-size:12px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.22em;margin:0 0 18px;">COACH WORKSPACE</div>
-        <p style="color:rgba(255,255,255,.6);font-size:16px;line-height:1.6;max-width:370px;margin:0;">One place for schedules, participants, attendance, and coach substitutions — synced directly with Admin Hub Arena.</p>
+        <div style="display:inline-flex;align-items:center;gap:9px;padding:7px 15px;border:1px solid rgba(255,255,255,.16);border-radius:100px;font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#fff;margin-bottom:26px;"><span style="width:7px;height:7px;border-radius:50%;background:#E4002B;box-shadow:0 0 10px 1px rgba(228,0,43,.85);"></span>{{ loginBadge }}</div>
+        <h1 style="font-family:'Barlow Condensed';font-weight:900;font-size:62px;line-height:.95;letter-spacing:-.03em;margin:0 0 12px;text-transform:uppercase;color:#fff;">{{ loginTitle }}<br><span style="color:#E4002B;">{{ loginTitleAccent }}</span></h1>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:.22em;margin:0 0 18px;">{{ loginSubtitle }}</div>
+        <p style="color:rgba(255,255,255,.6);font-size:16px;line-height:1.6;max-width:370px;margin:0;">{{ loginDesc }}</p>
       </div>
       <div style="position:relative;display:flex;gap:14px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:130px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:15px 16px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;color:#E4002B;">HYROX</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:3px;">Complete &amp; Foundation</div></div>
-        <div style="flex:1;min-width:130px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:15px 16px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;color:#fff;">Menteng</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:3px;">20FIT Arena · Jakarta</div></div>
+        <div style="flex:1;min-width:130px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:15px 16px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;color:#E4002B;">{{ loginCard1Title }}</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:3px;">{{ loginCard1Sub }}</div></div>
+        <div style="flex:1;min-width:130px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:15px 16px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;color:#fff;">{{ loginCard2Title }}</div><div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:3px;">{{ loginCard2Sub }}</div></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:center;padding:40px;">
@@ -226,8 +226,8 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
           <button onclick="{{ setLangEN }}" style="background:{{ langEnBg }};color:{{ langEnFg }};border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-family:'Manrope';font-weight:700;font-size:12.5px;cursor:pointer;">EN</button>
           <button onclick="{{ setLangID }}" style="background:{{ langIdBg }};color:{{ langIdFg }};border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-family:'Manrope';font-weight:700;font-size:12.5px;cursor:pointer;">ID</button>
         </div>
-        <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;">Welcome back</div>
-        <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:29px;margin:0 0 28px;letter-spacing:-.01em;">Sign in to your account</h2>
+        <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;">{{ loginWelcome }}</div>
+        <h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:29px;margin:0 0 28px;letter-spacing:-.01em;">{{ loginHeading }}</h2>
         <label style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;">Name</label>
         <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.6);border:1px solid var(--border2);border-radius:12px;padding:0 14px;margin-bottom:18px;transition:border-color .15s,box-shadow .15s;" class="login-field">
           <span style="color:var(--muted2);font-size:15px;">@</span>

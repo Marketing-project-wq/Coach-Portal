@@ -35,6 +35,7 @@ class Component extends DCLogic {
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
+    this.groEntry = location.pathname === '/gro' || location.pathname === '/gro/';
     this.boot();
     // Auto-refresh: pick up classes/bookings newly added in Admin Hub without a manual reload.
     this._pollTimer = setInterval(() => this.autoRefresh(), 60000);
@@ -2166,6 +2167,18 @@ class Component extends DCLogic {
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
       registerCanNote: isGro, exportAttendance: () => this.exportAttendancePdf(),
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
+      groEntry: this.groEntry,
+      loginBadge: this.groEntry ? 'GRO Staff Portal' : 'Official HYROX Training Club',
+      loginTitle: this.groEntry ? 'GRO' : 'Coach',
+      loginTitleAccent: this.groEntry ? 'Portal' : 'Portal',
+      loginSubtitle: this.groEntry ? 'GRO WORKSPACE' : 'COACH WORKSPACE',
+      loginDesc: this.groEntry ? 'Manage gym schedules, member check-ins, packages, and visit history — the GRO command center.' : 'One place for schedules, participants, attendance, and coach substitutions — synced directly with Admin Hub Arena.',
+      loginHeading: this.groEntry ? (st.lang === 'id' ? 'Masuk sebagai GRO' : 'Sign in as GRO') : (st.lang === 'id' ? 'Masuk ke akun Anda' : 'Sign in to your account'),
+      loginWelcome: this.groEntry ? (st.lang === 'id' ? 'Halo, GRO' : 'Hello, GRO') : (st.lang === 'id' ? 'Selamat datang' : 'Welcome back'),
+      loginCard1Title: this.groEntry ? 'GYM' : 'HYROX',
+      loginCard1Sub: this.groEntry ? 'Personal Training & Classes' : 'Complete & Foundation',
+      loginCard2Title: this.groEntry ? 'Menteng' : 'Menteng',
+      loginCard2Sub: this.groEntry ? '20FIT Gym · Jakarta' : '20FIT Arena · Jakarta',
       login: () => this.login(), logout: () => this.logout(),
       setLangEN: () => this.setLang('en'), setLangID: () => this.setLang('id'),
       langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',

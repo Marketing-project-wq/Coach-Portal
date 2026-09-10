@@ -525,6 +525,7 @@ function serveStatic(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
   if (p === '/review') p = '/review.html';
+  if (p === '/gro' || p === '/gro/') p = '/index.html';
   // Coach guide landing (pick Internal / Freelance) — shareable as <domain>/tutorial.
   if (p === '/tutorial' || p === '/tutorial/') p = '/tutorial.html';
   const fp = path.normalize(path.join(PUBLIC_DIR, p));
