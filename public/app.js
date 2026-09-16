@@ -33,7 +33,7 @@ class Component extends DCLogic {
       gymScanResult: null, gymScanBusy: false, gymScanSaved: null, gymScanReason: '', gymSearchResults: [],
       gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '', gymPkgQ: '', gymCard: null,
       gymMemberTab: 'all', gymMemberSearch: '', gymMemberSort: 'lastVisit', gymMemberSortDir: 'desc', gymMemberDetail: null,
-      gymSchedMode: 'week', gymSchedAnchor: '', gymSchedCoachFilter: '', gymSchedTypeFilter: '', gymSchedDetail: null,
+      gymSchedMode: 'month', gymSchedAnchor: '', gymSchedCoachFilter: '', gymSchedTypeFilter: '', gymSchedDetail: null,
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -347,7 +347,12 @@ class Component extends DCLogic {
     this.setState({ gymSchedAnchor: this._isoDate(nd) }); this.loadGymSchedule();
   }
   gymSchedToday() { this.setState({ gymSchedAnchor: this.todayISO() }); this.loadGymSchedule(); }
-  gymSchedGoDay(date) { this.setState({ gymSchedMode: 'day', gymSchedAnchor: date }); this.loadGymSchedule(); }
+  gymSchedGoDay(date) {
+    const days = (this.state.d.gymSchedData || {}).days || {};
+    const classes = days[date] || [];
+    if (classes.length === 1) { this.openGymClassDetail(classes[0].id); return; }
+    if (classes.length > 1) { this.openGymClassDetail(classes[0].id); }
+  }
   openGymClassDetail(id) {
     this.setState({ gymSchedDetail: { loading: true } });
     this.api('/api/unit/gym/class-detail?id=' + id)
@@ -2200,7 +2205,8 @@ class Component extends DCLogic {
         const isToday = dt === _todayISO;
         const preview = raw.slice(0, 3).map((b) => ({ type: b.type, coach: b.coach || '', color: _coachColorMap[b.coach] || '#666', time: b.time }));
         const moreCount = raw.length > 3 ? raw.length - 3 : 0;
-        cells.push({ blank: false, day: d, date: dt, isToday, todayBg: isToday ? 'var(--volt-dim)' : 'transparent', todayBorder: isToday ? '2px solid var(--volt)' : '1px solid var(--border)', preview, hasPreview: preview.length > 0, moreCount, hasMore: moreCount > 0, moreLabel: '+' + moreCount + ' ' + this.t('n_more'), goDay: () => this.gymSchedGoDay(dt) });
+        const pickDay = () => this.gymSchedGoDay(dt);
+        cells.push({ blank: false, day: d, date: dt, isToday, todayBg: isToday ? 'var(--volt-dim)' : 'transparent', todayBorder: isToday ? '2px solid var(--volt)' : '1px solid var(--border)', preview, hasPreview: preview.length > 0, moreCount, hasMore: moreCount > 0, moreLabel: '+' + moreCount + ' ' + this.t('n_more'), goDay: pickDay, pick: pickDay });
       }
       const weeks = [];
       while (cells.length) weeks.push({ cells: cells.splice(0, 7) });
