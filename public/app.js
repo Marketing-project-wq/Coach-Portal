@@ -2302,7 +2302,7 @@ class Component extends DCLogic {
         const isToday = dt === _todayISO;
         const preview = raw.slice(0, 3).map((b) => {
           const cc = _coachColorMap[b.coach] || '#666';
-          return { type: b.type, coach: b.coach || '—', color: cc, bg: cc + '1A', time: b.time, paxLabel: (b.pax || 0) + '/' + (b.cap || 0), pick: () => this.openGymClassDetail(b.id), tooltip: b.type + ' · ' + b.time + (b.end ? '-' + b.end : '') + ' · ' + (b.coach || '—') + ' · ' + (b.pax || 0) + '/' + (b.cap || 0) };
+          return { type: b.type, coach: b.coach || '—', color: cc, bg: cc + '1A', time: b.time, paxLabel: (b.pax || 0) + '/' + (b.cap || 0), pick: (e) => { e.stopPropagation(); this.openGymClassDetail(b.id); }, tooltip: b.type + ' · ' + b.time + (b.end ? '-' + b.end : '') + ' · ' + (b.coach || '—') + ' · ' + (b.pax || 0) + '/' + (b.cap || 0) };
         });
         const moreCount = raw.length > 3 ? raw.length - 3 : 0;
         const pickDay = () => this.gymSchedGoDay(dt);
