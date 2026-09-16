@@ -831,9 +831,207 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   if (!scheds.length) return send(res, 404, { error: 'Class not found' });
   const x = scheds[0], t = types[x.class_type_id] || {};
   const bc = (await gymBookingCounts([x.id]))[x.id] || {};
-  const bookings = (await sb(`gym_class_bookings?select=full_name,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
-  return send(res, 200, { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, participants: bookings.map((b) => ({ name: b.full_name || '' })) });
+  const bookings = (await sb(`gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const started = x.schedule_date < today || (x.schedule_date === today && hhmmToMin(x.start_time) != null && hhmmToMin(x.start_time) <= nowMin);
+  const isUpcoming = !started && !x.is_cancelled;
+  // Check pending-reschedule status for each booking
+  const bkIds = bookings.map((b) => b.id);
+  let pendingMap = {};
+  if (bkIds.length) {
+    const pendingRows = (await sb(`gym_reschedule_log?select=booking_id,note,reason&action=eq.mark_pending&resolved_at=is.null&booking_id=in.(${bkIds.map(enc).join(',')})`).catch(() => [])) || [];
+    for (const p of pendingRows) pendingMap[p.booking_id] = { note: p.note || '', reason: p.reason || '' };
+  }
+  // Check if any booking was rescheduled INTO this session
+  let reschFromMap = {};
+  const reschInto = (await sb(`gym_reschedule_log?select=booking_id,old_date,old_time&action=eq.reschedule&new_session_id=eq.${enc(id)}`).catch(() => [])) || [];
+  for (const r of reschInto) reschFromMap[r.booking_id] = r.old_date || '';
+  return send(res, 200, { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, participants: bookings.map((b) => ({ bookingId: b.id, name: b.full_name || '', phone: b.phone || '', pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '' })) });
 });
+// ===== GYM: RESCHEDULE & PENDING =====
+const GYM_RESCHEDULE_WINDOW_DAYS = 30;
+const GYM_MAX_RESCHEDULES = 0; // 0 = unlimited
+
+// GET: available gym sessions for a date (for the reschedule picker)
+route('GET', '/api/unit/gym/available-sessions', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : '';
+  if (!date) return send(res, 400, { error: 'date required' });
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const types = await gymClassTypes();
+  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&is_cancelled=eq.false&order=start_time.asc`).catch(() => [])) || [];
+  const ids = scheds.map((x) => x.id);
+  const counts = ids.length ? await gymBookingCounts(ids) : {};
+  const sessions = [];
+  for (const sc of scheds) {
+    const startMin = hhmmToMin(sc.start_time);
+    const isPast = sc.schedule_date < today || (sc.schedule_date === today && startMin != null && startMin <= nowMin);
+    if (isPast) continue;
+    const t = types[sc.class_type_id] || {};
+    const bc = counts[sc.id] || {};
+    const used = (bc.confirmed || 0) + (bc.pending || 0);
+    const remaining = Math.max(0, (sc.quota || 0) - used);
+    sessions.push({
+      scheduleId: sc.id, date: sc.schedule_date, start: hhmm(sc.start_time), end: hhmm(sc.end_time),
+      className: t.name || 'Class', classColor: t.color || null, instructor: sc.instructor || '',
+      quota: sc.quota || 0, used, remaining, full: remaining <= 0,
+    });
+  }
+  return send(res, 200, { date, sessions });
+});
+
+// POST: reschedule a gym booking to a new session
+route('POST', '/api/unit/gym/reschedule', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  const bookingId = String(body.booking_id || '').trim();
+  const newScheduleId = String(body.new_schedule_id || '').trim();
+  const reason = String(body.reason || '').trim().slice(0, 500);
+  if (!bookingId || !newScheduleId) return send(res, 400, { error: 'booking_id and new_schedule_id required.' });
+  if (!reason) return send(res, 400, { error: 'Alasan reschedule wajib diisi.' });
+
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+
+  // Fetch booking
+  const bk = ((await sb(`gym_class_bookings?select=id,full_name,phone,schedule_id,status&id=eq.${enc(bookingId)}&limit=1`).catch(() => [])) || [])[0];
+  if (!bk) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  if (bk.status === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
+
+  // Fetch old schedule
+  const oldSc = ((await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&id=eq.${enc(bk.schedule_id)}&limit=1`).catch(() => [])) || [])[0];
+  if (!oldSc) return send(res, 404, { error: 'Sesi asal tidak ditemukan.' });
+  const oldStartMin = hhmmToMin(oldSc.start_time);
+  const oldStarted = oldSc.schedule_date < today || (oldSc.schedule_date === today && oldStartMin != null && oldStartMin <= nowMin);
+  if (oldStarted) return send(res, 400, { error: 'Sesi asal sudah berlangsung, tidak bisa di-reschedule.' });
+
+  // Fetch new schedule
+  const newSc = ((await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&id=eq.${enc(newScheduleId)}&limit=1`).catch(() => [])) || [])[0];
+  if (!newSc) return send(res, 404, { error: 'Sesi tujuan tidak ditemukan.' });
+  if (newSc.is_cancelled) return send(res, 400, { error: 'Sesi tujuan sudah dibatalkan.' });
+  const newStartMin = hhmmToMin(newSc.start_time);
+  const newStarted = newSc.schedule_date < today || (newSc.schedule_date === today && newStartMin != null && newStartMin <= nowMin);
+  if (newStarted) return send(res, 400, { error: 'Sesi tujuan sudah berlangsung.' });
+
+  // Check 30-day window
+  const maxDate = addDaysISO(oldSc.schedule_date, GYM_RESCHEDULE_WINDOW_DAYS);
+  if (newSc.schedule_date > maxDate) return send(res, 400, { error: `Reschedule hanya bisa ke sesi dalam ${GYM_RESCHEDULE_WINDOW_DAYS} hari ke depan.` });
+
+  // Check capacity
+  const bc = (await gymBookingCounts([newSc.id]))[newSc.id] || {};
+  const used = (bc.confirmed || 0) + (bc.pending || 0);
+  if (used >= (newSc.quota || 0)) return send(res, 400, { error: 'Sesi tujuan sudah penuh.' });
+
+  // Check reschedule limit
+  if (GYM_MAX_RESCHEDULES > 0) {
+    const logCount = ((await sb(`gym_reschedule_log?select=id&action=eq.reschedule&booking_id=eq.${enc(bookingId)}`).catch(() => [])) || []).length;
+    if (logCount >= GYM_MAX_RESCHEDULES) return send(res, 400, { error: `Klien sudah mencapai batas reschedule (${GYM_MAX_RESCHEDULES}x).` });
+  }
+
+  const types = await gymClassTypes();
+  const oldType = types[oldSc.class_type_id] || {};
+  const newType = types[newSc.class_type_id] || {};
+  const actor = s.d || s.c || 'gro';
+
+  // Step 1: Update old booking status to 'rescheduled'
+  await sb(`gym_class_bookings?id=eq.${enc(bookingId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'rescheduled' }) });
+
+  // Step 2: Create new booking in target session
+  await sb('gym_class_bookings', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: newScheduleId, full_name: bk.full_name, phone: bk.phone || null, status: 'confirmed' }) });
+
+  // Step 3: If booking had pending status, resolve it
+  await sb(`gym_reschedule_log?action=eq.mark_pending&booking_id=eq.${enc(bookingId)}&resolved_at=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ resolved_at: new Date().toISOString(), resolved_to_session_id: newScheduleId, action: 'resolve_pending' }) }).catch(() => {});
+
+  // Step 4: Log
+  await sb('gym_reschedule_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    booking_id: bookingId, member_name: bk.full_name, old_session_id: bk.schedule_id, new_session_id: newScheduleId,
+    old_date: oldSc.schedule_date, old_time: hhmm(oldSc.start_time), new_date: newSc.schedule_date, new_time: hhmm(newSc.start_time),
+    reason, performed_by: actor, performed_at: new Date().toISOString(), action: 'reschedule',
+  }) }).catch(() => {});
+
+  return send(res, 200, { ok: true, message: `${bk.full_name} berhasil dipindahkan ke ${newType.name || 'Class'} pada ${dLabel(newSc.schedule_date)}, ${hhmm(newSc.start_time)}.` });
+});
+
+// POST: mark a gym booking as pending reschedule
+route('POST', '/api/unit/gym/mark-pending', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  const bookingId = String(body.booking_id || '').trim();
+  const reason = String(body.reason || '').trim().slice(0, 500);
+  const note = String(body.note || '').trim().slice(0, 500);
+  if (!bookingId) return send(res, 400, { error: 'booking_id required.' });
+  if (!reason) return send(res, 400, { error: 'Alasan wajib diisi.' });
+
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const bk = ((await sb(`gym_class_bookings?select=id,full_name,schedule_id,status&id=eq.${enc(bookingId)}&limit=1`).catch(() => [])) || [])[0];
+  if (!bk) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  const sc = ((await sb(`gym_class_schedules?select=id,schedule_date,start_time&id=eq.${enc(bk.schedule_id)}&limit=1`).catch(() => [])) || [])[0];
+  if (!sc) return send(res, 404, { error: 'Sesi tidak ditemukan.' });
+  const startMin = hhmmToMin(sc.start_time);
+  const started = sc.schedule_date < today || (sc.schedule_date === today && startMin != null && startMin <= nowMin);
+  if (started) return send(res, 400, { error: 'Sesi sudah berlangsung.' });
+
+  // Check if already marked pending
+  const existing = ((await sb(`gym_reschedule_log?select=id&action=eq.mark_pending&booking_id=eq.${enc(bookingId)}&resolved_at=is.null&limit=1`).catch(() => [])) || []);
+  if (existing.length) return send(res, 400, { error: 'Klien sudah ditandai pending reschedule.' });
+
+  await sb('gym_reschedule_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    booking_id: bookingId, member_name: bk.full_name, old_session_id: bk.schedule_id,
+    old_date: sc.schedule_date, old_time: hhmm(sc.start_time),
+    reason, note, performed_by: s.d || s.c || 'gro', performed_at: new Date().toISOString(), action: 'mark_pending',
+  }) });
+
+  return send(res, 200, { ok: true });
+});
+
+// POST: cancel pending reschedule mark
+route('POST', '/api/unit/gym/cancel-pending', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  const bookingId = String(body.booking_id || '').trim();
+  if (!bookingId) return send(res, 400, { error: 'booking_id required.' });
+
+  const updated = await sb(`gym_reschedule_log?action=eq.mark_pending&booking_id=eq.${enc(bookingId)}&resolved_at=is.null`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ resolved_at: new Date().toISOString(), action: 'cancel_pending' }),
+  }).catch(() => null);
+
+  return send(res, 200, { ok: true });
+});
+
+// GET: list all pending reschedule bookings
+route('GET', '/api/unit/gym/pending-list', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const rows = (await sbAll(`gym_reschedule_log?select=id,booking_id,member_name,old_session_id,old_date,old_time,reason,note,performed_by,performed_at&action=eq.mark_pending&resolved_at=is.null&order=performed_at.asc`).catch(() => [])) || [];
+  const types = await gymClassTypes();
+  const schedIds = [...new Set(rows.map((r) => r.old_session_id))];
+  const schedMap = {};
+  for (let i = 0; i < schedIds.length; i += 100) {
+    const chunk = schedIds.slice(i, i + 100).map(enc).join(',');
+    const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&id=in.(${chunk})`).catch(() => [])) || [];
+    for (const sc of scheds) schedMap[sc.id] = sc;
+  }
+  const items = rows.map((r) => {
+    const sc = schedMap[r.old_session_id] || {};
+    const t = types[sc.class_type_id] || {};
+    return {
+      logId: r.id, bookingId: r.booking_id, memberName: r.member_name,
+      className: t.name || 'Class', classColor: t.color || null,
+      sessionDate: sc.schedule_date || r.old_date, sessionTime: hhmm(sc.start_time) || r.old_time,
+      sessionEnd: hhmm(sc.end_time) || '', coach: sc.instructor || '',
+      dateLabel: sc.schedule_date ? dLabel(sc.schedule_date) : r.old_date,
+      reason: r.reason, note: r.note, markedAt: r.performed_at, markedBy: r.performed_by,
+    };
+  });
+  return send(res, 200, { items, count: items.length });
+});
+
+// GET: pending reschedule count (for sidebar badge)
+route('GET', '/api/unit/gym/pending-count', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const rows = (await sb(`gym_reschedule_log?select=id&action=eq.mark_pending&resolved_at=is.null`).catch(() => [])) || [];
+  return send(res, 200, { count: rows.length });
+});
+
 // Gym clients — confirmed bookers in the month window, ranked by visit count.
 route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
   if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });

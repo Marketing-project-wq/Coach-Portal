@@ -34,6 +34,9 @@ class Component extends DCLogic {
       gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '', gymPkgQ: '', gymCard: null,
       gymMemberTab: 'all', gymMemberSearch: '', gymMemberSort: 'lastVisit', gymMemberSortDir: 'desc', gymMemberDetail: null,
       gymSchedMode: 'month', gymSchedAnchor: '', gymSchedCoachFilter: '', gymSchedTypeFilter: '', gymSchedDetail: null,
+      gymRsModal: null, gymRsStep: 0, gymRsDate: '', gymRsSessions: null, gymRsTarget: null, gymRsReason: '', gymRsReasonOther: '', gymRsSaving: false,
+      gymPendingModal: null, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false,
+      gymPendingCount: 0,
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -46,7 +49,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.gymCard) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.gymCard || this.state.gymRsModal || this.state.gymPendingModal) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -312,7 +315,7 @@ class Component extends DCLogic {
     this.gymShowDay(this.state.gymSelDate || this.todayISO());
     this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0, gymClientsWithPkg: r.withPkg || 0, gymClientsInactive: r.inactive || 0 })).catch(() => {});
     if (this.state.role === 'coach' || this.state.role === 'admin') this.loadGymCoachBookings();
-    if (this.state.role === 'gro') this.loadGymSchedule();
+    if (this.state.role === 'gro') { this.loadGymSchedule(); this.loadGymPendingCount(); }
   }
   gymShowDay(date) { this.setState({ gymSelDate: date }); if (this.MOCK) return; this.api('/api/unit/gym/day?date=' + encodeURIComponent(date)).then((r) => this.setD({ gymDayClasses: r.classes || [], gymDayLabel: r.dateLabel || '' })).catch(() => {}); }
   gymCalNav(ym) { if (!ym) return; this.setState({ gymCalYm: ym }); if (!this.MOCK) this.loadGymView(); }
@@ -362,6 +365,65 @@ class Component extends DCLogic {
   closeGymClassDetail() { this.setState({ gymSchedDetail: null }); }
   setGymSchedCoachFilter(e) { this.setState({ gymSchedCoachFilter: e && e.target ? e.target.value : '' }); }
   setGymSchedTypeFilter(e) { this.setState({ gymSchedTypeFilter: e && e.target ? e.target.value : '' }); }
+  // ---------- Gym Reschedule & Pending ----------
+  openGymReschedule(bookingId, participant, sessionInfo) {
+    this.setState({ gymRsModal: { bookingId, participant, session: sessionInfo }, gymRsStep: 1, gymRsDate: '', gymRsSessions: null, gymRsTarget: null, gymRsReason: '', gymRsReasonOther: '', gymRsSaving: false });
+  }
+  closeGymReschedule() { this.setState({ gymRsModal: null, gymRsStep: 0, gymRsDate: '', gymRsSessions: null, gymRsTarget: null, gymRsReason: '', gymRsReasonOther: '', gymRsSaving: false }); }
+  setGymRsDate(e) {
+    const date = e && e.target ? e.target.value : '';
+    this.setState({ gymRsDate: date, gymRsSessions: null, gymRsTarget: null });
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      this.api('/api/unit/gym/available-sessions?date=' + date)
+        .then((r) => this.setState({ gymRsSessions: r.sessions || [] }))
+        .catch(() => this.setState({ gymRsSessions: [] }));
+    }
+  }
+  selectGymRsTarget(session) { if (!session.full) this.setState({ gymRsTarget: session }); }
+  gymRsGoStep2() { if (this.state.gymRsTarget) this.setState({ gymRsStep: 2 }); }
+  setGymRsReason(e) { this.setState({ gymRsReason: e && e.target ? e.target.value : '' }); }
+  setGymRsReasonOther(e) { this.setState({ gymRsReasonOther: e && e.target ? e.target.value : '' }); }
+  confirmGymReschedule() {
+    const st = this.state;
+    if (st.gymRsSaving || !st.gymRsModal || !st.gymRsTarget) return;
+    const reason = st.gymRsReason === 'Lainnya' ? (st.gymRsReasonOther || '').trim() : st.gymRsReason;
+    if (!reason) { this.toastMsg(this.t('rs_reason') + '!'); return; }
+    this.setState({ gymRsSaving: true });
+    this.api('/api/unit/gym/reschedule', { method: 'POST', body: JSON.stringify({ booking_id: st.gymRsModal.bookingId, new_schedule_id: st.gymRsTarget.scheduleId, reason }) })
+      .then((r) => { this.toastMsg(r.message || this.t('rs_success')); this.closeGymReschedule(); this.closeGymClassDetail(); this.loadGymSchedule(); this.loadGymPendingCount(); })
+      .catch((e) => { this.toastMsg(e.message || 'Error'); this.setState({ gymRsSaving: false }); });
+  }
+  openGymPendingMark(bookingId, participant, sessionInfo) {
+    this.setState({ gymPendingModal: { bookingId, participant, session: sessionInfo }, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false });
+  }
+  closeGymPendingMark() { this.setState({ gymPendingModal: null, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false }); }
+  setGymPendingReason(e) { this.setState({ gymPendingReason: e && e.target ? e.target.value : '' }); }
+  setGymPendingNote(e) { this.setState({ gymPendingNote: e && e.target ? e.target.value : '' }); }
+  confirmGymPendingMark() {
+    const st = this.state;
+    if (st.gymPendingSaving || !st.gymPendingModal) return;
+    const reason = st.gymPendingReason;
+    if (!reason) { this.toastMsg(this.t('rs_reason') + '!'); return; }
+    this.setState({ gymPendingSaving: true });
+    this.api('/api/unit/gym/mark-pending', { method: 'POST', body: JSON.stringify({ booking_id: st.gymPendingModal.bookingId, reason, note: st.gymPendingNote }) })
+      .then(() => { this.toastMsg('OK'); this.closeGymPendingMark(); this.openGymClassDetail(this.state.gymSchedDetail ? this.state.gymSchedDetail.id : ''); this.loadGymPendingCount(); })
+      .catch((e) => { this.toastMsg(e.message || 'Error'); this.setState({ gymPendingSaving: false }); });
+  }
+  cancelGymPending(bookingId) {
+    this.api('/api/unit/gym/cancel-pending', { method: 'POST', body: JSON.stringify({ booking_id: bookingId }) })
+      .then(() => { this.toastMsg('OK'); this.loadGymPendingList(); this.loadGymPendingCount(); if (this.state.gymSchedDetail) this.openGymClassDetail(this.state.gymSchedDetail.id); })
+      .catch((e) => this.toastMsg(e.message || 'Error'));
+  }
+  loadGymPendingList() {
+    this.api('/api/unit/gym/pending-list')
+      .then((r) => this.setD({ gymPendingList: r }))
+      .catch(() => {});
+  }
+  loadGymPendingCount() {
+    this.api('/api/unit/gym/pending-count')
+      .then((r) => this.setState({ gymPendingCount: r.count || 0 }))
+      .catch(() => {});
+  }
   // ---------- Gym Members: tabs, search, sort, detail ----------
   setGymMemberTab(tab) { this.setState({ gymMemberTab: tab }); }
   setGymMemberSearch(e) { this.setState({ gymMemberSearch: e && e.target ? e.target.value : '' }); }
@@ -499,6 +561,7 @@ class Component extends DCLogic {
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueCoachList: r.coachList || [], venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'packageorders') this.api('/api/gro/package-orders').then((r) => this.setD({ packageOrders: r.orders || [] })).catch(fail);
+    else if (screen === 'gympending') this.loadGymPendingList();
     else if (screen === 'reschedule') this.api('/api/gro/participants/search').then((r) => this.setD({ rschBookings: r.participants || [] })).catch(fail);
     else if (screen === 'validatecoach') this.loadVcSessions();
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
@@ -1429,7 +1492,9 @@ class Component extends DCLogic {
     if (scr === 'gympackages') tt = titles.gympackages;
     if (scr === 'gymscan') tt = titles.gymscan;
     if (scr === 'gymvisits') tt = titles.gymvisits;
-    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
+    titles.gympending = ['20FIT Gym', this.t('rs_pending_list')];
+    if (scr === 'gympending') tt = titles.gympending;
+    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -2224,7 +2289,57 @@ class Component extends DCLogic {
     }
 
     const _scDetail = st.gymSchedDetail;
-    const scDetailParticipants = _scDetail && _scDetail.participants ? _scDetail.participants.map((p, i) => ({ n: i + 1, name: p.name || '—' })) : [];
+    const _scIsUpcoming = !!(_scDetail && _scDetail.isUpcoming);
+    const _scIsGroDetail = !!(_scDetail && _scDetail.isGro && isGro);
+    const scDetailParticipants = _scDetail && _scDetail.participants ? _scDetail.participants.map((p, i) => {
+      const sessionInfo = { id: _scDetail.id, date: _scDetail.date, dateLabel: _scDetail.dateLabel, time: _scDetail.time, end: _scDetail.end, type: _scDetail.type, coach: _scDetail.coach };
+      return {
+        n: i + 1, name: p.name || '—', phone: p.phone || '',
+        pending: !!p.pending, pendingNote: p.pendingNote || '',
+        rescheduledFrom: p.rescheduledFrom || '', hasReschFrom: !!p.rescheduledFrom,
+        showActions: _scIsUpcoming && _scIsGroDetail && !p.pending,
+        showPendingTag: !!p.pending,
+        reschedule: () => this.openGymReschedule(p.bookingId, { name: p.name, phone: p.phone }, sessionInfo),
+        markPending: () => this.openGymPendingMark(p.bookingId, { name: p.name, phone: p.phone }, sessionInfo),
+        statusColor: p.pending ? '#f59e0b' : 'var(--muted)',
+      };
+    }) : [];
+
+    // Gym Reschedule modal
+    const _rsModal = st.gymRsModal;
+    const _rsSessions = st.gymRsSessions;
+    const _rsTarget = st.gymRsTarget;
+    const rsReasons = [
+      { value: '', label: '— ' + this.t('rs_reason') + ' —' },
+      { value: this.t('rs_reason_client'), label: this.t('rs_reason_client') },
+      { value: this.t('rs_reason_sick'), label: this.t('rs_reason_sick') },
+      { value: this.t('rs_reason_coach'), label: this.t('rs_reason_coach') },
+      { value: this.t('rs_reason_conflict'), label: this.t('rs_reason_conflict') },
+      { value: 'Lainnya', label: this.t('rs_reason_other') },
+    ];
+    const rsSessionRows = (_rsSessions || []).map((s) => ({
+      scheduleId: s.scheduleId, className: s.className, start: s.start, end: s.end, instructor: s.instructor,
+      remaining: s.remaining, quota: s.quota, full: s.full, notFull: !s.full,
+      slotLabel: s.remaining + ' ' + this.t('rs_slot_left'),
+      bg: _rsTarget && _rsTarget.scheduleId === s.scheduleId ? 'var(--volt-dim)' : (s.full ? 'var(--panel)' : 'var(--bg)'),
+      border: _rsTarget && _rsTarget.scheduleId === s.scheduleId ? 'var(--volt)' : 'var(--border)',
+      opacity: s.full ? '0.5' : '1', cursor: s.full ? 'not-allowed' : 'pointer',
+      fullLabel: this.t('rs_full'),
+      pick: () => this.selectGymRsTarget(s),
+    }));
+
+    // Gym Pending modal
+    const _pendModal = st.gymPendingModal;
+
+    // Gym Pending list (screen)
+    const _pendList = (D.gymPendingList || {}).items || [];
+    const gymPendingRows = _pendList.map((p) => ({
+      logId: p.logId, bookingId: p.bookingId, memberName: p.memberName,
+      className: p.className, dateLabel: p.dateLabel, sessionTime: p.sessionTime + (p.sessionEnd ? '–' + p.sessionEnd : ''),
+      coach: p.coach || '—', reason: p.reason, note: p.note || '—', markedAt: p.markedAt ? new Date(p.markedAt).toLocaleDateString() : '',
+      rescheduleNow: () => { const sessionInfo = { id: p.bookingId, date: p.sessionDate, dateLabel: p.dateLabel, time: p.sessionTime, end: p.sessionEnd, type: p.className, coach: p.coach }; this.openGymReschedule(p.bookingId, { name: p.memberName }, sessionInfo); },
+      cancelMark: () => this.cancelGymPending(p.bookingId),
+    }));
 
     return {
       isGro, goReschedule: () => this.go('reschedule'),
@@ -2322,8 +2437,48 @@ class Component extends DCLogic {
       scDetailCancelled: !!(_scDetail && _scDetail.cancelled),
       scDetailColor: _scDetail ? (_coachColorMap[_scDetail.coach] || '#666') : '#666',
       scDetailParticipants: scDetailParticipants, scDetailHasPax: scDetailParticipants.length > 0, scDetailNoPax: !!(_scDetail && !_scDetail.loading && scDetailParticipants.length === 0),
+      scDetailShowActions: _scIsUpcoming && _scIsGroDetail,
       scParticipantsLabel: this.t('sched_participants'), scNoPaxLabel: this.t('no_participants'),
       scNoClassesDay: this.t('no_classes_day'),
+      // Gym Reschedule modal
+      showGymRsModal: !!_rsModal, gymRsStep1: st.gymRsStep === 0 || st.gymRsStep === 1, gymRsStep2: st.gymRsStep === 2,
+      gymRsParticipant: _rsModal ? (_rsModal.participant.name || '') : '',
+      gymRsFromLabel: _rsModal ? (_rsModal.sessionInfo.type + ' · ' + _rsModal.sessionInfo.dateLabel + ' · ' + _rsModal.sessionInfo.time + '–' + _rsModal.sessionInfo.end) : '',
+      gymRsDateVal: st.gymRsDate || '', setGymRsDate: (e) => this.setGymRsDate(e),
+      gymRsSessions: rsSessionRows, gymRsHasSessions: rsSessionRows.length > 0, gymRsNoSessions: !!(st.gymRsDate && _rsSessions && rsSessionRows.length === 0),
+      gymRsSessionsLoading: !!(st.gymRsDate && !_rsSessions),
+      gymRsTarget: !!_rsTarget,
+      gymRsTargetLabel: _rsTarget ? (_rsTarget.className + ' · ' + _rsTarget.start + '–' + _rsTarget.end + ' · ' + _rsTarget.instructor) : '',
+      gymRsTargetSlots: _rsTarget ? (_rsTarget.remaining + '/' + _rsTarget.quota) : '',
+      gymRsCanStep2: !!_rsTarget, gymRsGoStep2: () => this.gymRsGoStep2(),
+      rsReasons: rsReasons, gymRsReasonVal: st.gymRsReason || '', setGymRsReason: (e) => this.setGymRsReason(e),
+      gymRsShowOther: st.gymRsReason === 'Lainnya', gymRsReasonOtherVal: st.gymRsReasonOther || '', setGymRsReasonOther: (e) => this.setGymRsReasonOther(e),
+      gymRsCanConfirm: !!(st.gymRsReason && (st.gymRsReason !== 'Lainnya' || (st.gymRsReasonOther || '').trim())),
+      gymRsNoConfirm: !(st.gymRsReason && (st.gymRsReason !== 'Lainnya' || (st.gymRsReasonOther || '').trim())),
+      gymRsConfirm: () => this.confirmGymReschedule(), gymRsSaving: st.gymRsSaving,
+      gymRsBack: () => this.setState({ gymRsStep: 1 }), closeGymReschedule: () => this.closeGymReschedule(),
+      tRsReschedule: this.t('rs_reschedule'), tRsStep1: this.t('rs_step_1'), tRsStep2: this.t('rs_step_2'),
+      tRsPickDate: this.t('rs_pick_date'), tRsPickSession: this.t('rs_pick_session'), tRsNoSessions: this.t('rs_no_sessions'),
+      tRsFromLabel: this.t('rs_from_label'), tRsToLabel: this.t('rs_to_label'), tRsReason: this.t('rs_reason'),
+      tRsReasonDetail: this.t('rs_reason_detail'), tRsConfirm: this.t('rs_confirm_reschedule'), tRsCancel: this.t('rs_cancel'),
+      // Gym Pending modal
+      showGymPendingModal: !!_pendModal,
+      gymPendParticipant: _pendModal ? (_pendModal.participant.name || '') : '',
+      gymPendSessionLabel: _pendModal ? (_pendModal.sessionInfo.type + ' · ' + _pendModal.sessionInfo.dateLabel + ' · ' + _pendModal.sessionInfo.time + '–' + _pendModal.sessionInfo.end) : '',
+      gymPendReasonVal: st.gymPendingReason || '', setGymPendReason: (e) => this.setGymPendingReason(e),
+      gymPendNoteVal: st.gymPendingNote || '', setGymPendNote: (e) => this.setGymPendingNote(e),
+      gymPendCanConfirm: !!(st.gymPendingReason),
+      gymPendNoConfirm: !(st.gymPendingReason),
+      gymPendConfirm: () => this.confirmGymPendingMark(), gymPendSaving: st.gymPendingSaving,
+      closeGymPendingMark: () => this.closeGymPendingMark(),
+      tRsMarkPending: this.t('rs_mark_pending'), tRsNote: this.t('rs_note'), tRsNotePlaceholder: this.t('rs_note_placeholder'),
+      // Gym Pending list screen
+      gymPendingRows: gymPendingRows, gymHasPendingRows: gymPendingRows.length > 0, gymNoPendingRows: gymPendingRows.length === 0,
+      goGymPending: () => this.go('gympending'), gymPendingNav: this.navMeta(scr === 'gympending'),
+      gymPendingCount: st.gymPendingCount || 0, gymHasPending: (st.gymPendingCount || 0) > 0,
+      tRsPendingList: this.t('rs_pending_list'), tRsPendingEmpty: this.t('rs_pending_empty'),
+      tRsMarkedAt: this.t('rs_marked_at'), tRsBack: this.t('rs_back'),
+      tRsRescheduleNow: this.t('rs_reschedule_now'), tRsCancelMark: this.t('rs_cancel_mark'),
       gmClients, gmClientsHas: gmClients.length > 0, gmClientsEmpty: gmClients.length === 0,
       gmTabs: [
         { label: this.t('all_clients') + ' (' + gmAll.length + ')', bg: gmTab === 'all' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'all' ? '#fff' : 'var(--text)', border: gmTab === 'all' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('all') },
