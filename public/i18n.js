@@ -436,7 +436,7 @@ window.__I18N = (function () {
     rs_note:               { id: 'Catatan GRO',             en: 'GRO Notes' },
     rs_note_placeholder:   { id: 'Contoh: Klien bilang akan konfirmasi besok lewat WA', en: 'e.g. Client said they will confirm tomorrow via WA' },
     rs_success:            { id: 'Berhasil dipindahkan!',   en: 'Successfully rescheduled!' },
-    rs_pending_list:       { id: 'Pending Reschedule',      en: 'Pending Reschedule' },
+    rs_pending_list:       { id: 'Reschedule',              en: 'Reschedule' },
     rs_pending_empty:      { id: 'Tidak ada klien pending reschedule.', en: 'No pending reschedule clients.' },
     rs_marked_at:          { id: 'Ditandai',                en: 'Marked' },
     rs_back:               { id: 'Kembali',                 en: 'Back' },

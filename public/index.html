@@ -188,6 +188,17 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
     [style*="80px 90px 70px 1fr 90px"] { min-width:520px; }
     [style*="border-radius:18px"]:has([style*="80px 90px 70px 1fr 90px"]) { overflow-x:auto !important; }
   }
+  /* GRO Calendar responsive */
+  @media (max-width:1024px) {
+    .gro-cal-mini-coach { display:none !important; }
+  }
+  @media (max-width:768px) {
+    .gro-cal-grid { display:none !important; }
+    .gro-cal-mobile { display:block !important; }
+  }
+  @media (min-width:769px) {
+    .gro-cal-mobile { display:none !important; }
+  }
 
 </style>
 </head>
@@ -317,8 +328,8 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
         <sc-if value="{{ showGroArena }}" hint-placeholder-val="{{ true }}">
         <button onclick="{{ goPackageOrders }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ nav.packageorders.bg }};color:{{ nav.packageorders.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ nav.packageorders.bar }};transition:background .15s;" style-hover="background:{{ nav.packageorders.hover }}">Package Orders</button>
         <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 14px;"></div>
-        <button onclick="{{ goReschedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ reschedNavBg }};color:var(--text);font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="font-size:16px;line-height:1;">&#128197;</span><span style="flex:1;min-width:0;">Reschedule</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
-        <button onclick="{{ goValidateCoach }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ validateNavBg }};color:var(--text);font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="font-size:16px;line-height:1;">&#9989;</span><span style="flex:1;min-width:0;">{{ vcTitle }}</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
+        <button onclick="{{ goReschedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ reschedNavBg }};color:var(--text);font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="flex:1;min-width:0;">Reschedule</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
+        <button onclick="{{ goValidateCoach }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;border-left:3px solid transparent;cursor:pointer;background:{{ validateNavBg }};color:var(--text);font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;transition:background .15s;" style-hover="background:var(--panel2);"><span style="flex:1;min-width:0;">{{ vcTitle }}</span><span style="color:var(--muted2);font-size:15px;line-height:1;">&#8943;</span></button>
         </sc-if>
         <sc-if value="{{ inGym }}" hint-placeholder-val="{{ true }}">
         <button onclick="{{ goGymSchedule }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymSchedNav.bg }};color:{{ gymSchedNav.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymSchedNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Schedule</button>
@@ -467,39 +478,53 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
           <!-- ===== GRO FULL CALENDAR ===== -->
           <sc-if value="{{ gymFullCal }}">
           <div style="margin-bottom:18px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+            <!-- Header: nav + today + filters -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
               <div style="display:flex;align-items:center;gap:8px;">
-                <button onclick="{{ scPrev }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:700;cursor:pointer;">&lsaquo;</button>
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;min-width:180px;text-align:center;">{{ scNavLabel }}</div>
-                <button onclick="{{ scNext }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;color:var(--text);font-family:'Manrope';font-size:13px;font-weight:700;cursor:pointer;">&rsaquo;</button>
+                <button onclick="{{ scPrev }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Manrope';font-size:14px;font-weight:700;cursor:pointer;line-height:1;">&lsaquo;</button>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;min-width:200px;text-align:center;letter-spacing:-.01em;">{{ scNavLabel }}</div>
+                <button onclick="{{ scNext }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Manrope';font-size:14px;font-weight:700;cursor:pointer;line-height:1;">&rsaquo;</button>
+                <button onclick="{{ scToday }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;color:var(--text);font-family:'Manrope';font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;">{{ scTodayLabel }}</button>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <select onchange="{{ scSetCoach }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:8px 11px;color:var(--text);font-family:'Manrope';font-size:12.5px;cursor:pointer;"><option value="">{{ scAllCoaches }}</option><sc-for list="{{ scCoachOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
-                <select onchange="{{ scSetType }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:8px 11px;color:var(--text);font-family:'Manrope';font-size:12.5px;cursor:pointer;"><option value="">{{ scAllClasses }}</option><sc-for list="{{ scTypeOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
+                <select onchange="{{ scSetCoach }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Manrope';font-size:13px;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22><path d=%22M1 1l5 5 5-5%22 stroke=%22%23999%22 stroke-width=%221.5%22 fill=%22none%22/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;"><option value="">{{ scAllCoaches }}</option><sc-for list="{{ scCoachOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
+                <select onchange="{{ scSetType }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Manrope';font-size:13px;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22><path d=%22M1 1l5 5 5-5%22 stroke=%22%23999%22 stroke-width=%221.5%22 fill=%22none%22/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;"><option value="">{{ scAllClasses }}</option><sc-for list="{{ scTypeOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
               </div>
             </div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;">
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);">
+            <!-- Coach legend -->
+            <sc-if value="{{ scHasCoachLegend }}">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:0 2px;">
+              <sc-for list="{{ scCoachLegend }}" as="lg">
+                <div style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:{{ lg.color }};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:var(--text);">{{ lg.name }}</span></div>
+              </sc-for>
+            </div>
+            </sc-if>
+            <!-- Month grid -->
+            <div class="gro-cal-grid" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);">
                 <sc-for list="{{ scMonthDow }}" as="d">
-                  <div style="text-align:center;padding:10px 4px;font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;border-left:1px solid var(--border);">{{ d.lbl }}</div>
+                  <div style="text-align:center;padding:10px 4px;font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);">{{ d.lbl }}</div>
                 </sc-for>
               </div>
               <sc-for list="{{ monthWeeks }}" as="w">
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);">
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);">
                 <sc-for list="{{ w.cells }}" as="c">
-                  <sc-if value="{{ c.blank }}"><div style="border-left:1px solid var(--border);min-height:90px;"></div></sc-if>
+                  <sc-if value="{{ c.blank }}"><div style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:120px;background:rgba(0,0,0,0.015);"></div></sc-if>
                   <sc-if value="{{ c.day }}">
-                  <div onclick="{{ c.pick }}" style="border-left:1px solid var(--border);min-height:90px;padding:6px;cursor:pointer;background:{{ c.todayBg }};" style-hover="background:var(--panel2);">
-                    <div style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;margin-bottom:4px;">{{ c.day }}</div>
+                  <div onclick="{{ c.pick }}" style="border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:120px;max-height:160px;overflow:hidden;padding:8px;cursor:pointer;background:{{ c.todayBg }};transition:background .15s;" style-hover="background:rgba(0,0,0,0.025);">
+                    <div style="margin-bottom:6px;">
+                      <sc-if value="{{ c.isToday }}"><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--volt);color:#fff;font-family:'Barlow Condensed';font-weight:800;font-size:15px;">{{ c.day }}</span></sc-if>
+                      <sc-if value="{{ c.notToday }}"><span style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;color:var(--text);">{{ c.day }}</span></sc-if>
+                    </div>
                     <sc-if value="{{ c.hasPreview }}">
                     <sc-for list="{{ c.preview }}" as="p">
-                      <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
-                        <span style="width:6px;height:6px;border-radius:50%;background:{{ p.color }};flex-shrink:0;"></span>
-                        <span style="font-size:9.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.time }} {{ p.type }}</span>
+                      <div onclick="{{ p.pick }}" title="{{ p.tooltip }}" style="background:{{ p.bg }};border-left:3px solid {{ p.color }};border-radius:4px;padding:4px 7px;margin-bottom:3px;cursor:pointer;transition:transform .1s;" style-hover="transform:scale(0.98);">
+                        <div style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">{{ p.time }} {{ p.type }}</div>
+                        <div class="gro-cal-mini-coach" style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.coach }} &#183; {{ p.paxLabel }}</div>
                       </div>
                     </sc-for>
                     </sc-if>
-                    <sc-if value="{{ c.hasMore }}"><div style="font-size:9px;color:var(--muted);font-weight:600;">{{ c.moreLabel }}</div></sc-if>
+                    <sc-if value="{{ c.hasMore }}"><div onclick="{{ c.pick }}" style="font-size:10px;color:var(--muted);font-weight:700;margin-top:2px;cursor:pointer;">{{ c.moreLabel }}</div></sc-if>
                   </div>
                   </sc-if>
                 </sc-for>
@@ -916,7 +941,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
         <div style="max-width:1140px;margin:0 auto;">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
             <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-              <span style="font-weight:800;font-family:'Barlow Condensed';font-size:15px;">&#128339; Coach Check-in &#183; {{ checkinRangeLabel }}</span>
+              <span style="font-weight:800;font-family:'Barlow Condensed';font-size:15px;">Coach Check-in &#183; {{ checkinRangeLabel }}</span>
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <div style="display:inline-flex;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:3px;">
                   <button onclick="{{ setCheckinDay }}" style="background:{{ ckDayBg }};color:{{ ckDayFg }};border:0;border-radius:7px;padding:6px 14px;font-family:'Manrope';font-size:12.5px;font-weight:800;cursor:pointer;">Day</button>
@@ -1413,7 +1438,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
   <div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeReschedule }}">
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:24px 26px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;">
-        <div style="display:flex;align-items:center;gap:11px;"><span style="font-size:20px;line-height:1;">&#128197;</span><div style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;letter-spacing:-.01em;text-transform:uppercase;">Reschedule</div></div>
+        <div style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;letter-spacing:-.01em;text-transform:uppercase;">Reschedule</div>
         <button onclick="{{ closeReschedule }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
       </div>
 
@@ -1470,7 +1495,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
   <div style="position:fixed;inset:0;z-index:55;background:rgba(4,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px;" onclick="{{ closeValidate }}">
     <div onclick="{{ stopProp }}" style="background:var(--panel2);border:1px solid var(--border2);border-radius:22px;padding:24px 26px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;">
-        <div style="display:flex;align-items:center;gap:11px;"><span style="font-size:20px;line-height:1;">&#9989;</span><div style="font-family:'Barlow Condensed';font-weight:900;font-size:19px;letter-spacing:-.01em;text-transform:uppercase;">{{ vcTitle }}</div></div>
+        <div style="font-family:'Barlow Condensed';font-weight:900;font-size:19px;letter-spacing:-.01em;text-transform:uppercase;">{{ vcTitle }}</div>
         <button onclick="{{ closeValidate }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
       </div>
 
