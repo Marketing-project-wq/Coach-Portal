@@ -35,6 +35,7 @@ class Component extends DCLogic {
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
+    this.groEntry = location.pathname === '/gro' || location.pathname === '/gro/';
     this.boot();
     // Auto-refresh: pick up classes/bookings newly added in Admin Hub without a manual reload.
     this._pollTimer = setInterval(() => this.autoRefresh(), 60000);
@@ -2039,7 +2040,7 @@ class Component extends DCLogic {
       border: D.gymSelDate === c.date ? 'var(--volt)' : (c.teach ? 'var(--border2)' : 'var(--border)'),
       col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach, pick: () => this.gymShowDay(c.date),
     });
-    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: x.color || 'var(--cyan)', cancelled: !!x.cancelled }));
+    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: (x.cap > 0 && x.pax >= x.cap) ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled }));
     const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
     const gsc = st.gymScanResult, gss = st.gymScanSaved;
 
@@ -2166,6 +2167,12 @@ class Component extends DCLogic {
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
       registerCanNote: isGro, exportAttendance: () => this.exportAttendancePdf(),
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
+      groLogin: !st.loggedIn && this.groEntry,
+      coachLogin: !st.loggedIn && !this.groEntry,
+      groLangEnBg: st.lang === 'en' ? '#E4002B' : 'transparent', groLangEnFg: st.lang === 'en' ? '#fff' : 'rgba(255,255,255,.5)',
+      groLangIdBg: st.lang === 'id' ? '#E4002B' : 'transparent', groLangIdFg: st.lang === 'id' ? '#fff' : 'rgba(255,255,255,.5)',
+      loginWelcome: st.lang === 'id' ? 'Selamat datang' : 'Welcome back',
+      loginHeading: st.lang === 'id' ? 'Masuk ke akun Anda' : 'Sign in to your account',
       login: () => this.login(), logout: () => this.logout(),
       setLangEN: () => this.setLang('en'), setLangID: () => this.setLang('id'),
       langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',
