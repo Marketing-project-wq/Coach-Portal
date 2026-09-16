@@ -443,6 +443,18 @@ window.__I18N = (function () {
     rs_step_1:             { id: 'Langkah 1: Pilih Tanggal & Sesi', en: 'Step 1: Pick Date & Session' },
     rs_step_2:             { id: 'Langkah 2: Konfirmasi',   en: 'Step 2: Confirm' },
     rs_cancel:             { id: 'Batal',                   en: 'Cancel' },
+    // ---- Gym Package Category ----
+    gm_all_packages:       { id: 'Semua Paket',             en: 'All Packages' },
+    gm_pkg_name:           { id: 'Nama Paket',              en: 'Package Name' },
+    gm_coach:              { id: 'Coach',                   en: 'Coach' },
+    gm_remaining_quota:    { id: 'Sisa Kuota',              en: 'Remaining Quota' },
+    gm_low_quota:          { id: 'Kuota Rendah',            en: 'Low Quota' },
+    gm_expired_this_month: { id: 'Expired Bulan Ini',       en: 'Expired This Month' },
+    gm_active_clients:     { id: 'Klien Aktif',             en: 'Active Clients' },
+    gm_active_packages:    { id: 'Paket Aktif',             en: 'Active Packages' },
+    gm_used:               { id: 'Terpakai',                en: 'Used' },
+    gm_upcoming_sessions:  { id: 'Sesi Mendatang',          en: 'Upcoming Sessions' },
+    gm_no_upcoming:        { id: 'Tidak ada sesi mendatang.', en: 'No upcoming sessions.' },
   };
 
   return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl, T: T };
