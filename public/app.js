@@ -2428,6 +2428,7 @@ class Component extends DCLogic {
       gymCardUsed: st.gymCard ? st.gymCard.used : 0, gymCardTotal: st.gymCard ? st.gymCard.total : 0, gymCardRemaining: st.gymCard ? st.gymCard.remaining : 0,
       tMemberCard: this.t('member_card'), tPrintCard: this.t('print_card'), tShowToGro: this.t('show_to_gro'),
       gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'),
+      gymScanBtnBg: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnFg: scr === 'gymscan' ? '#ffffff' : 'var(--text)', gymScanBtnBar: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnWeight: scr === 'gymscan' ? '700' : '600',
       // Gym view (calendar + day list + clients)
       gymCalLabel: D.gymCalLabel || '', gymDow,
       gymPrev: () => this.gymCalNav(D.gymCalPrevYm), gymNext: () => this.gymCalNav(D.gymCalNextYm),
