@@ -354,8 +354,9 @@ class Component extends DCLogic {
     const days = (this.state.d.gymSchedData || {}).days || {};
     const classes = days[date] || [];
     if (classes.length === 1) { this.openGymClassDetail(classes[0].id); return; }
-    if (classes.length > 1) { this.openGymClassDetail(classes[0].id); }
+    if (classes.length > 1) { this.setState({ gymDayListDate: date }); return; }
   }
+  closeGymDayList() { this.setState({ gymDayListDate: null }); }
   openGymClassDetail(id) {
     this.setState({ gymSchedDetail: { loading: true } });
     this.api('/api/unit/gym/class-detail?id=' + id)
@@ -2239,7 +2240,7 @@ class Component extends DCLogic {
     const gymFullCal = isGro && st.unit === 'gym' && scr === 'gymview';
     const gymMiniCal = !isGro && st.unit === 'gym' && scr === 'gymview';
     const sd = D.gymSchedData || {};
-    const _COACH_PALETTE = ['#4DD4F2','#3ED598','#FF8A65','#BA68C8','#FFD54F','#64B5F6','#F06292','#81C784','#4FC3F7','#AED581'];
+    const _COACH_PALETTE = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#F97316','#64B5F6','#81C784'];
     const _coachColorMap = {};
     (sd.coaches || []).forEach((c, i) => { _coachColorMap[c] = _COACH_PALETTE[i % _COACH_PALETTE.length]; });
     const _scMode = st.gymSchedMode, _scAnchor = st.gymSchedAnchor || this.todayISO();
@@ -2296,10 +2297,13 @@ class Component extends DCLogic {
         const dt = ym + '-' + String(d).padStart(2, '0');
         const raw = _filterBlocks(_scDays[dt] || []);
         const isToday = dt === _todayISO;
-        const preview = raw.slice(0, 3).map((b) => ({ type: b.type, coach: b.coach || '', color: _coachColorMap[b.coach] || '#666', time: b.time }));
+        const preview = raw.slice(0, 3).map((b) => {
+          const cc = _coachColorMap[b.coach] || '#666';
+          return { type: b.type, coach: b.coach || '—', color: cc, bg: cc + '1A', time: b.time, paxLabel: (b.pax || 0) + '/' + (b.cap || 0), pick: () => this.openGymClassDetail(b.id), tooltip: b.type + ' · ' + b.time + (b.end ? '-' + b.end : '') + ' · ' + (b.coach || '—') + ' · ' + (b.pax || 0) + '/' + (b.cap || 0) };
+        });
         const moreCount = raw.length > 3 ? raw.length - 3 : 0;
         const pickDay = () => this.gymSchedGoDay(dt);
-        cells.push({ blank: false, day: d, date: dt, isToday, todayBg: isToday ? 'var(--volt-dim)' : 'transparent', todayBorder: isToday ? '2px solid var(--volt)' : '1px solid var(--border)', preview, hasPreview: preview.length > 0, moreCount, hasMore: moreCount > 0, moreLabel: '+' + moreCount + ' ' + this.t('n_more'), goDay: pickDay, pick: pickDay });
+        cells.push({ blank: false, day: d, date: dt, isToday, notToday: !isToday, todayBg: isToday ? 'rgba(239,68,68,0.06)' : 'transparent', preview, hasPreview: preview.length > 0, noPreview: preview.length === 0, moreCount, hasMore: moreCount > 0, moreLabel: '+' + moreCount + ' ' + this.t('n_more'), goDay: pickDay, pick: pickDay });
       }
       const weeks = [];
       while (cells.length) weeks.push({ cells: cells.splice(0, 7) });
@@ -2447,6 +2451,8 @@ class Component extends DCLogic {
       scWeekLabel: this.t('sched_week'), scMonthLabel: this.t('sched_month'), scDayLabel: this.t('sched_day'), scTodayLabel: this.t('sched_today'),
       scCoachOpts: (sd.coaches || []).map((c) => ({ value: c, label: c, picked: _scCoach === c })),
       scTypeOpts: (sd.types || []).map((t) => ({ value: t, label: t, picked: _scType === t })),
+      scCoachLegend: (_scCoach ? [_scCoach] : (sd.coaches || [])).map((c) => ({ name: c, color: _coachColorMap[c] || '#666' })),
+      scHasCoachLegend: (_scCoach ? 1 : (sd.coaches || []).length) > 0,
       scSetCoach: (e) => this.setGymSchedCoachFilter(e), scSetType: (e) => this.setGymSchedTypeFilter(e),
       scAllCoaches: this.t('all_coaches'), scAllClasses: this.t('all_classes'),
       scHourLabels: _hourLabels, scGridHeight: GRID_HEIGHT + 'px',
@@ -2468,6 +2474,14 @@ class Component extends DCLogic {
       scDetailShowActions: _scIsUpcoming && _scIsGroDetail,
       scParticipantsLabel: this.t('sched_participants'), scNoPaxLabel: this.t('no_participants'),
       scNoClassesDay: this.t('no_classes_day'),
+      // Day list modal (when clicking a cell with multiple classes)
+      scDayListOpen: !!st.gymDayListDate, scCloseDayList: () => this.closeGymDayList(),
+      scDayListLabel: st.gymDayListDate ? (() => { const dt = new Date(st.gymDayListDate + 'T00:00:00'); const mNames = isID ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return _dnFn[dt.getDay()] + ', ' + dt.getDate() + ' ' + mNames[dt.getMonth()] + ' ' + dt.getFullYear(); })() : '',
+      scDayListClasses: st.gymDayListDate ? _filterBlocks(_scDays[st.gymDayListDate] || []).map((b) => {
+        const cc = _coachColorMap[b.coach] || '#666';
+        return { id: b.id, time: b.time, end: b.end || '', type: b.type, coach: b.coach || '—', paxLabel: (b.pax || 0) + '/' + (b.cap || 0), color: cc, bg: cc + '1A', cancelled: !!b.cancelled, pick: () => { this.closeGymDayList(); this.openGymClassDetail(b.id); } };
+      }) : [],
+      scDayListHas: st.gymDayListDate ? _filterBlocks(_scDays[st.gymDayListDate] || []).length > 0 : false,
       // Gym Reschedule modal
       showGymRsModal: !!_rsModal, gymRsStep1: st.gymRsStep === 0 || st.gymRsStep === 1, gymRsStep2: st.gymRsStep === 2,
       gymRsParticipant: _rsModal ? (_rsModal.participant.name || '') : '',
