@@ -485,6 +485,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
                 <div style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;min-width:200px;text-align:center;letter-spacing:-.01em;">{{ scNavLabel }}</div>
                 <button onclick="{{ scNext }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Manrope';font-size:14px;font-weight:700;cursor:pointer;line-height:1;">&rsaquo;</button>
                 <button onclick="{{ scToday }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;color:var(--text);font-family:'Manrope';font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;">{{ scTodayLabel }}</button>
+                <button onclick="{{ openGymPvtModal }}" style="background:#8B5CF6;border:0;color:#fff;border-radius:8px;padding:7px 14px;font-family:'Manrope';font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;">+ Private</button>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <select onchange="{{ scSetCoach }}" style="background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Manrope';font-size:13px;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22><path d=%22M1 1l5 5 5-5%22 stroke=%22%23999%22 stroke-width=%221.5%22 fill=%22none%22/></svg>');background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;"><option value="">{{ scAllCoaches }}</option><sc-for list="{{ scCoachOpts }}" as="o"><option value="{{ o.value }}" selected="{{ o.picked }}">{{ o.label }}</option></sc-for></select>
@@ -497,6 +498,25 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
               <sc-for list="{{ scCoachLegend }}" as="lg">
                 <div style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:3px;background:{{ lg.color }};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:var(--text);">{{ lg.name }}</span></div>
               </sc-for>
+            </div>
+            </sc-if>
+            <!-- Today Summary Widget -->
+            <sc-if value="{{ gymTodaySummary }}">
+            <div style="background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(59,130,246,.06));border:1px solid rgba(139,92,246,.2);border-radius:14px;padding:14px 18px;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:15px;color:var(--text);">{{ tTsTitle }}</div>
+                <sc-if value="{{ gymTsHasNext }}">
+                <div style="font-size:11.5px;color:var(--muted);">{{ tTsNext }}: <span style="font-weight:700;color:var(--text);">{{ gymTsNextTime }}</span> {{ gymTsNextType }} <sc-if value="{{ gymTsNextPvt }}"><span style="background:#8B5CF6;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">PRIVATE</span></sc-if></div>
+                </sc-if>
+              </div>
+              <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
+                <div style="text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:20px;color:var(--text);">{{ gymTsTotal }}</div><div style="font-size:10px;color:var(--muted);font-weight:600;">{{ tTsSessions }}</div></div>
+                <div style="text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:20px;color:#3B82F6;">{{ gymTsGroup }}</div><div style="font-size:10px;color:var(--muted);font-weight:600;">{{ tTsGroup }}</div></div>
+                <div style="text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:20px;color:#8B5CF6;">{{ gymTsPrivate }}</div><div style="font-size:10px;color:var(--muted);font-weight:600;">{{ tTsPrivate }}</div></div>
+                <div style="width:1px;background:var(--border);margin:0 4px;"></div>
+                <div style="text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:20px;color:#16a34a;">{{ gymTsCheckedIn }}</div><div style="font-size:10px;color:var(--muted);font-weight:600;">{{ tTsCheckedIn }}</div></div>
+                <div style="text-align:center;"><div style="font-family:'JetBrains Mono';font-weight:800;font-size:20px;color:#f59e0b;">{{ gymTsPending }}</div><div style="font-size:10px;color:var(--muted);font-weight:600;">{{ tTsPending }}</div></div>
+              </div>
             </div>
             </sc-if>
             <!-- Month grid -->
@@ -518,9 +538,13 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
                     </div>
                     <sc-if value="{{ c.hasPreview }}">
                     <sc-for list="{{ c.preview }}" as="p">
-                      <div onclick="{{ p.pick }}" title="{{ p.tooltip }}" style="background:{{ p.bg }};border-left:3px solid {{ p.color }};border-radius:4px;padding:4px 7px;margin-bottom:3px;cursor:pointer;transition:transform .1s;" style-hover="transform:scale(0.98);">
-                        <div style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">{{ p.time }} {{ p.type }}</div>
-                        <div class="gro-cal-mini-coach" style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.coach }} &#183; {{ p.paxLabel }}</div>
+                      <div onclick="{{ p.pick }}" title="{{ p.tooltip }}" style="background:{{ p.bg }};border-left:3px solid {{ p.color }};border-radius:4px;padding:4px 7px;margin-bottom:3px;cursor:pointer;transition:transform .1s;opacity:{{ p.completedOp }};" style-hover="transform:scale(0.98);">
+                        <div style="display:flex;align-items:center;gap:3px;">
+                          <sc-if value="{{ p.hasStatus }}"><span style="background:{{ p.statusColor }};color:#fff;font-size:8px;font-weight:800;padding:1px 4px;border-radius:3px;letter-spacing:.03em;flex-shrink:0;">{{ p.statusBadge }}</span></sc-if>
+                          <sc-if value="{{ p.hasBadge }}"><span style="background:{{ p.badgeBg }};color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;flex-shrink:0;">{{ p.badge }}</span></sc-if>
+                          <span style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);min-width:0;">{{ p.time }}</span>
+                        </div>
+                        <div class="gro-cal-mini-coach" style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><sc-if value="{{ p.hasMember }}">{{ p.memberName }} &#183; </sc-if>{{ p.coach }}<sc-if value="{{ p.hasCheckin }}"> &#183; {{ p.checkinLabel }}</sc-if></div>
                       </div>
                     </sc-for>
                     </sc-if>
@@ -543,8 +567,12 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
               <sc-if value="{{ scDayListHas }}">
               <sc-for list="{{ scDayListClasses }}" as="dl">
                 <div onclick="{{ dl.pick }}" style="background:{{ dl.bg }};border-left:3px solid {{ dl.color }};border-radius:6px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:transform .1s;" style-hover="transform:scale(0.99);">
-                  <div style="font-weight:700;font-size:13px;">{{ dl.time }}<sc-if value="{{ dl.end }}"> – {{ dl.end }}</sc-if> &#183; {{ dl.type }}</div>
-                  <div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ dl.coach }} &#183; {{ dl.paxLabel }}</div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <sc-if value="{{ dl.hasBadge }}"><span style="background:{{ dl.badgeBg }};color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;">{{ dl.badge }}</span></sc-if>
+                    <sc-if value="{{ dl.isLive }}"><span style="background:#EF4444;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0;">LIVE</span></sc-if>
+                    <span style="font-weight:700;font-size:13px;">{{ dl.time }}<sc-if value="{{ dl.end }}"> – {{ dl.end }}</sc-if> &#183; {{ dl.type }}</span>
+                  </div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:2px;"><sc-if value="{{ dl.hasMember }}">{{ dl.memberName }} &#183; </sc-if>{{ dl.coach }} &#183; {{ dl.paxLabel }}</div>
                 </div>
               </sc-for>
               </sc-if>
@@ -554,9 +582,13 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
           <sc-if value="{{ scDetailLoading }}"><div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:998;display:flex;align-items:center;justify-content:center;"><div style="background:#ffffff;border:1px solid var(--border);border-radius:22px;padding:32px;text-align:center;color:var(--muted);font-size:14px;box-shadow:0 20px 60px rgba(0,0,0,.18);">Loading&#8230;</div></div></sc-if>
           <sc-if value="{{ scShowDetail }}">
             <div onclick="{{ scCloseDetail }}" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:998;"></div>
-            <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:#ffffff;border:1px solid var(--border);border-radius:22px;padding:24px;width:calc(100% - 32px);max-width:420px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+            <div data-modalscroll style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:#ffffff;border:1px solid var(--border);border-radius:22px;padding:24px;width:calc(100% - 32px);max-width:460px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.18);">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:19px;">{{ scDetailTitle }}</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="font-family:'Barlow Condensed';font-weight:800;font-size:19px;">{{ scDetailTitle }}</div>
+                  <span style="background:{{ scDetailSessionBadgeBg }};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;">{{ scDetailSessionBadge }}</span>
+                  <span style="background:{{ scDetailLiveBg }};color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;">{{ scDetailLiveLabel }}</span>
+                </div>
                 <button onclick="{{ scCloseDetail }}" style="background:none;border:0;color:var(--muted);cursor:pointer;font-size:20px;padding:0 4px;">&#10005;</button>
               </div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
@@ -567,14 +599,31 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
               <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">{{ scDetailDate }}</div>
               <div style="font-family:'JetBrains Mono';font-size:13px;margin-bottom:4px;">{{ scDetailTime }}</div>
               <div style="font-size:13px;margin-bottom:4px;">Coach: <span style="font-weight:700;">{{ scDetailCoach }}</span></div>
-              <div style="font-family:'JetBrains Mono';font-size:13px;font-weight:700;margin-bottom:14px;">{{ scDetailPax }}</div>
+              <div style="font-family:'JetBrains Mono';font-size:13px;font-weight:700;margin-bottom:8px;">{{ scDetailPax }}</div>
+              <!-- Voucher info for private sessions -->
+              <sc-if value="{{ scHasVoucher }}">
+              <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+                <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;">VOUCHER</div>
+                <div style="font-weight:700;font-size:13px;">{{ scVoucherPkg }}</div>
+                <div style="font-family:'JetBrains Mono';font-size:12px;color:var(--muted);margin-top:2px;">{{ scVoucherCode }} &#183; {{ scVoucherUsed }}/{{ scVoucherTotal }} {{ tGmUsed }}</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;"><span style="font-size:12px;font-weight:700;color:#8B5CF6;">{{ scVoucherRemaining }}</span><span style="font-size:11px;color:var(--muted);">{{ tPvtQuotaLeft }}</span></div>
+              </div>
+              </sc-if>
+              <!-- Check-in actions -->
+              <sc-if value="{{ scShowManualCheckin }}">
+              <button onclick="{{ scDoManualCheckin }}" style="width:100%;background:#16a34a;border:0;color:#fff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;margin-bottom:12px;">{{ tManualCheckin }}</button>
+              </sc-if>
+              <sc-if value="{{ scShowScanCheckin }}">
+              <button onclick="{{ scDoScanCheckin }}" style="width:100%;background:var(--volt);border:0;color:#fff;border-radius:10px;padding:11px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;letter-spacing:.02em;margin-bottom:12px;">{{ tScanCheckin }}</button>
+              </sc-if>
               <div style="font-weight:700;font-size:13px;margin-bottom:8px;">{{ scParticipantsLabel }}</div>
               <sc-if value="{{ scDetailHasPax }}">
                 <sc-for list="{{ scDetailParticipants }}" as="p">
-                  <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+                  <div style="padding:8px 0;border-bottom:1px solid var(--border);background:{{ p.checkinBg }};border-radius:6px;margin-bottom:2px;padding-left:6px;padding-right:6px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                       <span style="font-family:'JetBrains Mono';font-size:11px;color:var(--muted);min-width:22px;">{{ p.n }}</span>
                       <span style="font-size:13px;flex:1;min-width:0;">{{ p.name }}
+                        <sc-if value="{{ p.checkedIn }}"><span style="display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(62,213,152,.15);color:#16a34a;margin-left:6px;vertical-align:middle;">{{ tCheckedInLabel }}</span></sc-if>
                         <sc-if value="{{ p.showPendingTag }}"><span style="display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(245,158,11,.15);color:#f59e0b;margin-left:6px;vertical-align:middle;">PENDING</span></sc-if>
                       </span>
                     </div>
@@ -584,6 +633,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
                       <div style="display:flex;gap:6px;margin:6px 0 0 30px;">
                         <button onclick="{{ p.reschedule }}" style="background:var(--cyan);border:0;color:#fff;border-radius:7px;padding:5px 11px;font-family:'Manrope';font-weight:700;font-size:11px;cursor:pointer;">{{ tRsReschedule }}</button>
                         <button onclick="{{ p.markPending }}" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);color:#f59e0b;border-radius:7px;padding:5px 11px;font-family:'Manrope';font-weight:700;font-size:11px;cursor:pointer;">{{ tRsMarkPending }}</button>
+                        <sc-if value="{{ p.notCheckedIn }}"><button onclick="{{ p.markNoShow }}" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#dc2626;border-radius:7px;padding:5px 11px;font-family:'Manrope';font-weight:700;font-size:11px;cursor:pointer;">{{ tMarkNoShow }}</button></sc-if>
                       </div>
                     </sc-if>
                   </div>
@@ -1313,6 +1363,61 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
     </sc-if>
     <sc-if value="{{ gymPendNoConfirm }}">
       <button disabled style="width:100%;background:var(--border2);border:0;color:var(--muted);border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:not-allowed;text-transform:uppercase;">{{ tRsMarkPending }}</button>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <!-- ===== PRIVATE BOOKING MODAL ===== -->
+  <sc-if value="{{ showGymPvtModal }}">
+  <div onclick="{{ closeGymPvtModal }}" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1100;"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1101;background:#ffffff;border:1px solid var(--border);border-radius:22px;padding:24px;width:calc(100% - 32px);max-width:460px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.18);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;"><span style="background:#8B5CF6;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;">PRIVATE</span><span style="font-family:'Barlow Condensed';font-weight:800;font-size:19px;">{{ tPvtTitle }}</span></div>
+      <button onclick="{{ closeGymPvtModal }}" style="background:none;border:0;color:var(--muted);cursor:pointer;font-size:20px;padding:0 4px;">&#10005;</button>
+    </div>
+    <!-- Member search -->
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">{{ tPvtMember }}</label>
+      <input value="{{ gymPvtMemberQ }}" oninput="{{ setGymPvtMemberQ }}" placeholder="{{ tPvtSearchMember }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;">
+      <sc-if value="{{ gymPvtHasMembers }}">
+      <div style="border:1px solid var(--border);border-radius:10px;margin-top:6px;max-height:160px;overflow-y:auto;">
+        <sc-for list="{{ gymPvtMembers }}" as="m">
+          <div onclick="{{ m.pick }}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);" style-hover="background:var(--panel2);">
+            <div style="font-weight:700;font-size:13px;">{{ m.name }}</div>
+            <div style="font-size:11px;color:var(--muted);">{{ m.coach }} &#183; {{ m.remaining }}/{{ m.total }} {{ tPvtQuotaLeft }}</div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+    </div>
+    <!-- Selected member info -->
+    <sc-if value="{{ gymPvtSelected }}">
+    <div style="background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+      <div style="font-weight:700;font-size:14px;">{{ gymPvtSelName }}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Coach: {{ gymPvtSelCoach }} &#183; {{ gymPvtSelRemaining }}/{{ gymPvtSelTotal }} {{ tPvtQuotaLeft }}</div>
+    </div>
+    </sc-if>
+    <!-- Date & time -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div>
+        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">{{ tPvtDate }}</label>
+        <input type="date" value="{{ gymPvtDateVal }}" onchange="{{ setGymPvtDate }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 8px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">{{ tPvtStart }}</label>
+        <input type="time" value="{{ gymPvtStartVal }}" onchange="{{ setGymPvtStart }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 8px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">{{ tPvtEnd }}</label>
+        <input type="time" value="{{ gymPvtEndVal }}" onchange="{{ setGymPvtEnd }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 8px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;">
+      </div>
+    </div>
+    <!-- Confirm button -->
+    <sc-if value="{{ gymPvtCanConfirm }}">
+      <button onclick="{{ gymPvtConfirm }}" style="width:100%;background:#8B5CF6;border:0;color:#fff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:pointer;text-transform:uppercase;">{{ tPvtConfirm }}</button>
+    </sc-if>
+    <sc-if value="{{ gymPvtNoConfirm }}">
+      <button disabled style="width:100%;background:var(--border2);border:0;color:var(--muted);border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:14px;cursor:not-allowed;text-transform:uppercase;">{{ tPvtConfirm }}</button>
     </sc-if>
   </div>
   </sc-if>

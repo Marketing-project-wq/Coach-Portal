@@ -455,6 +455,35 @@ window.__I18N = (function () {
     gm_used:               { id: 'Terpakai',                en: 'Used' },
     gm_upcoming_sessions:  { id: 'Sesi Mendatang',          en: 'Upcoming Sessions' },
     gm_no_upcoming:        { id: 'Tidak ada sesi mendatang.', en: 'No upcoming sessions.' },
+    // ---- Private Class Booking ----
+    pvt_title:             { id: 'Booking Sesi Private',    en: 'Book Private Session' },
+    pvt_member:            { id: 'Member',                  en: 'Member' },
+    pvt_date:              { id: 'Tanggal',                 en: 'Date' },
+    pvt_start:             { id: 'Jam Mulai',               en: 'Start Time' },
+    pvt_end:               { id: 'Jam Selesai',             en: 'End Time' },
+    pvt_confirm:           { id: 'Konfirmasi Booking',      en: 'Confirm Booking' },
+    pvt_search_member:     { id: 'Cari member...',          en: 'Search member...' },
+    pvt_quota_left:        { id: 'sisa kuota',              en: 'quota left' },
+    pvt_booked:            { id: 'Sesi private berhasil dibuat!', en: 'Private session booked!' },
+    // ---- Today Summary ----
+    ts_today_title:        { id: 'Ringkasan Hari Ini',      en: "Today's Summary" },
+    ts_sessions:           { id: 'Sesi',                    en: 'Sessions' },
+    ts_group:              { id: 'Grup',                    en: 'Group' },
+    ts_private:            { id: 'Private',                 en: 'Private' },
+    ts_checked_in:         { id: 'Check-in',                en: 'Checked In' },
+    ts_pending:            { id: 'Menunggu',                en: 'Pending' },
+    ts_next_session:       { id: 'Sesi Berikutnya',         en: 'Next Session' },
+    // ---- Check-in & Status ----
+    checked_in_label:      { id: 'Hadir',                   en: 'Checked In' },
+    not_checked_in_label:  { id: 'Belum Hadir',             en: 'Not Checked In' },
+    manual_checkin:        { id: 'Check-in Manual',         en: 'Manual Check-in' },
+    scan_checkin:          { id: 'Scan Check-in',           en: 'Scan Check-in' },
+    noshow_label:          { id: 'No-show',                 en: 'No-show' },
+    mark_noshow:           { id: 'Tandai No-show',          en: 'Mark No-show' },
+    noshow_marked:         { id: 'Ditandai no-show.',       en: 'Marked as no-show.' },
+    session_type:          { id: 'Tipe Sesi',               en: 'Session Type' },
+    private_label:         { id: 'Private',                 en: 'Private' },
+    group_label:           { id: 'Grup',                    en: 'Group' },
   };
 
   return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl, T: T };
