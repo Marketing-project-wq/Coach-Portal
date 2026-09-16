@@ -525,6 +525,7 @@ function serveStatic(req, res) {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
   if (p === '/review') p = '/review.html';
+  if (p === '/gro' || p === '/gro/') p = '/index.html';
   // Coach guide landing (pick Internal / Freelance) — shareable as <domain>/tutorial.
   if (p === '/tutorial' || p === '/tutorial/') p = '/tutorial.html';
   const fp = path.normalize(path.join(PUBLIC_DIR, p));
@@ -797,6 +798,320 @@ route('GET', '/api/unit/gym/day', async (req, res, s, q) => {
   const classes = scheds.map((x) => { const t = types[x.class_type_id] || {}; return { time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', color: t.color || null, coach: x.instructor || '', pax: (counts[x.id] || {}).confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled }; });
   return send(res, 200, { date, dateLabel: dLabel(date), classes });
 });
+// Gym schedule for a date range — used by the GRO full-calendar view.
+route('GET', '/api/unit/gym/schedule', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(q.from || '') ? q.from : todayJakarta();
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(q.to || '') ? q.to : from;
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const types = await gymClassTypes();
+  const rows = (await sbAll(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=gte.${from}&schedule_date=lte.${to}&order=schedule_date.asc,start_time.asc`).catch(() => [])) || [];
+  const ids = rows.map((x) => x.id);
+  const counts = ids.length ? await gymBookingCounts(ids) : {};
+  // For private sessions (quota=1), fetch member names from bookings
+  const privateIds = rows.filter((x) => x.quota === 1).map((x) => x.id);
+  let privateMemberMap = {};
+  if (privateIds.length) {
+    for (let i = 0; i < privateIds.length; i += 100) {
+      const chunk = privateIds.slice(i, i + 100).map(enc).join(',');
+      const bks = (await sb(`gym_class_bookings?select=schedule_id,full_name,status&schedule_id=in.(${chunk})&status=in.(confirmed,pending_payment)&limit=200`).catch(() => [])) || [];
+      for (const b of bks) if (!privateMemberMap[b.schedule_id]) privateMemberMap[b.schedule_id] = b.full_name || '';
+    }
+  }
+  // For today's sessions, check visit/check-in status
+  let checkinMap = {};
+  const todayIds = rows.filter((x) => x.schedule_date === today).map((x) => x.id);
+  if (todayIds.length) {
+    // Check for pt_visits linked to today's bookings
+    const todayBks = [];
+    for (let i = 0; i < todayIds.length; i += 100) {
+      const chunk = todayIds.slice(i, i + 100).map(enc).join(',');
+      const bks = (await sb(`gym_class_bookings?select=id,schedule_id,full_name,status&schedule_id=in.(${chunk})&status=in.(confirmed,pending_payment)&limit=500`).catch(() => [])) || [];
+      todayBks.push(...bks);
+    }
+    // Count check-ins per schedule from pt_visits for today
+    const todayVisits = (await sb(`pt_visits?select=id,visit_date,member_name,status&visit_date=eq.${today}&status=eq.active`).catch(() => [])) || [];
+    // Map visits to schedules via member name matching against bookings
+    for (const sid of todayIds) {
+      const bksForSched = todayBks.filter((b) => b.schedule_id === sid);
+      let checkedIn = 0;
+      for (const b of bksForSched) {
+        if (todayVisits.some((v) => v.member_name && b.full_name && v.member_name.toLowerCase() === b.full_name.toLowerCase())) checkedIn++;
+      }
+      if (bksForSched.length > 0) checkinMap[sid] = { booked: bksForSched.length, checkedIn };
+    }
+  }
+  const days = {}, coachSet = new Set(), typeSet = new Set();
+  for (const x of rows) {
+    const d = x.schedule_date;
+    if (!days[d]) days[d] = [];
+    const t = types[x.class_type_id] || {};
+    const coach = x.instructor || '';
+    if (coach) coachSet.add(coach);
+    const typeName = t.name || 'Class';
+    typeSet.add(typeName);
+    const bc = counts[x.id] || {};
+    const isPrivate = x.quota === 1;
+    const startMin = hhmmToMin(x.start_time);
+    const endMin = hhmmToMin(x.end_time);
+    // Status: live, completed, upcoming, no-show
+    let liveStatus = 'upcoming';
+    if (x.is_cancelled) { liveStatus = 'cancelled'; }
+    else if (d < today) { liveStatus = 'completed'; }
+    else if (d === today && endMin != null && nowMin > endMin) { liveStatus = 'completed'; }
+    else if (d === today && startMin != null && nowMin >= startMin && (endMin == null || nowMin <= endMin)) { liveStatus = 'live'; }
+    const entry = { id: x.id, time: hhmm(x.start_time), end: hhmm(x.end_time), type: typeName, typeColor: t.color || null, coach, pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, sessionType: isPrivate ? 'private' : 'group', liveStatus };
+    if (isPrivate && privateMemberMap[x.id]) entry.memberName = privateMemberMap[x.id];
+    if (checkinMap[x.id]) { entry.checkedInCount = checkinMap[x.id].checkedIn; entry.bookedCount = checkinMap[x.id].booked; }
+    days[d].push(entry);
+  }
+  return send(res, 200, { from, to, days, coaches: [...coachSet].sort(), types: [...typeSet].sort() });
+});
+// Gym class detail with participant names — for the detail modal.
+route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const id = String(q.id || '').trim();
+  if (!id) return send(res, 400, { error: 'id required' });
+  const types = await gymClassTypes();
+  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&id=eq.${enc(id)}`).catch(() => [])) || [];
+  if (!scheds.length) return send(res, 404, { error: 'Class not found' });
+  const x = scheds[0], t = types[x.class_type_id] || {};
+  const bc = (await gymBookingCounts([x.id]))[x.id] || {};
+  const bookings = (await sb(`gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const started = x.schedule_date < today || (x.schedule_date === today && hhmmToMin(x.start_time) != null && hhmmToMin(x.start_time) <= nowMin);
+  const isUpcoming = !started && !x.is_cancelled;
+  // Check pending-reschedule status for each booking
+  const bkIds = bookings.map((b) => b.id);
+  let pendingMap = {};
+  if (bkIds.length) {
+    const pendingRows = (await sb(`gym_reschedule_log?select=booking_id,note,reason&action=eq.mark_pending&resolved_at=is.null&booking_id=in.(${bkIds.map(enc).join(',')})`).catch(() => [])) || [];
+    for (const p of pendingRows) pendingMap[p.booking_id] = { note: p.note || '', reason: p.reason || '' };
+  }
+  // Check if any booking was rescheduled INTO this session
+  let reschFromMap = {};
+  const reschInto = (await sb(`gym_reschedule_log?select=booking_id,old_date,old_time&action=eq.reschedule&new_session_id=eq.${enc(id)}`).catch(() => [])) || [];
+  for (const r of reschInto) reschFromMap[r.booking_id] = r.old_date || '';
+  const isPrivate = x.quota === 1;
+  // For each participant, check if they have a pt_visit today (checked in)
+  const todayVisits = (x.schedule_date === today) ? ((await sb(`pt_visits?select=id,member_name,status,coach_checked_in&visit_date=eq.${today}&status=eq.active`).catch(() => [])) || []) : [];
+  // For private sessions, look up voucher info
+  let voucherInfo = null;
+  if (isPrivate && bookings.length) {
+    const memberName = bookings[0].full_name || '';
+    const coachName = x.instructor || '';
+    if (memberName) {
+      const vouchers = (await sb(`pt_package_vouchers?select=id,voucher_code,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active&is_active=eq.true&order=created_at.desc`).catch(() => [])) || [];
+      for (const v of vouchers) {
+        if (coachName && v.coach_name && v.coach_name.toLowerCase().indexOf(coachName.toLowerCase()) >= 0) {
+          const order = ((await sb(`pt_package_orders?select=full_name,phone,order_code,package_name&id=eq.${enc(v.order_id)}&limit=1`).catch(() => [])) || [])[0];
+          if (order && order.full_name && order.full_name.toLowerCase() === memberName.toLowerCase()) {
+            voucherInfo = { voucherId: v.id, voucherCode: v.voucher_code, total: v.total_sessions || 0, used: v.used_sessions || 0, remaining: Math.max(0, (v.total_sessions || 0) - (v.used_sessions || 0)), packageName: order.package_name || order.order_code || '', expired: !!(v.expires_at && v.expires_at < today) };
+            break;
+          }
+        }
+      }
+    }
+  }
+  const participants = bookings.map((b) => {
+    const checkedIn = todayVisits.some((v) => v.member_name && b.full_name && v.member_name.toLowerCase() === b.full_name.toLowerCase());
+    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
+  });
+  const result = { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, sessionType: isPrivate ? 'private' : 'group', participants };
+  if (voucherInfo) result.voucher = voucherInfo;
+  // Compute live status
+  const endMin = hhmmToMin(x.end_time), startMin = hhmmToMin(x.start_time);
+  if (x.is_cancelled) result.liveStatus = 'cancelled';
+  else if (x.schedule_date < today) result.liveStatus = 'completed';
+  else if (x.schedule_date === today && endMin != null && nowMin > endMin) result.liveStatus = 'completed';
+  else if (x.schedule_date === today && startMin != null && nowMin >= startMin && (endMin == null || nowMin <= endMin)) result.liveStatus = 'live';
+  else result.liveStatus = 'upcoming';
+  return send(res, 200, result);
+});
+// ===== GYM: RESCHEDULE & PENDING =====
+const GYM_RESCHEDULE_WINDOW_DAYS = 30;
+const GYM_MAX_RESCHEDULES = 0; // 0 = unlimited
+
+// GET: available gym sessions for a date (for the reschedule picker)
+route('GET', '/api/unit/gym/available-sessions', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : '';
+  if (!date) return send(res, 400, { error: 'date required' });
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const types = await gymClassTypes();
+  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&is_cancelled=eq.false&order=start_time.asc`).catch(() => [])) || [];
+  const ids = scheds.map((x) => x.id);
+  const counts = ids.length ? await gymBookingCounts(ids) : {};
+  const sessions = [];
+  for (const sc of scheds) {
+    const startMin = hhmmToMin(sc.start_time);
+    const isPast = sc.schedule_date < today || (sc.schedule_date === today && startMin != null && startMin <= nowMin);
+    if (isPast) continue;
+    const t = types[sc.class_type_id] || {};
+    const bc = counts[sc.id] || {};
+    const used = (bc.confirmed || 0) + (bc.pending || 0);
+    const remaining = Math.max(0, (sc.quota || 0) - used);
+    sessions.push({
+      scheduleId: sc.id, date: sc.schedule_date, start: hhmm(sc.start_time), end: hhmm(sc.end_time),
+      className: t.name || 'Class', classColor: t.color || null, instructor: sc.instructor || '',
+      quota: sc.quota || 0, used, remaining, full: remaining <= 0,
+    });
+  }
+  return send(res, 200, { date, sessions });
+});
+
+// POST: reschedule a gym booking to a new session
+route('POST', '/api/unit/gym/reschedule', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  const bookingId = String(body.booking_id || '').trim();
+  const newScheduleId = String(body.new_schedule_id || '').trim();
+  const reason = String(body.reason || '').trim().slice(0, 500);
+  if (!bookingId || !newScheduleId) return send(res, 400, { error: 'booking_id and new_schedule_id required.' });
+  if (!reason) return send(res, 400, { error: 'Alasan reschedule wajib diisi.' });
+
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+
+  // Fetch booking
+  const bk = ((await sb(`gym_class_bookings?select=id,full_name,phone,schedule_id,status&id=eq.${enc(bookingId)}&limit=1`).catch(() => [])) || [])[0];
+  if (!bk) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  if (bk.status === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
+
+  // Fetch old schedule
+  const oldSc = ((await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&id=eq.${enc(bk.schedule_id)}&limit=1`).catch(() => [])) || [])[0];
+  if (!oldSc) return send(res, 404, { error: 'Sesi asal tidak ditemukan.' });
+  const oldStartMin = hhmmToMin(oldSc.start_time);
+  const oldStarted = oldSc.schedule_date < today || (oldSc.schedule_date === today && oldStartMin != null && oldStartMin <= nowMin);
+  if (oldStarted) return send(res, 400, { error: 'Sesi asal sudah berlangsung, tidak bisa di-reschedule.' });
+
+  // Fetch new schedule
+  const newSc = ((await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&id=eq.${enc(newScheduleId)}&limit=1`).catch(() => [])) || [])[0];
+  if (!newSc) return send(res, 404, { error: 'Sesi tujuan tidak ditemukan.' });
+  if (newSc.is_cancelled) return send(res, 400, { error: 'Sesi tujuan sudah dibatalkan.' });
+  const newStartMin = hhmmToMin(newSc.start_time);
+  const newStarted = newSc.schedule_date < today || (newSc.schedule_date === today && newStartMin != null && newStartMin <= nowMin);
+  if (newStarted) return send(res, 400, { error: 'Sesi tujuan sudah berlangsung.' });
+
+  // Check 30-day window
+  const maxDate = addDaysISO(oldSc.schedule_date, GYM_RESCHEDULE_WINDOW_DAYS);
+  if (newSc.schedule_date > maxDate) return send(res, 400, { error: `Reschedule hanya bisa ke sesi dalam ${GYM_RESCHEDULE_WINDOW_DAYS} hari ke depan.` });
+
+  // Check capacity
+  const bc = (await gymBookingCounts([newSc.id]))[newSc.id] || {};
+  const used = (bc.confirmed || 0) + (bc.pending || 0);
+  if (used >= (newSc.quota || 0)) return send(res, 400, { error: 'Sesi tujuan sudah penuh.' });
+
+  // Check reschedule limit
+  if (GYM_MAX_RESCHEDULES > 0) {
+    const logCount = ((await sb(`gym_reschedule_log?select=id&action=eq.reschedule&booking_id=eq.${enc(bookingId)}`).catch(() => [])) || []).length;
+    if (logCount >= GYM_MAX_RESCHEDULES) return send(res, 400, { error: `Klien sudah mencapai batas reschedule (${GYM_MAX_RESCHEDULES}x).` });
+  }
+
+  const types = await gymClassTypes();
+  const oldType = types[oldSc.class_type_id] || {};
+  const newType = types[newSc.class_type_id] || {};
+  const actor = s.d || s.c || 'gro';
+
+  // Step 1: Update old booking status to 'rescheduled'
+  await sb(`gym_class_bookings?id=eq.${enc(bookingId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'rescheduled' }) });
+
+  // Step 2: Create new booking in target session
+  await sb('gym_class_bookings', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: newScheduleId, full_name: bk.full_name, phone: bk.phone || null, status: 'confirmed' }) });
+
+  // Step 3: If booking had pending status, resolve it
+  await sb(`gym_reschedule_log?action=eq.mark_pending&booking_id=eq.${enc(bookingId)}&resolved_at=is.null`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ resolved_at: new Date().toISOString(), resolved_to_session_id: newScheduleId, action: 'resolve_pending' }) }).catch(() => {});
+
+  // Step 4: Log
+  await sb('gym_reschedule_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    booking_id: bookingId, member_name: bk.full_name, old_session_id: bk.schedule_id, new_session_id: newScheduleId,
+    old_date: oldSc.schedule_date, old_time: hhmm(oldSc.start_time), new_date: newSc.schedule_date, new_time: hhmm(newSc.start_time),
+    reason, performed_by: actor, performed_at: new Date().toISOString(), action: 'reschedule',
+  }) }).catch(() => {});
+
+  return send(res, 200, { ok: true, message: `${bk.full_name} berhasil dipindahkan ke ${newType.name || 'Class'} pada ${dLabel(newSc.schedule_date)}, ${hhmm(newSc.start_time)}.` });
+});
+
+// POST: mark a gym booking as pending reschedule
+route('POST', '/api/unit/gym/mark-pending', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  const bookingId = String(body.booking_id || '').trim();
+  const reason = String(body.reason || '').trim().slice(0, 500);
+  const note = String(body.note || '').trim().slice(0, 500);
+  if (!bookingId) return send(res, 400, { error: 'booking_id required.' });
+  if (!reason) return send(res, 400, { error: 'Alasan wajib diisi.' });
+
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const bk = ((await sb(`gym_class_bookings?select=id,full_name,schedule_id,status&id=eq.${enc(bookingId)}&limit=1`).catch(() => [])) || [])[0];
+  if (!bk) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  const sc = ((await sb(`gym_class_schedules?select=id,schedule_date,start_time&id=eq.${enc(bk.schedule_id)}&limit=1`).catch(() => [])) || [])[0];
+  if (!sc) return send(res, 404, { error: 'Sesi tidak ditemukan.' });
+  const startMin = hhmmToMin(sc.start_time);
+  const started = sc.schedule_date < today || (sc.schedule_date === today && startMin != null && startMin <= nowMin);
+  if (started) return send(res, 400, { error: 'Sesi sudah berlangsung.' });
+
+  // Check if already marked pending
+  const existing = ((await sb(`gym_reschedule_log?select=id&action=eq.mark_pending&booking_id=eq.${enc(bookingId)}&resolved_at=is.null&limit=1`).catch(() => [])) || []);
+  if (existing.length) return send(res, 400, { error: 'Klien sudah ditandai pending reschedule.' });
+
+  await sb('gym_reschedule_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({
+    booking_id: bookingId, member_name: bk.full_name, old_session_id: bk.schedule_id,
+    old_date: sc.schedule_date, old_time: hhmm(sc.start_time),
+    reason, note, performed_by: s.d || s.c || 'gro', performed_at: new Date().toISOString(), action: 'mark_pending',
+  }) });
+
+  return send(res, 200, { ok: true });
+});
+
+// POST: cancel pending reschedule mark
+route('POST', '/api/unit/gym/cancel-pending', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const body = (await readBody(req)) || {};
+  const bookingId = String(body.booking_id || '').trim();
+  if (!bookingId) return send(res, 400, { error: 'booking_id required.' });
+
+  const updated = await sb(`gym_reschedule_log?action=eq.mark_pending&booking_id=eq.${enc(bookingId)}&resolved_at=is.null`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ resolved_at: new Date().toISOString(), action: 'cancel_pending' }),
+  }).catch(() => null);
+
+  return send(res, 200, { ok: true });
+});
+
+// GET: list all pending reschedule bookings
+route('GET', '/api/unit/gym/pending-list', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const rows = (await sbAll(`gym_reschedule_log?select=id,booking_id,member_name,old_session_id,old_date,old_time,reason,note,performed_by,performed_at&action=eq.mark_pending&resolved_at=is.null&order=performed_at.asc`).catch(() => [])) || [];
+  const types = await gymClassTypes();
+  const schedIds = [...new Set(rows.map((r) => r.old_session_id))];
+  const schedMap = {};
+  for (let i = 0; i < schedIds.length; i += 100) {
+    const chunk = schedIds.slice(i, i + 100).map(enc).join(',');
+    const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor&id=in.(${chunk})`).catch(() => [])) || [];
+    for (const sc of scheds) schedMap[sc.id] = sc;
+  }
+  const items = rows.map((r) => {
+    const sc = schedMap[r.old_session_id] || {};
+    const t = types[sc.class_type_id] || {};
+    return {
+      logId: r.id, bookingId: r.booking_id, memberName: r.member_name,
+      className: t.name || 'Class', classColor: t.color || null,
+      sessionDate: sc.schedule_date || r.old_date, sessionTime: hhmm(sc.start_time) || r.old_time,
+      sessionEnd: hhmm(sc.end_time) || '', coach: sc.instructor || '',
+      dateLabel: sc.schedule_date ? dLabel(sc.schedule_date) : r.old_date,
+      reason: r.reason, note: r.note, markedAt: r.performed_at, markedBy: r.performed_by,
+    };
+  });
+  return send(res, 200, { items, count: items.length });
+});
+
+// GET: pending reschedule count (for sidebar badge)
+route('GET', '/api/unit/gym/pending-count', async (req, res, s) => {
+  if (!gymUnitAllowed(s) || s.r !== 'gro') return send(res, 403, { error: 'Not available for this role.' });
+  const rows = (await sb(`gym_reschedule_log?select=id&action=eq.mark_pending&resolved_at=is.null`).catch(() => [])) || [];
+  return send(res, 200, { count: rows.length });
+});
+
 // Gym clients — confirmed bookers in the month window, ranked by visit count.
 route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
   if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
@@ -813,10 +1128,85 @@ route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
     const bks = (await sb(`gym_class_bookings?select=full_name,phone,schedule_id,status&schedule_id=in.(${chunk})&status=eq.confirmed`).catch(() => [])) || [];
     for (const b of bks) { const nm = String(b.full_name || '').trim(); if (!nm) continue; const k = nm.toLowerCase(); const d = byId[b.schedule_id] || ''; if (!map[k]) map[k] = { name: nm, phone: b.phone || '', visits: 0, last: '' }; map[k].visits++; if (d > map[k].last) map[k].last = d; }
   }
-  const clients = Object.values(map).sort((a, b) => b.visits - a.visits || (a.last < b.last ? 1 : -1)).map((x, i) => ({ rank: i + 1, name: x.name, phone: x.phone, visits: x.visits, lastVisit: x.last ? fmtDMon(x.last) : '-', daysSince: daysSinceISO(x.last, today) }));
+  // Enrich with package status from pt_package_vouchers/orders
+  let allOrders = await sbAll('pt_package_orders?select=id,full_name,phone,order_code,package_name').catch(() => null);
+  if (!allOrders) allOrders = (await sbAll('pt_package_orders?select=id,full_name,phone,order_code').catch(() => [])) || [];
+  const orderById = {};
+  const orderByName = {};
+  for (const o of allOrders) { orderById[o.id] = o; const k = String(o.full_name || '').trim().toLowerCase(); if (!orderByName[k]) orderByName[k] = []; orderByName[k].push(o.id); }
+  const allVouchers = (await sbAll('pt_package_vouchers?select=id,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active').catch(() => [])) || [];
+  const vouchersByOrder = {};
+  for (const v of allVouchers) { if (!vouchersByOrder[v.order_id]) vouchersByOrder[v.order_id] = []; vouchersByOrder[v.order_id].push(v); }
+  function clientPkgs(name) {
+    const oids = orderByName[name.toLowerCase()] || [];
+    const pkgs = [];
+    for (const oid of oids) {
+      const o = orderById[oid] || {};
+      for (const v of (vouchersByOrder[oid] || [])) {
+        const total = v.total_sessions || 0, used = v.used_sessions || 0, rem = Math.max(0, total - used);
+        const expired = !!(v.expires_at && v.expires_at < today);
+        const active = v.is_active !== false && !expired && rem > 0;
+        const status = active ? 'active' : (expired ? 'expired' : (rem <= 0 ? 'used_up' : ''));
+        const pkgName = o.package_name || v.coach_name || '';
+        pkgs.push({ name: pkgName, coach: v.coach_name || '', total, used, remaining: rem, status, expired, active });
+      }
+    }
+    return pkgs;
+  }
+  function pkgStatus(pkgs) {
+    if (pkgs.some((p) => p.active)) return 'active';
+    if (pkgs.some((p) => p.status === 'used_up')) return 'used_up';
+    if (pkgs.some((p) => p.expired)) return 'expired';
+    return '';
+  }
+  const clients = Object.values(map).sort((a, b) => b.visits - a.visits || (a.last < b.last ? 1 : -1)).map((x, i) => {
+    const pkgs = clientPkgs(x.name);
+    const activePkgs = pkgs.filter((p) => p.active);
+    const bestPkg = activePkgs[0] || pkgs[0] || null;
+    return { rank: i + 1, name: x.name, phone: x.phone, visits: x.visits, lastVisit: x.last ? fmtDMon(x.last) : '-', lastVisitISO: x.last || '', daysSince: daysSinceISO(x.last, today), pkgStatus: pkgStatus(pkgs), packages: pkgs, pkgName: bestPkg ? bestPkg.name : '', pkgCoach: bestPkg ? bestPkg.coach : '', pkgRemaining: activePkgs.reduce((s, p) => s + p.remaining, 0), pkgTotal: activePkgs.reduce((s, p) => s + p.total, 0) };
+  });
   const active30 = clients.filter((c) => c.daysSince != null && c.daysSince <= 30).length;
+  const withPkg = clients.filter((c) => c.pkgStatus === 'active').length;
+  const inactive = clients.filter((c) => (c.daysSince == null || c.daysSince > 30) && c.pkgStatus !== 'active').length;
+  const lowQuota = clients.filter((c) => c.pkgTotal > 0 && c.pkgRemaining > 0 && (c.pkgRemaining / c.pkgTotal) < 0.25).length;
+  const thisMonth = today.slice(0, 7);
+  const expiredThisMonth = clients.reduce((n, c) => n + c.packages.filter((p) => p.expired && p.status === 'expired' && (allVouchers.find((v) => v.order_id && orderById[v.order_id] && (v.expires_at || '').startsWith(thisMonth)) ? true : false)).length, 0);
+  const expThisMonth = allVouchers.filter((v) => (v.expires_at || '').startsWith(thisMonth) && v.expires_at < today).length;
   const floor = await earliestYm('gym_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7)).catch(() => today.slice(0, 7));
-  return send(res, 200, { clients, total: clients.length, active30, months: monthOptions(today, floor), ym });
+  return send(res, 200, { clients, total: clients.length, active30, withPkg, inactive, lowQuota, expiredThisMonth: expThisMonth, months: monthOptions(today, floor), ym });
+});
+
+// Gym member detail — packages + last 5 visits for a specific member (by name).
+route('GET', '/api/unit/gym/member', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const name = String(q.name || '').trim();
+  if (!name) return send(res, 400, { error: 'Name is required.' });
+  const today = todayJakarta();
+  const orders = (await sb(`pt_package_orders?select=id,full_name,phone,order_code&full_name=ilike.${enc(name)}&limit=10`).catch(() => [])) || [];
+  const oids = orders.map((o) => o.id);
+  const phone = (orders[0] || {}).phone || '';
+  let packages = [];
+  if (oids.length) {
+    const vs = (await sb(`pt_package_vouchers?select=id,voucher_code,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active,created_at&order_id=in.(${oids.map(enc).join(',')})&order=created_at.desc`).catch(() => [])) || [];
+    packages = vs.map((v) => { const total = v.total_sessions || 0, used = v.used_sessions || 0, rem = Math.max(0, total - used); const expired = !!(v.expires_at && v.expires_at < today); const active = v.is_active !== false && !expired && rem > 0; const pctLeft = total > 0 ? Math.round((rem / total) * 100) : 0; const o = orders.find((x) => x.id === v.order_id) || {}; return { voucherCode: v.voucher_code, coach: v.coach_name || '', total, used, remaining: rem, expired, active, pctLeft, pkgName: o.package_name || v.coach_name || '', expiresAt: v.expires_at ? fmtDMon(v.expires_at.slice(0, 10)) : '', createdAt: v.created_at ? fmtDMon(v.created_at.slice(0, 10)) : '' }; });
+  }
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  const visits = (await sb(`pt_visits?select=id,visit_at,visit_date,coach_name,status,over_quota&member_name=ilike.${enc(name)}&status=eq.active&order=visit_at.desc&limit=10`).catch(() => [])) || [];
+  const recentVisits = visits.map((v) => ({ date: v.visit_date ? fmtDMon(v.visit_date) : '', time: v.visit_at ? hm(v.visit_at) : '', coach: v.coach_name || '—' }));
+  // Upcoming sessions (bookings in the next 7 days)
+  const weekAhead = addDaysISO(today, 7);
+  const upcoming = (await sb(`gym_class_bookings?select=id,full_name,schedule_id,status&full_name=ilike.${enc(name)}&status=in.(confirmed,pending_payment)&limit=50`).catch(() => [])) || [];
+  const upIds = upcoming.map((b) => b.schedule_id).filter(Boolean);
+  let upcomingSessions = [];
+  if (upIds.length) {
+    const types = await gymClassTypes();
+    const upScheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,is_cancelled&id=in.(${upIds.map(enc).join(',')})&schedule_date=gte.${today}&schedule_date=lte.${weekAhead}&is_cancelled=eq.false&order=schedule_date.asc,start_time.asc`).catch(() => [])) || [];
+    const pendingBkIds = upcoming.map((b) => b.id);
+    let pendingMap = {};
+    if (pendingBkIds.length) { const pRows = (await sb(`gym_reschedule_log?select=booking_id&action=eq.mark_pending&resolved_at=is.null&booking_id=in.(${pendingBkIds.map(enc).join(',')})`).catch(() => [])) || []; for (const p of pRows) pendingMap[p.booking_id] = true; }
+    upcomingSessions = upScheds.map((sc) => { const t = types[sc.class_type_id] || {}; const bk = upcoming.find((b) => b.schedule_id === sc.id); return { date: sc.schedule_date, dateLabel: dLabel(sc.schedule_date), time: hhmm(sc.start_time), end: hhmm(sc.end_time), className: t.name || 'Class', coach: sc.instructor || '', pending: bk ? !!pendingMap[bk.id] : false }; });
+  }
+  return send(res, 200, { name, phone, packages, recentVisits, upcomingSessions });
 });
 
 // ===== GYM GRO: Scan Member (PT package check-in) — quota lives on pt_package_vouchers =====
@@ -917,6 +1307,106 @@ route('POST', '/api/unit/gym/coach/checkin', async (req, res, s) => {
   await sb(`pt_visits?id=eq.${enc(String(body.visit_id))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ coach_checked_in: true, coach_checkin_at: new Date().toISOString(), updated_at: new Date().toISOString() }) });
   return send(res, 200, { ok: true });
 });
+// ===== GYM: Private class booking (GRO creates a private 1-on-1 session) =====
+route('POST', '/api/unit/gym/private-booking', async (req, res, s) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  const { memberName, phone, coachName, date, startTime, endTime, classTypeId, voucherCode } = body;
+  if (!memberName || !coachName || !date || !startTime) return send(res, 400, { error: 'Data tidak lengkap.' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return send(res, 400, { error: 'Format tanggal salah.' });
+  if (!/^\d{2}:\d{2}$/.test(startTime)) return send(res, 400, { error: 'Format waktu salah.' });
+  const endT = endTime && /^\d{2}:\d{2}$/.test(endTime) ? endTime : null;
+  // Find or use a "Private" class type
+  let typeId = classTypeId;
+  if (!typeId) {
+    const allTypes = (await sb('gym_class_types?select=id,name').catch(() => [])) || [];
+    const pvt = allTypes.find((t) => /private|personal|pt/i.test(t.name));
+    typeId = pvt ? pvt.id : (allTypes[0] || {}).id;
+  }
+  if (!typeId) return send(res, 400, { error: 'Tipe kelas tidak ditemukan.' });
+  // Create the schedule entry (quota=1 marks it as private)
+  const sched = await sb('gym_class_schedules', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ schedule_date: date, start_time: startTime + ':00', end_time: endT ? endT + ':00' : null, class_type_id: typeId, instructor: coachName, quota: 1, is_cancelled: false }) }).catch(() => null);
+  if (!sched || !sched[0]) return send(res, 500, { error: 'Gagal membuat sesi.' });
+  const schedId = sched[0].id;
+  // Create the booking for the member
+  await sb('gym_class_bookings', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ schedule_id: schedId, full_name: String(memberName).trim(), phone: phone ? String(phone).trim() : null, status: 'confirmed' }) }).catch(() => null);
+  return send(res, 200, { ok: true, scheduleId: schedId });
+});
+
+// Today summary for GRO (session counts, check-in stats, next upcoming)
+route('GET', '/api/unit/gym/today-summary', async (req, res, s) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const today = todayJakarta(), nowMin = nowMinutesJakarta();
+  const types = await gymClassTypes();
+  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${today}&is_cancelled=eq.false&order=start_time.asc`).catch(() => [])) || [];
+  const ids = scheds.map((x) => x.id);
+  const counts = ids.length ? await gymBookingCounts(ids) : {};
+  const totalGroup = scheds.filter((x) => x.quota !== 1).length;
+  const totalPrivate = scheds.filter((x) => x.quota === 1).length;
+  // Check-in counts
+  const todayVisits = (await sb(`pt_visits?select=id,status&visit_date=eq.${today}&status=eq.active`).catch(() => [])) || [];
+  const totalBooked = Object.values(counts).reduce((s, c) => s + (c.confirmed || 0), 0);
+  // Next upcoming session
+  let nextSession = null;
+  for (const sc of scheds) {
+    const sm = hhmmToMin(sc.start_time);
+    if (sm != null && sm > nowMin) {
+      const t = types[sc.class_type_id] || {};
+      nextSession = { time: hhmm(sc.start_time), end: hhmm(sc.end_time), type: t.name || 'Class', coach: sc.instructor || '', isPrivate: sc.quota === 1 };
+      break;
+    }
+  }
+  return send(res, 200, { today, totalSessions: scheds.length, totalGroup, totalPrivate, totalBooked, totalCheckedIn: todayVisits.length, nextSession });
+});
+
+// Manual check-in for private class (GRO scans/confirms a private session member)
+route('POST', '/api/unit/gym/checkin-manual', async (req, res, s) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  const { scheduleId, voucherCode } = body;
+  if (!scheduleId) return send(res, 400, { error: 'scheduleId required' });
+  // If a voucher code is provided, use the standard scan flow for quota deduction
+  if (voucherCode) {
+    const r = await sb('rpc/pt_scan_visit', { method: 'POST', body: JSON.stringify({ p_code: voucherCode, p_actor: (s.d || s.c || 'gro'), p_allow_over: false, p_reason: 'private-class-checkin:' + scheduleId }) }).catch(() => null);
+    if (!r) return send(res, 500, { error: 'Gagal mencatat kunjungan.' });
+    if (r.ok !== true) return send(res, 400, r);
+    return send(res, 200, r);
+  }
+  return send(res, 400, { error: 'voucherCode required for check-in.' });
+});
+
+// Mark no-show for a booking
+route('POST', '/api/unit/gym/noshow', async (req, res, s) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const body = (await readBody(req)) || {};
+  const { bookingId } = body;
+  if (!bookingId) return send(res, 400, { error: 'bookingId required' });
+  // Mark booking as no_show (no quota deduction)
+  await sb(`gym_class_bookings?id=eq.${enc(String(bookingId))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'no_show' }) }).catch(() => null);
+  return send(res, 200, { ok: true });
+});
+
+// Search members for private booking (autocomplete)
+route('GET', '/api/unit/gym/member-search', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const term = String(q.q || '').trim();
+  if (term.length < 2) return send(res, 200, { results: [] });
+  const orders = (await sb(`pt_package_orders?select=id,full_name,phone&full_name=ilike.*${enc(term)}*&limit=25`).catch(() => [])) || [];
+  const results = [];
+  const seen = new Set();
+  for (const o of orders) {
+    const key = (o.full_name || '').toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const vs = (await sb(`pt_package_vouchers?select=id,voucher_code,coach_name,total_sessions,used_sessions,is_active&order_id=eq.${enc(o.id)}&is_active=eq.true`).catch(() => [])) || [];
+    for (const v of vs) {
+      const remaining = Math.max(0, (v.total_sessions || 0) - (v.used_sessions || 0));
+      if (remaining > 0) results.push({ name: o.full_name, phone: o.phone || '', coach: v.coach_name || '', voucherCode: v.voucher_code, remaining, total: v.total_sessions || 0 });
+    }
+  }
+  return send(res, 200, { results });
+});
+
 // PT packages list (GRO/admin) — one row per voucher, for the printable member barcode cards.
 route('GET', '/api/unit/gym/packages', async (req, res, s, q) => {
   if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });

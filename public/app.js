@@ -33,9 +33,18 @@ class Component extends DCLogic {
       units: [],
       gymScanResult: null, gymScanBusy: false, gymScanSaved: null, gymScanReason: '', gymSearchResults: [],
       gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '', gymPkgQ: '', gymCard: null,
+      gymMemberTab: 'all', gymMemberSearch: '', gymMemberSort: 'lastVisit', gymMemberSortDir: 'desc', gymMemberDetail: null, gymPkgFilter: '',
+      gymSchedMode: 'month', gymSchedAnchor: '', gymSchedCoachFilter: '', gymSchedTypeFilter: '', gymSchedDetail: null,
+      gymRsModal: null, gymRsStep: 0, gymRsDate: '', gymRsSessions: null, gymRsTarget: null, gymRsReason: '', gymRsReasonOther: '', gymRsSaving: false,
+      gymPendingModal: null, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false,
+      gymPendingCount: 0,
+      gymPrivateModal: false, gymPvtMemberQ: '', gymPvtMembers: [], gymPvtSelected: null,
+      gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false,
+      gymTodaySummary: null,
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
+    this.groEntry = location.pathname === '/gro' || location.pathname === '/gro/';
     this.boot();
     // Auto-refresh: pick up classes/bookings newly added in Admin Hub without a manual reload.
     this._pollTimer = setInterval(() => this.autoRefresh(), 60000);
@@ -44,7 +53,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.rcDetail || this.state.gymCard) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.rcDetail || this.state.gymCard || this.state.gymRsModal || this.state.gymPendingModal) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -57,7 +66,7 @@ class Component extends DCLogic {
   }
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '', rcBookings: [],
-      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [] };
+      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymClientsWithPkg: 0, gymClientsInactive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [], gymSchedData: null };
   }
   // ---- per-tab session token (multi-tab fix) ----
   // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
@@ -314,11 +323,211 @@ class Component extends DCLogic {
     const ym = this.state.gymCalYm || '';
     this.api('/api/unit/gym/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ gymCalCells: r.cells || [], gymCalLabel: r.monthLabel || '', gymCalYm: r.ym || '', gymCalPrevYm: r.prevYm || '', gymCalNextYm: r.nextYm || '' })).catch(() => {});
     this.gymShowDay(this.state.gymSelDate || this.todayISO());
-    this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0 })).catch(() => {});
+    this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0, gymClientsWithPkg: r.withPkg || 0, gymClientsInactive: r.inactive || 0, gymLowQuota: r.lowQuota || 0, gymExpiredThisMonth: r.expiredThisMonth || 0 })).catch(() => {});
     if (this.state.role === 'coach' || this.state.role === 'admin') this.loadGymCoachBookings();
+    if (this.state.role === 'gro') { this.loadGymSchedule(); this.loadGymPendingCount(); this.loadGymTodaySummary(); }
   }
   gymShowDay(date) { this.setState({ gymSelDate: date }); if (this.MOCK) return; this.api('/api/unit/gym/day?date=' + encodeURIComponent(date)).then((r) => this.setD({ gymDayClasses: r.classes || [], gymDayLabel: r.dateLabel || '' })).catch(() => {}); }
   gymCalNav(ym) { if (!ym) return; this.setState({ gymCalYm: ym }); if (!this.MOCK) this.loadGymView(); }
+  // ---------- Gym Schedule: full calendar for GRO ----------
+  loadGymSchedule() {
+    if (this.MOCK) return;
+    const mode = this.state.gymSchedMode, anchor = this.state.gymSchedAnchor || this.todayISO();
+    let from, to;
+    if (mode === 'week') {
+      const wd = this._weekDates(anchor); from = wd[0]; to = wd[6];
+    } else if (mode === 'month') {
+      const ym = anchor.slice(0, 7), parts = ym.split('-').map(Number);
+      from = ym + '-01'; to = ym + '-' + String(new Date(parts[0], parts[1], 0).getDate()).padStart(2, '0');
+    } else { from = to = anchor; }
+    this.api('/api/unit/gym/schedule?from=' + from + '&to=' + to)
+      .then((r) => this.setD({ gymSchedData: r })).catch(() => {});
+  }
+  _weekDates(anchor) {
+    const p = anchor.split('-').map(Number), dt = new Date(p[0], p[1] - 1, p[2]);
+    const dow = dt.getDay(), off = dow === 0 ? -6 : 1 - dow, out = [];
+    for (let i = 0; i < 7; i++) { const d = new Date(p[0], p[1] - 1, p[2] + off + i); out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); }
+    return out;
+  }
+  _isoDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  setGymSchedMode(mode) { this.setState({ gymSchedMode: mode }); setTimeout(() => this.loadGymSchedule(), 0); }
+  gymSchedNav(dir) {
+    const mode = this.state.gymSchedMode, anchor = this.state.gymSchedAnchor || this.todayISO();
+    const p = anchor.split('-').map(Number); let nd;
+    if (mode === 'week') nd = new Date(p[0], p[1] - 1, p[2] + (dir * 7));
+    else if (mode === 'month') nd = new Date(p[0], p[1] - 1 + dir, 1);
+    else nd = new Date(p[0], p[1] - 1, p[2] + dir);
+    this.setState({ gymSchedAnchor: this._isoDate(nd) }); this.loadGymSchedule();
+  }
+  gymSchedToday() { this.setState({ gymSchedAnchor: this.todayISO() }); this.loadGymSchedule(); }
+  gymSchedGoDay(date) {
+    const days = (this.state.d.gymSchedData || {}).days || {};
+    let classes = days[date] || [];
+    const cf = this.state.gymSchedCoachFilter, tf = this.state.gymSchedTypeFilter;
+    if (cf) classes = classes.filter((c) => c.coach === cf);
+    if (tf) classes = classes.filter((c) => c.type === tf);
+    if (classes.length === 1) { this.openGymClassDetail(classes[0].id); return; }
+    if (classes.length > 1) { this.setState({ gymDayListDate: date }); return; }
+  }
+  closeGymDayList() { this.setState({ gymDayListDate: null }); }
+  openGymClassDetail(id) {
+    this.setState({ gymSchedDetail: { loading: true } });
+    this.api('/api/unit/gym/class-detail?id=' + id)
+      .then((r) => this.setState({ gymSchedDetail: r }))
+      .catch(() => this.setState({ gymSchedDetail: null }));
+  }
+  closeGymClassDetail() { this.setState({ gymSchedDetail: null }); }
+  setGymSchedCoachFilter(e) { this.setState({ gymSchedCoachFilter: e && e.target ? e.target.value : '' }); }
+  setGymSchedTypeFilter(e) { this.setState({ gymSchedTypeFilter: e && e.target ? e.target.value : '' }); }
+  // ---------- Gym Reschedule & Pending ----------
+  openGymReschedule(bookingId, participant, sessionInfo) {
+    this.setState({ gymRsModal: { bookingId, participant, session: sessionInfo }, gymRsStep: 1, gymRsDate: '', gymRsSessions: null, gymRsTarget: null, gymRsReason: '', gymRsReasonOther: '', gymRsSaving: false });
+  }
+  closeGymReschedule() { this.setState({ gymRsModal: null, gymRsStep: 0, gymRsDate: '', gymRsSessions: null, gymRsTarget: null, gymRsReason: '', gymRsReasonOther: '', gymRsSaving: false }); }
+  setGymRsDate(e) {
+    const date = e && e.target ? e.target.value : '';
+    this.setState({ gymRsDate: date, gymRsSessions: null, gymRsTarget: null });
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      this.api('/api/unit/gym/available-sessions?date=' + date)
+        .then((r) => this.setState({ gymRsSessions: r.sessions || [] }))
+        .catch(() => this.setState({ gymRsSessions: [] }));
+    }
+  }
+  selectGymRsTarget(session) { if (!session.full) this.setState({ gymRsTarget: session }); }
+  gymRsGoStep2() { if (this.state.gymRsTarget) this.setState({ gymRsStep: 2 }); }
+  setGymRsReason(e) { this.setState({ gymRsReason: e && e.target ? e.target.value : '' }); }
+  setGymRsReasonOther(e) { this.setState({ gymRsReasonOther: e && e.target ? e.target.value : '' }); }
+  confirmGymReschedule() {
+    const st = this.state;
+    if (st.gymRsSaving || !st.gymRsModal || !st.gymRsTarget) return;
+    const reason = st.gymRsReason === 'Lainnya' ? (st.gymRsReasonOther || '').trim() : st.gymRsReason;
+    if (!reason) { this.toastMsg(this.t('rs_reason') + '!'); return; }
+    this.setState({ gymRsSaving: true });
+    this.api('/api/unit/gym/reschedule', { method: 'POST', body: JSON.stringify({ booking_id: st.gymRsModal.bookingId, new_schedule_id: st.gymRsTarget.scheduleId, reason }) })
+      .then((r) => { this.toastMsg(r.message || this.t('rs_success')); this.closeGymReschedule(); this.closeGymClassDetail(); this.loadGymSchedule(); this.loadGymPendingCount(); })
+      .catch((e) => { this.toastMsg(e.message || 'Error'); this.setState({ gymRsSaving: false }); });
+  }
+  openGymPendingMark(bookingId, participant, sessionInfo) {
+    this.setState({ gymPendingModal: { bookingId, participant, session: sessionInfo }, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false });
+  }
+  closeGymPendingMark() { this.setState({ gymPendingModal: null, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false }); }
+  setGymPendingReason(e) { this.setState({ gymPendingReason: e && e.target ? e.target.value : '' }); }
+  setGymPendingNote(e) { this.setState({ gymPendingNote: e && e.target ? e.target.value : '' }); }
+  confirmGymPendingMark() {
+    const st = this.state;
+    if (st.gymPendingSaving || !st.gymPendingModal) return;
+    const reason = st.gymPendingReason;
+    if (!reason) { this.toastMsg(this.t('rs_reason') + '!'); return; }
+    this.setState({ gymPendingSaving: true });
+    this.api('/api/unit/gym/mark-pending', { method: 'POST', body: JSON.stringify({ booking_id: st.gymPendingModal.bookingId, reason, note: st.gymPendingNote }) })
+      .then(() => { this.toastMsg('OK'); this.closeGymPendingMark(); this.openGymClassDetail(this.state.gymSchedDetail ? this.state.gymSchedDetail.id : ''); this.loadGymPendingCount(); })
+      .catch((e) => { this.toastMsg(e.message || 'Error'); this.setState({ gymPendingSaving: false }); });
+  }
+  cancelGymPending(bookingId) {
+    this.api('/api/unit/gym/cancel-pending', { method: 'POST', body: JSON.stringify({ booking_id: bookingId }) })
+      .then(() => { this.toastMsg('OK'); this.loadGymPendingList(); this.loadGymPendingCount(); if (this.state.gymSchedDetail) this.openGymClassDetail(this.state.gymSchedDetail.id); })
+      .catch((e) => this.toastMsg(e.message || 'Error'));
+  }
+  loadGymPendingList() {
+    this.api('/api/unit/gym/pending-list')
+      .then((r) => this.setD({ gymPendingList: r }))
+      .catch(() => {});
+  }
+  loadGymPendingCount() {
+    this.api('/api/unit/gym/pending-count')
+      .then((r) => this.setState({ gymPendingCount: r.count || 0 }))
+      .catch(() => {});
+  }
+  // ---------- Gym: Private Class Booking ----------
+  openGymPrivateBooking() { this.setState({ gymPrivateModal: true, gymPvtMemberQ: '', gymPvtMembers: [], gymPvtSelected: null, gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false }); }
+  closeGymPrivateBooking() { this.setState({ gymPrivateModal: false }); }
+  setGymPvtMemberQ(e) {
+    const q = e && e.target ? e.target.value : '';
+    this.setState({ gymPvtMemberQ: q });
+    if (q.trim().length < 2) return this.setState({ gymPvtMembers: [] });
+    clearTimeout(this._pvtSearchTimer);
+    this._pvtSearchTimer = setTimeout(() => {
+      this.api('/api/unit/gym/member-search?q=' + encodeURIComponent(q.trim()))
+        .then((r) => this.setState({ gymPvtMembers: r.results || [] }))
+        .catch(() => {});
+    }, 300);
+  }
+  selectGymPvtMember(m) { this.setState({ gymPvtSelected: m, gymPvtMemberQ: m.name }); }
+  setGymPvtDate(e) { this.setState({ gymPvtDate: e && e.target ? e.target.value : '' }); }
+  setGymPvtStartTime(e) { this.setState({ gymPvtStartTime: e && e.target ? e.target.value : '' }); }
+  setGymPvtEndTime(e) { this.setState({ gymPvtEndTime: e && e.target ? e.target.value : '' }); }
+  confirmGymPrivateBooking() {
+    const st = this.state;
+    if (st.gymPvtSaving || !st.gymPvtSelected || !st.gymPvtDate || !st.gymPvtStartTime) return;
+    this.setState({ gymPvtSaving: true });
+    this.api('/api/unit/gym/private-booking', { method: 'POST', body: JSON.stringify({
+      memberName: st.gymPvtSelected.name, phone: st.gymPvtSelected.phone || '',
+      coachName: st.gymPvtSelected.coach || '', date: st.gymPvtDate,
+      startTime: st.gymPvtStartTime, endTime: st.gymPvtEndTime || null,
+      voucherCode: st.gymPvtSelected.voucherCode || ''
+    }) })
+      .then(() => { this.setState({ gymPvtSaving: false }); this.closeGymPrivateBooking(); this.toastMsg(this.t('pvt_booked')); this.loadGymSchedule(); })
+      .catch((e) => { this.setState({ gymPvtSaving: false }); this.toastMsg(e.message || 'Error'); });
+  }
+  // ---------- Gym: Today Summary ----------
+  loadGymTodaySummary() {
+    if (this.MOCK) return;
+    this.api('/api/unit/gym/today-summary')
+      .then((r) => this.setState({ gymTodaySummary: r }))
+      .catch(() => {});
+  }
+  // ---------- Gym: Manual Check-in from Schedule ----------
+  gymManualCheckin(scheduleId, voucherCode) {
+    if (!scheduleId) return;
+    this.api('/api/unit/gym/checkin-manual', { method: 'POST', body: JSON.stringify({ scheduleId, voucherCode }) })
+      .then(() => { this.toastMsg(this.t('checkin_recorded')); if (this.state.gymSchedDetail) this.openGymClassDetail(this.state.gymSchedDetail.id); this.loadGymSchedule(); this.loadGymTodaySummary(); })
+      .catch((e) => this.toastMsg(e.message || 'Error'));
+  }
+  // ---------- Gym: No-show ----------
+  gymMarkNoShow(bookingId) {
+    if (!bookingId) return;
+    this.api('/api/unit/gym/noshow', { method: 'POST', body: JSON.stringify({ bookingId }) })
+      .then(() => { this.toastMsg(this.t('noshow_marked')); if (this.state.gymSchedDetail) this.openGymClassDetail(this.state.gymSchedDetail.id); this.loadGymSchedule(); })
+      .catch((e) => this.toastMsg(e.message || 'Error'));
+  }
+  // ---------- Gym Members: tabs, search, sort, detail ----------
+  setGymMemberTab(tab) { this.setState({ gymMemberTab: tab }); }
+  setGymMemberSearch(e) { this.setState({ gymMemberSearch: e && e.target ? e.target.value : '' }); }
+  clearGymMemberSearch() { this.setState({ gymMemberSearch: '' }); }
+  setGymPkgFilter(v) { this.setState({ gymPkgFilter: v }); }
+  setGymMemberSort(col) {
+    const st = this.state;
+    if (st.gymMemberSort === col) this.setState({ gymMemberSortDir: st.gymMemberSortDir === 'asc' ? 'desc' : 'asc' });
+    else this.setState({ gymMemberSort: col, gymMemberSortDir: col === 'name' ? 'asc' : 'desc' });
+  }
+  openGymMemberDetail(name) {
+    if (this.MOCK) return;
+    this.setState({ gymMemberDetail: { name, phone: '', packages: [], recentVisits: [], upcomingSessions: [], loading: true } });
+    this.api('/api/unit/gym/member?name=' + encodeURIComponent(name))
+      .then((r) => this.setState({ gymMemberDetail: { name: r.name || name, phone: r.phone || '', packages: r.packages || [], recentVisits: r.recentVisits || [], upcomingSessions: r.upcomingSessions || [], loading: false } }))
+      .catch(() => this.setState({ gymMemberDetail: { name, phone: '', packages: [], recentVisits: [], upcomingSessions: [], loading: false } }));
+  }
+  closeGymMemberDetail() { this.setState({ gymMemberDetail: null }); }
+  gymFilterClients() {
+    const st = this.state, D = st.d, tab = st.gymMemberTab, q = (st.gymMemberSearch || '').trim().toLowerCase(), pf = st.gymPkgFilter || '';
+    let list = (D.gymClients || []).slice();
+    if (tab === 'active30') list = list.filter((c) => c.daysSince != null && c.daysSince <= 30);
+    else if (tab === 'activePkg') list = list.filter((c) => c.pkgStatus === 'active');
+    else if (tab === 'inactive') list = list.filter((c) => (c.daysSince == null || c.daysSince > 30) && c.pkgStatus !== 'active');
+    if (pf) list = list.filter((c) => (c.packages || []).some((p) => (p.name || '').toLowerCase() === pf.toLowerCase()));
+    if (q.length >= 2) list = list.filter((c) => c.name.toLowerCase().indexOf(q) >= 0 || (c.phone || '').replace(/\D/g, '').indexOf(q.replace(/\D/g, '')) >= 0);
+    const col = st.gymMemberSort, dir = st.gymMemberSortDir === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      if (col === 'name') return dir * a.name.localeCompare(b.name);
+      if (col === 'visits') return dir * ((a.visits || 0) - (b.visits || 0));
+      if (col === 'lastVisit') { const da = a.lastVisitISO || '', db = b.lastVisitISO || ''; return dir * (da < db ? -1 : da > db ? 1 : 0); }
+      if (col === 'pkgName') return dir * (a.pkgName || '').localeCompare(b.pkgName || '');
+      if (col === 'pkgCoach') return dir * (a.pkgCoach || '').localeCompare(b.pkgCoach || '');
+      if (col === 'quota') return dir * ((a.pkgRemaining || 0) - (b.pkgRemaining || 0));
+      return 0;
+    });
+    return list.map((c, i) => ({ ...c, rank: i + 1 }));
+  }
   // ---------- Gym GRO: Scan Member ----------
   gymScanSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -423,6 +632,7 @@ class Component extends DCLogic {
     else if (screen === 'leaderboard') this.api('/api/coach/leaderboard').then((r) => this.setD({ leaderboard: r.board })).catch(fail);
     else if (screen === 'venue' || screen === 'venueassign') this.api('/api/venue/bookings').then((r) => this.setD({ venueBookings: r.bookings, venueMine: r.mine, venueCoaches: r.coaches, venueCoachList: r.coachList || [], venueIsHC: r.isHC })).catch(fail);
     else if (screen === 'packageorders') this.api('/api/gro/package-orders').then((r) => this.setD({ packageOrders: r.orders || [] })).catch(fail);
+    else if (screen === 'gympending') this.loadGymPendingList();
     else if (screen === 'reschedule') this.api('/api/gro/participants/search').then((r) => this.setD({ rschBookings: r.participants || [] })).catch(fail);
     else if (screen === 'validatecoach') this.loadVcSessions();
     else if (screen === 'recoverycenter') this.loadRcBookings();
@@ -1387,7 +1597,9 @@ class Component extends DCLogic {
     if (scr === 'gympackages') tt = titles.gympackages;
     if (scr === 'gymscan') tt = titles.gymscan;
     if (scr === 'gymvisits') tt = titles.gymvisits;
-    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
+    titles.gympending = ['20FIT Gym', this.t('rs_pending_list')];
+    if (scr === 'gympending') tt = titles.gympending;
+    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -2114,9 +2326,199 @@ class Component extends DCLogic {
       border: D.gymSelDate === c.date ? 'var(--volt)' : (c.teach ? 'var(--border2)' : 'var(--border)'),
       col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach, pick: () => this.gymShowDay(c.date),
     });
-    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: x.color || 'var(--cyan)', cancelled: !!x.cancelled }));
+    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: (x.cap > 0 && x.pax >= x.cap) ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled }));
     const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
+    const gmTab = st.gymMemberTab, gmAll = D.gymClients || [];
+    const gmActive30 = gmAll.filter((c) => c.daysSince != null && c.daysSince <= 30).length;
+    const gmActivePkg = gmAll.filter((c) => c.pkgStatus === 'active').length;
+    const gmInactive = gmAll.filter((c) => (c.daysSince == null || c.daysSince > 30) && c.pkgStatus !== 'active').length;
+    // Package filter chips — dynamic from data
+    const _pkgNames = {};
+    for (const c of gmAll) { for (const p of (c.packages || [])) { const nm = (p.name || '').trim(); if (nm) { if (!_pkgNames[nm]) _pkgNames[nm] = 0; _pkgNames[nm]++; } } }
+    const gmPkgFilter = st.gymPkgFilter || '';
+    const gmPkgChips = [{ value: '', label: this.t('gm_all_packages'), count: '', on: !gmPkgFilter, bg: !gmPkgFilter ? 'var(--volt)' : 'var(--panel)', fg: !gmPkgFilter ? '#fff' : 'var(--text)', border: !gmPkgFilter ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymPkgFilter('') }];
+    for (const [nm, cnt] of Object.entries(_pkgNames).sort((a, b) => b[1] - a[1])) {
+      const on = gmPkgFilter === nm;
+      gmPkgChips.push({ value: nm, label: nm + ' (' + cnt + ')', count: cnt, on, bg: on ? 'var(--volt)' : 'var(--panel)', fg: on ? '#fff' : 'var(--text)', border: on ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymPkgFilter(nm) });
+    }
+    const gmFiltered = this.gymFilterClients();
+    const gmSort = st.gymMemberSort, gmDir = st.gymMemberSortDir;
+    const gmArrow = (col) => gmSort === col ? (gmDir === 'asc' ? ' ↑' : ' ↓') : '';
+    const _quotaColor = (rem, total) => { if (!total || rem <= 0) return { fg: '#ef4444', bg: 'rgba(239,68,68,.15)' }; const pct = rem / total; if (pct < 0.25) return { fg: '#ef4444', bg: 'rgba(239,68,68,.15)' }; if (pct <= 0.5) return { fg: '#eab308', bg: 'rgba(234,179,8,.15)' }; return { fg: '#22c55e', bg: 'rgba(34,197,94,.15)' }; };
+    const gmClients = gmFiltered.map((c) => {
+      const activePkgs = (c.packages || []).filter((p) => p.active);
+      const allPkgs = c.packages || [];
+      const pkgNameList = activePkgs.length ? activePkgs.map((p) => p.name || '—').filter((v, i, a) => a.indexOf(v) === i).join(', ') : (allPkgs.length ? allPkgs[0].name || '—' : '—');
+      const pkgCoachList = activePkgs.length ? activePkgs.map((p) => p.coach || '—').filter((v, i, a) => a.indexOf(v) === i).join(', ') : '—';
+      const qc = _quotaColor(c.pkgRemaining || 0, c.pkgTotal || 0);
+      const quotaLabel = c.pkgTotal > 0 ? (c.pkgRemaining + '/' + c.pkgTotal) : '—';
+      return {
+        rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit,
+        pkgNameLabel: pkgNameList, pkgCoachLabel: pkgCoachList,
+        quotaLabel, quotaFg: c.pkgTotal > 0 ? qc.fg : 'var(--muted)', quotaBg: c.pkgTotal > 0 ? qc.bg : 'transparent',
+        hasQuota: c.pkgTotal > 0, noQuota: !c.pkgTotal,
+        pkgLabel: c.pkgStatus === 'active' ? this.t('pkg_active') : (c.pkgStatus === 'used_up' ? this.t('pkg_used_up') : (c.pkgStatus === 'expired' ? this.t('pkg_expired') : '—')),
+        pkgBg: c.pkgStatus === 'active' ? 'rgba(62,213,152,.15)' : (c.pkgStatus === 'used_up' ? 'rgba(148,163,184,.2)' : (c.pkgStatus === 'expired' ? 'rgba(255,82,71,.15)' : 'transparent')),
+        pkgFg: c.pkgStatus === 'active' ? '#16a34a' : (c.pkgStatus === 'used_up' ? 'var(--muted)' : (c.pkgStatus === 'expired' ? '#dc2626' : 'var(--muted)')),
+        hasPkg: !!c.pkgStatus, noPkg: !c.pkgStatus,
+        pick: () => this.openGymMemberDetail(c.name),
+      };
+    });
+    // Summary cards
+    const _gmSummary = { activePkg: D.gymClientsWithPkg || 0, totalActive: gmAll.filter((c) => c.packages && c.packages.some((p) => p.active)).length, lowQuota: D.gymLowQuota || 0, expThisMonth: D.gymExpiredThisMonth || 0 };
+    const gmd = st.gymMemberDetail;
     const gsc = st.gymScanResult, gss = st.gymScanSaved;
+
+    // ---- GRO full calendar (week / month / day) ----
+    const gymFullCal = isGro && st.unit === 'gym' && scr === 'gymview';
+    const gymMiniCal = !isGro && st.unit === 'gym' && scr === 'gymview';
+    const sd = D.gymSchedData || {};
+    const _COACH_PALETTE = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#F97316','#64B5F6','#81C784'];
+    const _coachColorMap = {};
+    (sd.coaches || []).forEach((c, i) => { _coachColorMap[c] = _COACH_PALETTE[i % _COACH_PALETTE.length]; });
+    const _scMode = st.gymSchedMode, _scAnchor = st.gymSchedAnchor || this.todayISO();
+    const _scCoach = st.gymSchedCoachFilter, _scType = st.gymSchedTypeFilter;
+    const _scDays = sd.days || {};
+    const _filterBlocks = (blocks) => {
+      let b = blocks || [];
+      if (_scCoach) b = b.filter((x) => x.coach === _scCoach);
+      if (_scType) b = b.filter((x) => x.type === _scType);
+      return b;
+    };
+    const HOUR_PX = 56, START_HOUR = 7, END_HOUR = 22, GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_PX;
+    const _blockPos = (b) => {
+      const [sh, sm] = (b.time || '07:00').split(':').map(Number), [eh, em] = (b.end || b.time || '08:00').split(':').map(Number);
+      const sMin = Math.max((sh * 60 + sm) - START_HOUR * 60, 0), eMin = Math.min((eh * 60 + em) - START_HOUR * 60, (END_HOUR - START_HOUR) * 60);
+      return { top: (sMin / 60) * HOUR_PX, height: Math.max(((eMin - sMin) / 60) * HOUR_PX, 20) };
+    };
+    const _hourLabels = [];
+    for (let h = START_HOUR; h <= END_HOUR; h++) _hourLabels.push({ lbl: String(h).padStart(2, '0') + ':00', top: (h - START_HOUR) * HOUR_PX });
+    const _dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+    const _dayNamesEn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const _dnFn = isID ? _dayNames : _dayNamesEn;
+
+    let scNavLabel = '', weekDayCols = [], monthWeeks = [], dayBlocks = [];
+    const _todayISO = this.todayISO();
+    const _nowH = new Date().getHours(), _nowM = new Date().getMinutes();
+    const _nowTop = Math.max((_nowH * 60 + _nowM - START_HOUR * 60) / 60, 0) * HOUR_PX;
+    const _showNow = _nowH >= START_HOUR && _nowH < END_HOUR;
+
+    if (_scMode === 'week') {
+      const wd = this._weekDates(_scAnchor);
+      const d0 = wd[0].split('-'), d6 = wd[6].split('-');
+      scNavLabel = parseInt(d0[2]) + ' ' + (isID ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(d0[1]) - 1] + ' – ' + parseInt(d6[2]) + ' ' + (isID ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(d6[1]) - 1] + ' ' + d6[0];
+      weekDayCols = wd.map((dt) => {
+        const pp = dt.split('-').map(Number), dow = new Date(pp[0], pp[1] - 1, pp[2]).getDay();
+        const isToday = dt === _todayISO;
+        const raw = _filterBlocks(_scDays[dt] || []);
+        const blocks = raw.map((b) => {
+          const pos = _blockPos(b);
+          return { id: b.id, time: b.time, end: b.end, type: b.type, coach: b.coach || '—', paxLabel: b.pax + '/' + b.cap, color: _coachColorMap[b.coach] || '#666', bg: (_coachColorMap[b.coach] || '#666') + '22', top: pos.top + 'px', height: pos.height + 'px', cancelled: !!b.cancelled, cancelledOp: b.cancelled ? '0.4' : '1', pick: () => this.openGymClassDetail(b.id) };
+        });
+        return { date: dt, dayNum: String(pp[2]), dayName: _dnFn[dow], isToday, todayBorder: isToday ? '2px solid var(--volt)' : '1px solid var(--border)', todayBg: isToday ? 'var(--volt-dim)' : 'transparent', blocks, hasBlocks: blocks.length > 0, noBlocks: blocks.length === 0, showNow: isToday && _showNow, nowTop: _nowTop + 'px', goDay: () => this.gymSchedGoDay(dt) };
+      });
+    } else if (_scMode === 'month') {
+      const ym = _scAnchor.slice(0, 7), parts = ym.split('-').map(Number);
+      const mNames = isID ? ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      scNavLabel = mNames[parts[1] - 1] + ' ' + parts[0];
+      const firstDay = new Date(parts[0], parts[1] - 1, 1).getDay();
+      const daysInMonth = new Date(parts[0], parts[1], 0).getDate();
+      const startOff = firstDay === 0 ? 6 : firstDay - 1;
+      let cells = [];
+      for (let i = 0; i < startOff; i++) cells.push({ blank: true });
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = ym + '-' + String(d).padStart(2, '0');
+        const raw = _filterBlocks(_scDays[dt] || []);
+        const isToday = dt === _todayISO;
+        const preview = raw.slice(0, 3).map((b) => {
+          const cc = _coachColorMap[b.coach] || '#666';
+          const isPvt = b.sessionType === 'private';
+          const badge = isPvt ? 'PRIVATE' : (b.cap > 1 ? 'GRUP' : '');
+          const badgeBg = isPvt ? '#8B5CF6' : '#3B82F6';
+          const statusBadge = b.liveStatus === 'live' ? 'LIVE' : '';
+          const statusColor = b.liveStatus === 'live' ? '#EF4444' : '';
+          const completedOp = b.liveStatus === 'completed' ? '0.5' : '1';
+          const checkinLabel = (b.checkedInCount != null && b.bookedCount != null) ? (b.checkedInCount + '/' + b.bookedCount) : '';
+          return { type: b.type, coach: b.coach || '—', color: cc, bg: cc + '1A', time: b.time, paxLabel: (b.pax || 0) + '/' + (b.cap || 0), pick: (e) => { e.stopPropagation(); this.openGymClassDetail(b.id); }, tooltip: b.type + ' · ' + b.time + (b.end ? '-' + b.end : '') + ' · ' + (b.coach || '—') + ' · ' + (b.pax || 0) + '/' + (b.cap || 0), isPvt, badge, hasBadge: !!badge, badgeBg, statusBadge, hasStatus: !!statusBadge, statusColor, completedOp, memberName: b.memberName || '', hasMember: !!b.memberName, checkinLabel, hasCheckin: !!checkinLabel };
+        });
+        const moreCount = raw.length > 3 ? raw.length - 3 : 0;
+        const pickDay = () => this.gymSchedGoDay(dt);
+        cells.push({ blank: false, day: d, date: dt, isToday, notToday: !isToday, todayBg: isToday ? 'rgba(239,68,68,0.06)' : 'transparent', preview, hasPreview: preview.length > 0, noPreview: preview.length === 0, moreCount, hasMore: moreCount > 0, moreLabel: '+' + moreCount + ' ' + this.t('n_more'), goDay: pickDay, pick: pickDay });
+      }
+      const weeks = [];
+      while (cells.length) weeks.push({ cells: cells.splice(0, 7) });
+      if (weeks.length && weeks[weeks.length - 1].cells.length < 7) { while (weeks[weeks.length - 1].cells.length < 7) weeks[weeks.length - 1].cells.push({ blank: true }); }
+      monthWeeks = weeks;
+    } else {
+      const pp = _scAnchor.split('-').map(Number), dow = new Date(pp[0], pp[1] - 1, pp[2]).getDay();
+      const mNames = isID ? ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      scNavLabel = _dnFn[dow] + ', ' + pp[2] + ' ' + mNames[pp[1] - 1] + ' ' + pp[0];
+      const raw = _filterBlocks(_scDays[_scAnchor] || []);
+      dayBlocks = raw.map((b) => {
+        const pos = _blockPos(b);
+        return { id: b.id, time: b.time, end: b.end, type: b.type, coach: b.coach || '—', paxLabel: b.pax + '/' + b.cap, color: _coachColorMap[b.coach] || '#666', bg: (_coachColorMap[b.coach] || '#666') + '22', top: pos.top + 'px', height: pos.height + 'px', cancelled: !!b.cancelled, cancelledOp: b.cancelled ? '0.4' : '1', pick: () => this.openGymClassDetail(b.id) };
+      });
+    }
+
+    const _scDetail = st.gymSchedDetail;
+    const _scIsUpcoming = !!(_scDetail && _scDetail.isUpcoming);
+    const _scIsGroDetail = !!(_scDetail && _scDetail.isGro && isGro);
+    const _scIsPrivate = !!(_scDetail && _scDetail.sessionType === 'private');
+    const _scVoucher = _scDetail ? _scDetail.voucher : null;
+    const scDetailParticipants = _scDetail && _scDetail.participants ? _scDetail.participants.map((p, i) => {
+      const sessionInfo = { id: _scDetail.id, date: _scDetail.date, dateLabel: _scDetail.dateLabel, time: _scDetail.time, end: _scDetail.end, type: _scDetail.type, coach: _scDetail.coach };
+      return {
+        n: i + 1, name: p.name || '—', phone: p.phone || '',
+        pending: !!p.pending, pendingNote: p.pendingNote || '',
+        rescheduledFrom: p.rescheduledFrom || '', hasReschFrom: !!p.rescheduledFrom,
+        showActions: _scIsUpcoming && _scIsGroDetail && !p.pending,
+        showPendingTag: !!p.pending,
+        checkedIn: !!p.checkedIn, notCheckedIn: !p.checkedIn,
+        checkinBg: p.checkedIn ? 'rgba(62,213,152,.15)' : 'transparent',
+        checkinFg: p.checkedIn ? '#16a34a' : 'var(--muted)',
+        checkinLabel: p.checkedIn ? this.t('checked_in_label') : this.t('not_checked_in_label'),
+        reschedule: () => this.openGymReschedule(p.bookingId, { name: p.name, phone: p.phone }, sessionInfo),
+        markPending: () => this.openGymPendingMark(p.bookingId, { name: p.name, phone: p.phone }, sessionInfo),
+        markNoShow: () => this.gymMarkNoShow(p.bookingId),
+        statusColor: p.checkedIn ? '#16a34a' : (p.pending ? '#f59e0b' : 'var(--muted)'),
+      };
+    }) : [];
+
+    // Gym Reschedule modal
+    const _rsModal = st.gymRsModal;
+    const _rsSessions = st.gymRsSessions;
+    const _rsTarget = st.gymRsTarget;
+    const rsReasons = [
+      { value: '', label: '— ' + this.t('rs_reason') + ' —' },
+      { value: this.t('rs_reason_client'), label: this.t('rs_reason_client') },
+      { value: this.t('rs_reason_sick'), label: this.t('rs_reason_sick') },
+      { value: this.t('rs_reason_coach'), label: this.t('rs_reason_coach') },
+      { value: this.t('rs_reason_conflict'), label: this.t('rs_reason_conflict') },
+      { value: 'Lainnya', label: this.t('rs_reason_other') },
+    ];
+    const rsSessionRows = (_rsSessions || []).map((s) => ({
+      scheduleId: s.scheduleId, className: s.className, start: s.start, end: s.end, instructor: s.instructor,
+      remaining: s.remaining, quota: s.quota, full: s.full, notFull: !s.full,
+      slotLabel: s.remaining + ' ' + this.t('rs_slot_left'),
+      bg: _rsTarget && _rsTarget.scheduleId === s.scheduleId ? 'var(--volt-dim)' : (s.full ? 'var(--panel)' : 'var(--bg)'),
+      border: _rsTarget && _rsTarget.scheduleId === s.scheduleId ? 'var(--volt)' : 'var(--border)',
+      opacity: s.full ? '0.5' : '1', cursor: s.full ? 'not-allowed' : 'pointer',
+      fullLabel: this.t('rs_full'),
+      pick: () => this.selectGymRsTarget(s),
+    }));
+
+    // Gym Pending modal
+    const _pendModal = st.gymPendingModal;
+
+    // Gym Pending list (screen)
+    const _pendList = (D.gymPendingList || {}).items || [];
+    const gymPendingRows = _pendList.map((p) => ({
+      logId: p.logId, bookingId: p.bookingId, memberName: p.memberName,
+      className: p.className, dateLabel: p.dateLabel, sessionTime: p.sessionTime + (p.sessionEnd ? '–' + p.sessionEnd : ''),
+      coach: p.coach || '—', reason: p.reason, note: p.note || '—', markedAt: p.markedAt ? new Date(p.markedAt).toLocaleDateString() : '',
+      rescheduleNow: () => { const sessionInfo = { id: p.bookingId, date: p.sessionDate, dateLabel: p.dateLabel, time: p.sessionTime, end: p.sessionEnd, type: p.className, coach: p.coach }; this.openGymReschedule(p.bookingId, { name: p.memberName }, sessionInfo); },
+      cancelMark: () => this.cancelGymPending(p.bookingId),
+    }));
 
     return {
       isGro, goReschedule: () => this.go('reschedule'),
@@ -2178,6 +2580,7 @@ class Component extends DCLogic {
       gymCardUsed: st.gymCard ? st.gymCard.used : 0, gymCardTotal: st.gymCard ? st.gymCard.total : 0, gymCardRemaining: st.gymCard ? st.gymCard.remaining : 0,
       tMemberCard: this.t('member_card'), tPrintCard: this.t('print_card'), tShowToGro: this.t('show_to_gro'),
       gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'),
+      gymScanBtnBg: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnFg: scr === 'gymscan' ? '#ffffff' : 'var(--text)', gymScanBtnBar: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnWeight: scr === 'gymscan' ? '700' : '600',
       // Gym view (calendar + day list + clients)
       gymCalLabel: D.gymCalLabel || '', gymDow,
       gymPrev: () => this.gymCalNav(D.gymCalPrevYm), gymNext: () => this.gymCalNav(D.gymCalNextYm),
@@ -2185,6 +2588,187 @@ class Component extends DCLogic {
       gymDayLabel: D.gymDayLabel || '', gymDay, gymDayHas: gymDay.length > 0, gymDayEmpty: gymDay.length === 0,
       gymClients, gymClientsHas: gymClients.length > 0, gymClientsEmpty: gymClients.length === 0,
       gymClientsTotal: D.gymClientsTotal || 0, gymClientsActive: D.gymClientsActive || 0,
+      // GRO full calendar
+      gymFullCal, gymMiniCal,
+      scIsWeek: _scMode === 'week', scIsMonth: _scMode === 'month', scIsDay: _scMode === 'day',
+      scNavLabel,
+      scModeWeek: () => this.setGymSchedMode('week'), scModeMonth: () => this.setGymSchedMode('month'), scModeDay: () => this.setGymSchedMode('day'),
+      scPrev: () => this.gymSchedNav(-1), scNext: () => this.gymSchedNav(1), scToday: () => this.gymSchedToday(),
+      scWeekBg: _scMode === 'week' ? 'var(--volt)' : 'var(--panel)', scWeekFg: _scMode === 'week' ? '#fff' : 'var(--text)',
+      scMonthBg: _scMode === 'month' ? 'var(--volt)' : 'var(--panel)', scMonthFg: _scMode === 'month' ? '#fff' : 'var(--text)',
+      scDayBg: _scMode === 'day' ? 'var(--volt)' : 'var(--panel)', scDayFg: _scMode === 'day' ? '#fff' : 'var(--text)',
+      scWeekLabel: this.t('sched_week'), scMonthLabel: this.t('sched_month'), scDayLabel: this.t('sched_day'), scTodayLabel: this.t('sched_today'),
+      scCoachOpts: (sd.coaches || []).map((c) => ({ value: c, label: c, picked: _scCoach === c })),
+      scTypeOpts: (sd.types || []).map((t) => ({ value: t, label: t, picked: _scType === t })),
+      scCoachLegend: (_scCoach ? [_scCoach] : (sd.coaches || [])).map((c) => ({ name: c, color: _coachColorMap[c] || '#666' })),
+      scHasCoachLegend: (_scCoach ? 1 : (sd.coaches || []).length) > 0,
+      scSetCoach: (e) => this.setGymSchedCoachFilter(e), scSetType: (e) => this.setGymSchedTypeFilter(e),
+      scAllCoaches: this.t('all_coaches'), scAllClasses: this.t('all_classes'),
+      scHourLabels: _hourLabels, scGridHeight: GRID_HEIGHT + 'px',
+      weekDayCols, scHasWeekCols: weekDayCols.length > 0,
+      monthWeeks, scHasMonthWeeks: monthWeeks.length > 0,
+      scMonthDow: [1,2,3,4,5,6,0].map((i) => ({ lbl: _dnFn[i] })),
+      dayBlocks, scHasDayBlocks: dayBlocks.length > 0, scNoDayBlocks: dayBlocks.length === 0,
+      scDayShowNow: _scMode === 'day' && _scAnchor === _todayISO && _showNow, scDayNowTop: _nowTop + 'px',
+      scShowDetail: !!(_scDetail && !_scDetail.loading), scDetailLoading: !!(_scDetail && _scDetail.loading),
+      scCloseDetail: () => this.closeGymClassDetail(),
+      scDetailTitle: this.t('class_detail_title'),
+      scDetailType: _scDetail ? (_scDetail.type || '') : '', scDetailDate: _scDetail ? (_scDetail.dateLabel || '') : '',
+      scDetailTime: _scDetail ? ((_scDetail.time || '') + '–' + (_scDetail.end || '')) : '',
+      scDetailCoach: _scDetail ? (_scDetail.coach || '—') : '',
+      scDetailPax: _scDetail ? ((_scDetail.pax || 0) + '/' + (_scDetail.cap || 0)) : '',
+      scDetailCancelled: !!(_scDetail && _scDetail.cancelled),
+      scDetailColor: _scDetail ? (_coachColorMap[_scDetail.coach] || '#666') : '#666',
+      scDetailParticipants: scDetailParticipants, scDetailHasPax: scDetailParticipants.length > 0, scDetailNoPax: !!(_scDetail && !_scDetail.loading && scDetailParticipants.length === 0),
+      scDetailShowActions: _scIsUpcoming && _scIsGroDetail,
+      scDetailIsPrivate: _scIsPrivate, scDetailIsGroup: !_scIsPrivate,
+      scDetailSessionBadge: _scIsPrivate ? 'PRIVATE' : 'GRUP',
+      scDetailSessionBadgeBg: _scIsPrivate ? '#8B5CF6' : '#3B82F6',
+      scDetailLiveStatus: _scDetail ? (_scDetail.liveStatus || '') : '',
+      scDetailIsLive: !!(_scDetail && _scDetail.liveStatus === 'live'),
+      scDetailIsCompleted: !!(_scDetail && _scDetail.liveStatus === 'completed'),
+      scDetailLiveBg: _scDetail && _scDetail.liveStatus === 'live' ? '#EF4444' : (_scDetail && _scDetail.liveStatus === 'completed' ? 'var(--muted)' : 'var(--green)'),
+      scDetailLiveLabel: _scDetail ? (_scDetail.liveStatus === 'live' ? 'LIVE' : (_scDetail.liveStatus === 'completed' ? this.t('status_done') : this.t('status_upcoming'))) : '',
+      // Voucher info for private sessions
+      scHasVoucher: !!_scVoucher, scVoucherCode: _scVoucher ? _scVoucher.voucherCode : '',
+      scVoucherPkg: _scVoucher ? _scVoucher.packageName : '', scVoucherRemaining: _scVoucher ? _scVoucher.remaining : 0,
+      scVoucherTotal: _scVoucher ? _scVoucher.total : 0, scVoucherUsed: _scVoucher ? _scVoucher.used : 0,
+      // Manual check-in button (for private sessions with voucher)
+      scShowManualCheckin: _scIsPrivate && _scVoucher && isGro && _scDetail && _scDetail.liveStatus !== 'completed',
+      scDoManualCheckin: () => _scDetail && _scVoucher ? this.gymManualCheckin(_scDetail.id, _scVoucher.voucherCode) : null,
+      // Scan check-in button (for group sessions)
+      scShowScanCheckin: !_scIsPrivate && isGro && _scDetail && _scDetail.liveStatus !== 'completed',
+      scDoScanCheckin: () => this.go('gymscan'),
+      scParticipantsLabel: this.t('sched_participants'), scNoPaxLabel: this.t('no_participants'),
+      scNoClassesDay: this.t('no_classes_day'),
+      // Day list modal (when clicking a cell with multiple classes)
+      scDayListOpen: !!st.gymDayListDate, scCloseDayList: () => this.closeGymDayList(),
+      scDayListLabel: st.gymDayListDate ? (() => { const dt = new Date(st.gymDayListDate + 'T00:00:00'); const mNames = isID ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return _dnFn[dt.getDay()] + ', ' + dt.getDate() + ' ' + mNames[dt.getMonth()] + ' ' + dt.getFullYear(); })() : '',
+      scDayListClasses: st.gymDayListDate ? _filterBlocks(_scDays[st.gymDayListDate] || []).map((b) => {
+        const cc = _coachColorMap[b.coach] || '#666';
+        const isPvt = b.sessionType === 'private';
+        return { id: b.id, time: b.time, end: b.end || '', type: b.type, coach: b.coach || '—', paxLabel: (b.pax || 0) + '/' + (b.cap || 0), color: cc, bg: cc + '1A', cancelled: !!b.cancelled, isPvt, badge: isPvt ? 'PRIVATE' : (b.cap > 1 ? 'GRUP' : ''), hasBadge: isPvt || b.cap > 1, badgeBg: isPvt ? '#8B5CF6' : '#3B82F6', memberName: b.memberName || '', hasMember: !!b.memberName, liveStatus: b.liveStatus || '', isLive: b.liveStatus === 'live', pick: () => { this.closeGymDayList(); this.openGymClassDetail(b.id); } };
+      }) : [],
+      scDayListHas: st.gymDayListDate ? _filterBlocks(_scDays[st.gymDayListDate] || []).length > 0 : false,
+      // Gym Reschedule modal
+      showGymRsModal: !!_rsModal, gymRsStep1: st.gymRsStep === 0 || st.gymRsStep === 1, gymRsStep2: st.gymRsStep === 2,
+      gymRsParticipant: _rsModal ? (_rsModal.participant.name || '') : '',
+      gymRsFromLabel: _rsModal ? (_rsModal.sessionInfo.type + ' · ' + _rsModal.sessionInfo.dateLabel + ' · ' + _rsModal.sessionInfo.time + '–' + _rsModal.sessionInfo.end) : '',
+      gymRsDateVal: st.gymRsDate || '', setGymRsDate: (e) => this.setGymRsDate(e),
+      gymRsSessions: rsSessionRows, gymRsHasSessions: rsSessionRows.length > 0, gymRsNoSessions: !!(st.gymRsDate && _rsSessions && rsSessionRows.length === 0),
+      gymRsSessionsLoading: !!(st.gymRsDate && !_rsSessions),
+      gymRsTarget: !!_rsTarget,
+      gymRsTargetLabel: _rsTarget ? (_rsTarget.className + ' · ' + _rsTarget.start + '–' + _rsTarget.end + ' · ' + _rsTarget.instructor) : '',
+      gymRsTargetSlots: _rsTarget ? (_rsTarget.remaining + '/' + _rsTarget.quota) : '',
+      gymRsCanStep2: !!_rsTarget, gymRsGoStep2: () => this.gymRsGoStep2(),
+      rsReasons: rsReasons, gymRsReasonVal: st.gymRsReason || '', setGymRsReason: (e) => this.setGymRsReason(e),
+      gymRsShowOther: st.gymRsReason === 'Lainnya', gymRsReasonOtherVal: st.gymRsReasonOther || '', setGymRsReasonOther: (e) => this.setGymRsReasonOther(e),
+      gymRsCanConfirm: !!(st.gymRsReason && (st.gymRsReason !== 'Lainnya' || (st.gymRsReasonOther || '').trim())),
+      gymRsNoConfirm: !(st.gymRsReason && (st.gymRsReason !== 'Lainnya' || (st.gymRsReasonOther || '').trim())),
+      gymRsConfirm: () => this.confirmGymReschedule(), gymRsSaving: st.gymRsSaving,
+      gymRsBack: () => this.setState({ gymRsStep: 1 }), closeGymReschedule: () => this.closeGymReschedule(),
+      tRsReschedule: this.t('rs_reschedule'), tRsStep1: this.t('rs_step_1'), tRsStep2: this.t('rs_step_2'),
+      tRsPickDate: this.t('rs_pick_date'), tRsPickSession: this.t('rs_pick_session'), tRsNoSessions: this.t('rs_no_sessions'),
+      tRsFromLabel: this.t('rs_from_label'), tRsToLabel: this.t('rs_to_label'), tRsReason: this.t('rs_reason'),
+      tRsReasonDetail: this.t('rs_reason_detail'), tRsConfirm: this.t('rs_confirm_reschedule'), tRsCancel: this.t('rs_cancel'),
+      // Gym Pending modal
+      showGymPendingModal: !!_pendModal,
+      gymPendParticipant: _pendModal ? (_pendModal.participant.name || '') : '',
+      gymPendSessionLabel: _pendModal ? (_pendModal.sessionInfo.type + ' · ' + _pendModal.sessionInfo.dateLabel + ' · ' + _pendModal.sessionInfo.time + '–' + _pendModal.sessionInfo.end) : '',
+      gymPendReasonVal: st.gymPendingReason || '', setGymPendReason: (e) => this.setGymPendingReason(e),
+      gymPendNoteVal: st.gymPendingNote || '', setGymPendNote: (e) => this.setGymPendingNote(e),
+      gymPendCanConfirm: !!(st.gymPendingReason),
+      gymPendNoConfirm: !(st.gymPendingReason),
+      gymPendConfirm: () => this.confirmGymPendingMark(), gymPendSaving: st.gymPendingSaving,
+      closeGymPendingMark: () => this.closeGymPendingMark(),
+      tRsMarkPending: this.t('rs_mark_pending'), tRsNote: this.t('rs_note'), tRsNotePlaceholder: this.t('rs_note_placeholder'),
+      // Gym Pending list screen
+      gymPendingRows: gymPendingRows, gymHasPendingRows: gymPendingRows.length > 0, gymNoPendingRows: gymPendingRows.length === 0,
+      goGymPending: () => this.go('gympending'), gymPendingNav: this.navMeta(scr === 'gympending'),
+      gymPendingCount: st.gymPendingCount || 0, gymHasPending: (st.gymPendingCount || 0) > 0,
+      tRsPendingList: this.t('rs_pending_list'), tRsPendingEmpty: this.t('rs_pending_empty'),
+      tRsMarkedAt: this.t('rs_marked_at'), tRsBack: this.t('rs_back'),
+      tRsRescheduleNow: this.t('rs_reschedule_now'), tRsCancelMark: this.t('rs_cancel_mark'),
+      // Private booking modal
+      showGymPvtModal: !!st.gymPrivateModal,
+      openGymPvtModal: () => this.openGymPrivateBooking(), closeGymPvtModal: () => this.closeGymPrivateBooking(),
+      gymPvtMemberQ: st.gymPvtMemberQ || '', setGymPvtMemberQ: (e) => this.setGymPvtMemberQ(e),
+      gymPvtMembers: (st.gymPvtMembers || []).map((m) => ({ name: m.name, phone: m.phone || '', coach: m.coach || '', remaining: m.remaining, total: m.total, pick: () => this.selectGymPvtMember(m) })),
+      gymPvtHasMembers: (st.gymPvtMembers || []).length > 0,
+      gymPvtSelected: !!st.gymPvtSelected, gymPvtNotSelected: !st.gymPvtSelected,
+      gymPvtSelName: st.gymPvtSelected ? st.gymPvtSelected.name : '',
+      gymPvtSelCoach: st.gymPvtSelected ? (st.gymPvtSelected.coach || '—') : '',
+      gymPvtSelRemaining: st.gymPvtSelected ? st.gymPvtSelected.remaining : 0,
+      gymPvtSelTotal: st.gymPvtSelected ? st.gymPvtSelected.total : 0,
+      gymPvtDateVal: st.gymPvtDate || '', setGymPvtDate: (e) => this.setGymPvtDate(e),
+      gymPvtStartVal: st.gymPvtStartTime || '', setGymPvtStart: (e) => this.setGymPvtStartTime(e),
+      gymPvtEndVal: st.gymPvtEndTime || '', setGymPvtEnd: (e) => this.setGymPvtEndTime(e),
+      gymPvtCanConfirm: !!(st.gymPvtSelected && st.gymPvtDate && st.gymPvtStartTime),
+      gymPvtNoConfirm: !(st.gymPvtSelected && st.gymPvtDate && st.gymPvtStartTime),
+      gymPvtConfirm: () => this.confirmGymPrivateBooking(), gymPvtSaving: st.gymPvtSaving,
+      tPvtTitle: this.t('pvt_title'), tPvtMember: this.t('pvt_member'), tPvtDate: this.t('pvt_date'),
+      tPvtStart: this.t('pvt_start'), tPvtEnd: this.t('pvt_end'), tPvtConfirm: this.t('pvt_confirm'),
+      tPvtSearchMember: this.t('pvt_search_member'), tPvtQuotaLeft: this.t('pvt_quota_left'),
+      // Today summary widget
+      gymTodaySummary: !!st.gymTodaySummary,
+      gymTsTotal: st.gymTodaySummary ? st.gymTodaySummary.totalSessions : 0,
+      gymTsGroup: st.gymTodaySummary ? st.gymTodaySummary.totalGroup : 0,
+      gymTsPrivate: st.gymTodaySummary ? st.gymTodaySummary.totalPrivate : 0,
+      gymTsBooked: st.gymTodaySummary ? st.gymTodaySummary.totalBooked : 0,
+      gymTsCheckedIn: st.gymTodaySummary ? st.gymTodaySummary.totalCheckedIn : 0,
+      gymTsPending: st.gymTodaySummary ? Math.max(0, (st.gymTodaySummary.totalBooked || 0) - (st.gymTodaySummary.totalCheckedIn || 0)) : 0,
+      gymTsHasNext: !!(st.gymTodaySummary && st.gymTodaySummary.nextSession),
+      gymTsNextTime: st.gymTodaySummary && st.gymTodaySummary.nextSession ? st.gymTodaySummary.nextSession.time : '',
+      gymTsNextType: st.gymTodaySummary && st.gymTodaySummary.nextSession ? st.gymTodaySummary.nextSession.type : '',
+      gymTsNextCoach: st.gymTodaySummary && st.gymTodaySummary.nextSession ? st.gymTodaySummary.nextSession.coach : '',
+      gymTsNextPvt: !!(st.gymTodaySummary && st.gymTodaySummary.nextSession && st.gymTodaySummary.nextSession.isPrivate),
+      tTsTitle: this.t('ts_today_title'), tTsSessions: this.t('ts_sessions'), tTsGroup: this.t('ts_group'),
+      tTsPrivate: this.t('ts_private'), tTsCheckedIn: this.t('ts_checked_in'), tTsPending: this.t('ts_pending'),
+      tTsNext: this.t('ts_next_session'),
+      // Check-in labels
+      tCheckedInLabel: this.t('checked_in_label'), tNotCheckedIn: this.t('not_checked_in_label'),
+      tManualCheckin: this.t('manual_checkin'), tScanCheckin: this.t('scan_checkin'),
+      tNoShow: this.t('noshow_label'), tMarkNoShow: this.t('mark_noshow'),
+      tSessionType: this.t('session_type'), tPrivateLabel: this.t('private_label'), tGroupLabel: this.t('group_label'),
+      gmPkgChips, gmHasPkgChips: gmPkgChips.length > 1,
+      gmSummaryActiveClients: _gmSummary.totalActive, gmSummaryActivePkg: _gmSummary.activePkg, gmSummaryLowQuota: _gmSummary.lowQuota, gmSummaryExpMonth: _gmSummary.expThisMonth,
+      gmHasLowQuota: _gmSummary.lowQuota > 0, gmNoLowQuota: _gmSummary.lowQuota === 0,
+      gmHasExpMonth: _gmSummary.expThisMonth > 0, gmNoExpMonth: _gmSummary.expThisMonth === 0,
+      tGmActiveClients: this.t('gm_active_clients'), tGmActivePkg: this.t('gm_active_packages'), tGmLowQuota: this.t('gm_low_quota'), tGmExpMonth: this.t('gm_expired_this_month'),
+      gmClients, gmClientsHas: gmClients.length > 0, gmClientsEmpty: gmClients.length === 0,
+      gmTabs: [
+        { label: this.t('all_clients') + ' (' + gmAll.length + ')', bg: gmTab === 'all' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'all' ? '#fff' : 'var(--text)', border: gmTab === 'all' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('all') },
+        { label: this.t('active_30d') + ' (' + gmActive30 + ')', bg: gmTab === 'active30' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'active30' ? '#fff' : 'var(--text)', border: gmTab === 'active30' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('active30') },
+        { label: this.t('active_package') + ' (' + gmActivePkg + ')', bg: gmTab === 'activePkg' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'activePkg' ? '#fff' : 'var(--text)', border: gmTab === 'activePkg' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('activePkg') },
+        { label: this.t('inactive_clients') + ' (' + gmInactive + ')', bg: gmTab === 'inactive' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'inactive' ? '#fff' : 'var(--text)', border: gmTab === 'inactive' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('inactive') },
+      ],
+      gmSearchVal: st.gymMemberSearch || '', gmSearchInput: (e) => this.setGymMemberSearch(e), gmClearSearch: () => this.clearGymMemberSearch(), gmHasSearch: !!(st.gymMemberSearch || '').trim(),
+      gmShowingText: this.t('showing_x_of_y') + ' ' + gmFiltered.length + ' ' + this.t('of_total') + ' ' + gmAll.length + ' ' + this.t('clients_label'),
+      gmSortName: () => this.setGymMemberSort('name'), gmSortVisits: () => this.setGymMemberSort('visits'), gmSortLast: () => this.setGymMemberSort('lastVisit'),
+      gmSortPkgName: () => this.setGymMemberSort('pkgName'), gmSortCoach: () => this.setGymMemberSort('pkgCoach'), gmSortQuota: () => this.setGymMemberSort('quota'),
+      gmNameHdr: this.t('col_name') + gmArrow('name'), gmVisitsHdr: this.t('col_visits') + gmArrow('visits'), gmLastHdr: this.t('col_last_visit') + gmArrow('lastVisit'), gmPkgStatusHdr: this.t('pkg_status'),
+      gmPkgNameHdr: this.t('gm_pkg_name') + gmArrow('pkgName'), gmCoachHdr: this.t('gm_coach') + gmArrow('pkgCoach'), gmQuotaHdr: this.t('gm_remaining_quota') + gmArrow('quota'),
+      gmShowDetail: !!gmd, gmCloseDetail: () => this.closeGymMemberDetail(),
+      gmDetailName: gmd ? gmd.name : '', gmDetailPhone: gmd ? (gmd.phone || '—') : '',
+      gmDetailLoading: !!(gmd && gmd.loading), gmDetailReady: !!(gmd && !gmd.loading),
+      gmDetailPkgs: gmd ? (gmd.packages || []).map((p) => {
+        const pqc = _quotaColor(p.remaining, p.total);
+        const pctLeft = p.total > 0 ? Math.round((p.remaining / p.total) * 100) : 0;
+        return { coach: p.coach || '—', code: p.voucherCode, sessions: p.used + '/' + p.total, remaining: p.remaining,
+        pkgName: p.pkgName || p.name || '—', expiresAt: p.expiresAt || '', createdAt: p.createdAt || '',
+        hasExpiry: !!p.expiresAt, pctLeft, pctWidth: pctLeft + '%', barFg: pqc.fg, barBg: pqc.bg,
+        usedLabel: this.t('gm_used') + ': ' + p.used + '/' + p.total,
+        statusLabel: p.active ? (p.expired ? this.t('pkg_expired') : (p.remaining <= 0 ? this.t('pkg_used_up') : this.t('pkg_active'))) : this.t('pkg_expired'),
+        statusBg: (p.active && !p.expired && p.remaining > 0) ? 'rgba(62,213,152,.15)' : ((p.expired || !p.active) ? 'rgba(255,82,71,.15)' : 'rgba(148,163,184,.2)'),
+        statusFg: (p.active && !p.expired && p.remaining > 0) ? '#16a34a' : ((p.expired || !p.active) ? '#dc2626' : 'var(--muted)'),
+      }; }) : [],
+      gmDetailHasPkgs: !!(gmd && (gmd.packages || []).length), gmDetailNoPkgs: !!(gmd && !(gmd.packages || []).length && !gmd.loading),
+      gmDetailVisits: gmd ? (gmd.recentVisits || []).map((v) => ({ date: v.date, time: v.time, coach: v.coach || '—' })) : [],
+      gmDetailHasVisits: !!(gmd && (gmd.recentVisits || []).length), gmDetailNoVisits: !!(gmd && !(gmd.recentVisits || []).length && !gmd.loading),
+      gmDetailUpcoming: gmd ? (gmd.upcomingSessions || []).map((u) => ({ dateLabel: u.dateLabel || u.date, time: u.time || '', type: u.className || u.type || '—', coach: u.coach || '—' })) : [],
+      gmDetailHasUpcoming: !!(gmd && (gmd.upcomingSessions || []).length), gmDetailNoUpcoming: !!(gmd && !(gmd.upcomingSessions || []).length && !gmd.loading),
+      tGmUpcoming: this.t('gm_upcoming_sessions'), tGmNoUpcoming: this.t('gm_no_upcoming'),
+      tMemberDetail: this.t('member_detail'), tPackages: this.t('packages_label'), tRecentVisits: this.t('recent_visits'), tNoPkgs: this.t('no_packages_yet'), tNoVisits: this.t('no_visits_yet'), tSearchNamePhone: this.t('search_name_phone'),
       // These two open modal-style flows, so they never take the red active-page state.
       // A light-grey ground marks the one whose flow is currently open.
       reschedNavBg: scr === 'reschedule' ? 'var(--raised)' : 'transparent',
@@ -2242,6 +2826,12 @@ class Component extends DCLogic {
       registerMonthOpts, hasRegisterMonths: registerMonthOpts.length > 0, setRegisterMonth: (e) => this.setRegisterMonth(e),
       registerCanNote: isGro, exportAttendance: () => this.exportAttendancePdf(),
       notLoggedIn: !st.loggedIn, loggedIn: st.loggedIn,
+      groLogin: !st.loggedIn && this.groEntry,
+      coachLogin: !st.loggedIn && !this.groEntry,
+      groLangEnBg: st.lang === 'en' ? '#E4002B' : 'transparent', groLangEnFg: st.lang === 'en' ? '#fff' : 'rgba(255,255,255,.5)',
+      groLangIdBg: st.lang === 'id' ? '#E4002B' : 'transparent', groLangIdFg: st.lang === 'id' ? '#fff' : 'rgba(255,255,255,.5)',
+      loginWelcome: st.lang === 'id' ? 'Selamat datang' : 'Welcome back',
+      loginHeading: st.lang === 'id' ? 'Masuk ke akun Anda' : 'Sign in to your account',
       login: () => this.login(), logout: () => this.logout(),
       setLangEN: () => this.setLang('en'), setLangID: () => this.setLang('id'),
       langEnBg: st.lang === 'en' ? 'var(--volt)' : 'transparent', langEnFg: st.lang === 'en' ? '#ffffff' : 'var(--muted)',
