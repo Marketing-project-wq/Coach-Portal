@@ -1342,6 +1342,94 @@ route('GET', '/api/gro/package-orders', async (req, res, s, q) => {
   return send(res, 200, { orders: rows, count: rows.length });
 });
 
+// ===== RECOVERY CENTER — GRO validates payment, then starts the service =====
+// Recovery Center bookings (Sport Massage / Taping / Recovery Pump, booked at
+// booking.20fit.id/book) share the clinic's `clinic_bookings` table. They are told apart from
+// ordinary clinic visits by EITHER a RECOVERY_CENTER product slug OR a service whose category
+// is "recovery". This screen lets the front-desk GRO confirm a guest has paid (and read back a
+// voucher code if one was used) and mark the service as started.
+const RC_PRODUCT_SLUGS = ['sport-massage-30', 'sport-massage-60', 'sport-massage-90', 'sports-taping', 'recovery-pump-30'];
+// Recovery services keyed by id (category='recovery' in clinic_services). Cached 5 min.
+let _rcSvcCache = null, _rcSvcAt = 0;
+async function recoveryServices() {
+  if (_rcSvcCache && (Date.now() - _rcSvcAt) < 300000) return _rcSvcCache;
+  const rows = (await sb('clinic_services?select=id,name,code&category=eq.recovery')) || [];
+  const byId = {}, ids = [];
+  for (const r of rows) { byId[r.id] = r; ids.push(r.id); }
+  _rcSvcCache = { byId, ids }; _rcSvcAt = Date.now();
+  return _rcSvcCache;
+}
+// therapist_id -> display name (Recovery Center physiotherapists). Cached 5 min.
+let _rcTherCache = null, _rcTherAt = 0;
+async function recoveryTherapists() {
+  if (_rcTherCache && (Date.now() - _rcTherAt) < 300000) return _rcTherCache;
+  const rows = (await sb('my20fit_physiotherapists?select=id,display_name')) || [];
+  const m = {}; for (const r of rows) m[r.id] = r.display_name || '';
+  _rcTherCache = m; _rcTherAt = Date.now();
+  return _rcTherCache;
+}
+function isRecoveryBooking(b, svc) {
+  return !!((b.service_id && svc.byId[b.service_id]) || (b.booking_product_slug && RC_PRODUCT_SLUGS.indexOf(b.booking_product_slug) >= 0));
+}
+// Payment state. Online Recovery Center bookings only reach "confirmed" after a successful
+// gateway payment or a fully-covering voucher, so confirmed (or an explicit paid_at / method)
+// counts as paid; pending_payment / requested is still awaiting payment; cancelled is cancelled.
+function rcPayKey(b) {
+  const st = String(b.status || '').toLowerCase();
+  if (st === 'cancelled') return 'cancelled';
+  if (st === 'confirmed' || b.paid_at || b.payment_method) return 'paid';
+  return 'pending';
+}
+function shapeRcBooking(b, svc, therById) {
+  const service = (b.service_id && svc.byId[b.service_id] && svc.byId[b.service_id].name) || b.booking_product_slug || 'Recovery Center';
+  const date = b.appointment_date || b.manual_date || (b.created_at ? String(b.created_at).slice(0, 10) : '');
+  const therapist = (b.therapist_id && therById[b.therapist_id]) || (b.assigned_therapist_id && therById[b.assigned_therapist_id]) || '';
+  return {
+    id: b.id, code: b.booking_code || '', name: b.full_name || '(tanpa nama)', phone: b.phone || '', email: b.email || '',
+    service, date, dateLabel: date ? fmtDMonY(date) : '', time: hhmm(b.appointment_time || b.manual_time || ''),
+    therapist,
+    price: Number(b.price) || 0, priceBefore: Number(b.price_before_disc) || 0, discount: Number(b.discount) || 0,
+    voucherCode: b.voucher_code || '',
+    payKey: rcPayKey(b), status: b.status || '',
+    paymentMethod: b.payment_method || '', paymentRef: b.payment_ref || '', paidAt: b.paid_at || '',
+    started: !!b.check_in_at, startedAt: b.check_in_at || '',
+    notes: b.notes || '', channel: b.channel || '', createdAt: b.created_at || '',
+  };
+}
+const RC_COLS = 'id,booking_code,service_id,booking_product_slug,full_name,phone,email,notes,price,price_before_disc,discount,status,payment_method,payment_ref,paid_at,check_in_at,voucher_code,channel,appointment_date,appointment_time,manual_date,manual_time,therapist_id,assigned_therapist_id,created_at';
+// List Recovery Center bookings for one day (defaults to today), newest appointment first.
+route('GET', '/api/gro/recovery/bookings', async (req, res, s, q) => {
+  if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Fitur ini hanya untuk GRO / Head Coach.' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : todayJakarta();
+  const [svc, therapists] = await Promise.all([recoveryServices(), recoveryTherapists()]);
+  // Scope to the chosen day first (Recovery Center bookings carry appointment_date; admin-entered
+  // ones may use manual_date), then keep only Recovery Center rows — a service in the recovery
+  // category OR a RECOVERY_CENTER product slug. Clinic visits rarely set appointment_date, so this
+  // day-scoped set is tiny and the in-JS filter is cheap.
+  const rows = (await sbAll(`clinic_bookings?select=${RC_COLS}&or=(appointment_date.eq.${date},manual_date.eq.${date})&order=appointment_time.asc.nullslast,created_at.asc`)) || [];
+  let list = rows.filter((b) => isRecoveryBooking(b, svc)).map((b) => shapeRcBooking(b, svc, therapists));
+  const term = String(q.q || '').trim().toLowerCase();
+  if (term) list = list.filter((r) => ((r.name || '') + ' ' + (r.code || '') + ' ' + (r.phone || '')).toLowerCase().indexOf(term) >= 0);
+  const statusFilter = String(q.status || '').trim().toLowerCase();
+  if (statusFilter && statusFilter !== 'all') list = list.filter((r) => statusFilter === 'started' ? r.started : r.payKey === statusFilter);
+  return send(res, 200, { bookings: list, count: list.length, date });
+});
+// Mark a Recovery Center service as started (front-desk "Start"). Records check_in_at — the same
+// field the clinic uses for arrival — leaving status untouched so no inbox/notification trigger fires.
+route('POST', '/api/gro/recovery/:id/start', async (req, res, s, q, params) => {
+  if (!(isGro(s) || requireHC(s))) return send(res, 403, { error: 'Fitur ini hanya untuk GRO / Head Coach.' });
+  const svc = await recoveryServices();
+  const rows = (await sb(`clinic_bookings?select=id,status,check_in_at,service_id,booking_product_slug&id=eq.${enc(params.id)}&limit=1`)) || [];
+  const b = rows[0];
+  if (!b) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  if (!isRecoveryBooking(b, svc)) return send(res, 400, { error: 'Booking ini bukan layanan Recovery Center.' });
+  if (String(b.status || '').toLowerCase() === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
+  if (b.check_in_at) return send(res, 200, { ok: true, started: true, startedAt: b.check_in_at, already: true });
+  const nowIso = new Date().toISOString();
+  await sb(`clinic_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ check_in_at: nowIso, updated_at: nowIso }) });
+  return send(res, 200, { ok: true, started: true, startedAt: nowIso });
+});
+
 // ===== VENUE BOOKING — sourced from the Admin Hub `arena_bookings` table =====
 // Coaches that can be assigned (all coaches + head coaches, external included; excludes admin).
 async function assignableCoaches() {
