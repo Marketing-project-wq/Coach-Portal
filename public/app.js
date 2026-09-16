@@ -32,6 +32,7 @@ class Component extends DCLogic {
       units: [],
       gymScanResult: null, gymScanBusy: false, gymScanSaved: null, gymScanReason: '', gymSearchResults: [],
       gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '', gymPkgQ: '', gymCard: null,
+      gymMemberTab: 'all', gymMemberSearch: '', gymMemberSort: 'lastVisit', gymMemberSortDir: 'desc', gymMemberDetail: null,
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -57,7 +58,7 @@ class Component extends DCLogic {
   }
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '',
-      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [] };
+      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymClientsWithPkg: 0, gymClientsInactive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [] };
   }
   // ---- per-tab session token (multi-tab fix) ----
   // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
@@ -308,11 +309,44 @@ class Component extends DCLogic {
     const ym = this.state.gymCalYm || '';
     this.api('/api/unit/gym/calendar' + (ym ? ('?ym=' + ym) : '')).then((r) => this.setD({ gymCalCells: r.cells || [], gymCalLabel: r.monthLabel || '', gymCalYm: r.ym || '', gymCalPrevYm: r.prevYm || '', gymCalNextYm: r.nextYm || '' })).catch(() => {});
     this.gymShowDay(this.state.gymSelDate || this.todayISO());
-    this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0 })).catch(() => {});
+    this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0, gymClientsWithPkg: r.withPkg || 0, gymClientsInactive: r.inactive || 0 })).catch(() => {});
     if (this.state.role === 'coach' || this.state.role === 'admin') this.loadGymCoachBookings();
   }
   gymShowDay(date) { this.setState({ gymSelDate: date }); if (this.MOCK) return; this.api('/api/unit/gym/day?date=' + encodeURIComponent(date)).then((r) => this.setD({ gymDayClasses: r.classes || [], gymDayLabel: r.dateLabel || '' })).catch(() => {}); }
   gymCalNav(ym) { if (!ym) return; this.setState({ gymCalYm: ym }); if (!this.MOCK) this.loadGymView(); }
+  // ---------- Gym Members: tabs, search, sort, detail ----------
+  setGymMemberTab(tab) { this.setState({ gymMemberTab: tab }); }
+  setGymMemberSearch(e) { this.setState({ gymMemberSearch: e && e.target ? e.target.value : '' }); }
+  clearGymMemberSearch() { this.setState({ gymMemberSearch: '' }); }
+  setGymMemberSort(col) {
+    const st = this.state;
+    if (st.gymMemberSort === col) this.setState({ gymMemberSortDir: st.gymMemberSortDir === 'asc' ? 'desc' : 'asc' });
+    else this.setState({ gymMemberSort: col, gymMemberSortDir: col === 'name' ? 'asc' : 'desc' });
+  }
+  openGymMemberDetail(name) {
+    if (this.MOCK) return;
+    this.setState({ gymMemberDetail: { name, phone: '', packages: [], recentVisits: [], loading: true } });
+    this.api('/api/unit/gym/member?name=' + encodeURIComponent(name))
+      .then((r) => this.setState({ gymMemberDetail: { name: r.name || name, phone: r.phone || '', packages: r.packages || [], recentVisits: r.recentVisits || [], loading: false } }))
+      .catch(() => this.setState({ gymMemberDetail: { name, phone: '', packages: [], recentVisits: [], loading: false } }));
+  }
+  closeGymMemberDetail() { this.setState({ gymMemberDetail: null }); }
+  gymFilterClients() {
+    const st = this.state, D = st.d, tab = st.gymMemberTab, q = (st.gymMemberSearch || '').trim().toLowerCase();
+    let list = (D.gymClients || []).slice();
+    if (tab === 'active30') list = list.filter((c) => c.daysSince != null && c.daysSince <= 30);
+    else if (tab === 'activePkg') list = list.filter((c) => c.pkgStatus === 'active');
+    else if (tab === 'inactive') list = list.filter((c) => (c.daysSince == null || c.daysSince > 30) && c.pkgStatus !== 'active');
+    if (q.length >= 2) list = list.filter((c) => c.name.toLowerCase().indexOf(q) >= 0 || (c.phone || '').replace(/\D/g, '').indexOf(q.replace(/\D/g, '')) >= 0);
+    const col = st.gymMemberSort, dir = st.gymMemberSortDir === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      if (col === 'name') return dir * a.name.localeCompare(b.name);
+      if (col === 'visits') return dir * ((a.visits || 0) - (b.visits || 0));
+      if (col === 'lastVisit') { const da = a.lastVisitISO || '', db = b.lastVisitISO || ''; return dir * (da < db ? -1 : da > db ? 1 : 0); }
+      return 0;
+    });
+    return list.map((c, i) => ({ ...c, rank: i + 1 }));
+  }
   // ---------- Gym GRO: Scan Member ----------
   gymScanSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -2042,6 +2076,22 @@ class Component extends DCLogic {
     });
     const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: (x.cap > 0 && x.pax >= x.cap) ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled }));
     const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
+    const gmTab = st.gymMemberTab, gmAll = D.gymClients || [];
+    const gmActive30 = gmAll.filter((c) => c.daysSince != null && c.daysSince <= 30).length;
+    const gmActivePkg = gmAll.filter((c) => c.pkgStatus === 'active').length;
+    const gmInactive = gmAll.filter((c) => (c.daysSince == null || c.daysSince > 30) && c.pkgStatus !== 'active').length;
+    const gmFiltered = this.gymFilterClients();
+    const gmSort = st.gymMemberSort, gmDir = st.gymMemberSortDir;
+    const gmArrow = (col) => gmSort === col ? (gmDir === 'asc' ? ' ↑' : ' ↓') : '';
+    const gmClients = gmFiltered.map((c) => ({
+      rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit,
+      pkgLabel: c.pkgStatus === 'active' ? this.t('pkg_active') : (c.pkgStatus === 'used_up' ? this.t('pkg_used_up') : (c.pkgStatus === 'expired' ? this.t('pkg_expired') : '—')),
+      pkgBg: c.pkgStatus === 'active' ? 'rgba(62,213,152,.15)' : (c.pkgStatus === 'used_up' ? 'rgba(148,163,184,.2)' : (c.pkgStatus === 'expired' ? 'rgba(255,82,71,.15)' : 'transparent')),
+      pkgFg: c.pkgStatus === 'active' ? '#16a34a' : (c.pkgStatus === 'used_up' ? 'var(--muted)' : (c.pkgStatus === 'expired' ? '#dc2626' : 'var(--muted)')),
+      hasPkg: !!c.pkgStatus, noPkg: !c.pkgStatus,
+      pick: () => this.openGymMemberDetail(c.name),
+    }));
+    const gmd = st.gymMemberDetail;
     const gsc = st.gymScanResult, gss = st.gymScanSaved;
 
     return {
@@ -2110,6 +2160,29 @@ class Component extends DCLogic {
       gymDayLabel: D.gymDayLabel || '', gymDay, gymDayHas: gymDay.length > 0, gymDayEmpty: gymDay.length === 0,
       gymClients, gymClientsHas: gymClients.length > 0, gymClientsEmpty: gymClients.length === 0,
       gymClientsTotal: D.gymClientsTotal || 0, gymClientsActive: D.gymClientsActive || 0,
+      gmClients, gmClientsHas: gmClients.length > 0, gmClientsEmpty: gmClients.length === 0,
+      gmTabs: [
+        { label: this.t('all_clients') + ' (' + gmAll.length + ')', bg: gmTab === 'all' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'all' ? '#fff' : 'var(--text)', border: gmTab === 'all' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('all') },
+        { label: this.t('active_30d') + ' (' + gmActive30 + ')', bg: gmTab === 'active30' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'active30' ? '#fff' : 'var(--text)', border: gmTab === 'active30' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('active30') },
+        { label: this.t('active_package') + ' (' + gmActivePkg + ')', bg: gmTab === 'activePkg' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'activePkg' ? '#fff' : 'var(--text)', border: gmTab === 'activePkg' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('activePkg') },
+        { label: this.t('inactive_clients') + ' (' + gmInactive + ')', bg: gmTab === 'inactive' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'inactive' ? '#fff' : 'var(--text)', border: gmTab === 'inactive' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('inactive') },
+      ],
+      gmSearchVal: st.gymMemberSearch || '', gmSearchInput: (e) => this.setGymMemberSearch(e), gmClearSearch: () => this.clearGymMemberSearch(), gmHasSearch: !!(st.gymMemberSearch || '').trim(),
+      gmShowingText: this.t('showing_x_of_y') + ' ' + gmFiltered.length + ' ' + this.t('of_total') + ' ' + gmAll.length + ' ' + this.t('clients_label'),
+      gmSortName: () => this.setGymMemberSort('name'), gmSortVisits: () => this.setGymMemberSort('visits'), gmSortLast: () => this.setGymMemberSort('lastVisit'),
+      gmNameHdr: this.t('col_name') + gmArrow('name'), gmVisitsHdr: this.t('col_visits') + gmArrow('visits'), gmLastHdr: this.t('col_last_visit') + gmArrow('lastVisit'), gmPkgStatusHdr: this.t('pkg_status'),
+      gmShowDetail: !!gmd, gmCloseDetail: () => this.closeGymMemberDetail(),
+      gmDetailName: gmd ? gmd.name : '', gmDetailPhone: gmd ? (gmd.phone || '—') : '',
+      gmDetailLoading: !!(gmd && gmd.loading), gmDetailReady: !!(gmd && !gmd.loading),
+      gmDetailPkgs: gmd ? (gmd.packages || []).map((p) => ({ coach: p.coach || '—', code: p.voucherCode, sessions: p.used + '/' + p.total, remaining: p.remaining,
+        statusLabel: p.active ? (p.expired ? this.t('pkg_expired') : (p.remaining <= 0 ? this.t('pkg_used_up') : this.t('pkg_active'))) : this.t('pkg_expired'),
+        statusBg: (p.active && !p.expired && p.remaining > 0) ? 'rgba(62,213,152,.15)' : ((p.expired || !p.active) ? 'rgba(255,82,71,.15)' : 'rgba(148,163,184,.2)'),
+        statusFg: (p.active && !p.expired && p.remaining > 0) ? '#16a34a' : ((p.expired || !p.active) ? '#dc2626' : 'var(--muted)'),
+      })) : [],
+      gmDetailHasPkgs: !!(gmd && (gmd.packages || []).length), gmDetailNoPkgs: !!(gmd && !(gmd.packages || []).length && !gmd.loading),
+      gmDetailVisits: gmd ? (gmd.recentVisits || []).map((v) => ({ date: v.date, time: v.time, coach: v.coach || '—' })) : [],
+      gmDetailHasVisits: !!(gmd && (gmd.recentVisits || []).length), gmDetailNoVisits: !!(gmd && !(gmd.recentVisits || []).length && !gmd.loading),
+      tMemberDetail: this.t('member_detail'), tPackages: this.t('packages_label'), tRecentVisits: this.t('recent_visits'), tNoPkgs: this.t('no_packages_yet'), tNoVisits: this.t('no_visits_yet'), tSearchNamePhone: this.t('search_name_phone'),
       // These two open modal-style flows, so they never take the red active-page state.
       // A light-grey ground marks the one whose flow is currently open.
       reschedNavBg: scr === 'reschedule' ? 'var(--raised)' : 'transparent',

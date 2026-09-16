@@ -814,10 +814,48 @@ route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
     const bks = (await sb(`gym_class_bookings?select=full_name,phone,schedule_id,status&schedule_id=in.(${chunk})&status=eq.confirmed`).catch(() => [])) || [];
     for (const b of bks) { const nm = String(b.full_name || '').trim(); if (!nm) continue; const k = nm.toLowerCase(); const d = byId[b.schedule_id] || ''; if (!map[k]) map[k] = { name: nm, phone: b.phone || '', visits: 0, last: '' }; map[k].visits++; if (d > map[k].last) map[k].last = d; }
   }
-  const clients = Object.values(map).sort((a, b) => b.visits - a.visits || (a.last < b.last ? 1 : -1)).map((x, i) => ({ rank: i + 1, name: x.name, phone: x.phone, visits: x.visits, lastVisit: x.last ? fmtDMon(x.last) : '-', daysSince: daysSinceISO(x.last, today) }));
+  // Enrich with package status from pt_package_vouchers/orders
+  const allOrders = (await sbAll('pt_package_orders?select=id,full_name,phone,order_code').catch(() => [])) || [];
+  const orderByName = {};
+  for (const o of allOrders) { const k = String(o.full_name || '').trim().toLowerCase(); if (!orderByName[k]) orderByName[k] = []; orderByName[k].push(o.id); }
+  const allVouchers = (await sbAll('pt_package_vouchers?select=id,order_id,total_sessions,used_sessions,expires_at,is_active').catch(() => [])) || [];
+  const vouchersByOrder = {};
+  for (const v of allVouchers) { if (!vouchersByOrder[v.order_id]) vouchersByOrder[v.order_id] = []; vouchersByOrder[v.order_id].push(v); }
+  function pkgStatus(name) {
+    const oids = orderByName[name.toLowerCase()] || [];
+    let hasActive = false, hasExpired = false, hasUsedUp = false;
+    for (const oid of oids) { for (const v of (vouchersByOrder[oid] || [])) { const total = v.total_sessions || 0, used = v.used_sessions || 0, rem = Math.max(0, total - used); const expired = !!(v.expires_at && v.expires_at < today); if (v.is_active !== false && !expired && rem > 0) hasActive = true; else if (expired) hasExpired = true; else if (rem <= 0) hasUsedUp = true; } }
+    if (hasActive) return 'active';
+    if (hasUsedUp) return 'used_up';
+    if (hasExpired) return 'expired';
+    return '';
+  }
+  const clients = Object.values(map).sort((a, b) => b.visits - a.visits || (a.last < b.last ? 1 : -1)).map((x, i) => ({ rank: i + 1, name: x.name, phone: x.phone, visits: x.visits, lastVisit: x.last ? fmtDMon(x.last) : '-', lastVisitISO: x.last || '', daysSince: daysSinceISO(x.last, today), pkgStatus: pkgStatus(x.name) }));
   const active30 = clients.filter((c) => c.daysSince != null && c.daysSince <= 30).length;
+  const withPkg = clients.filter((c) => c.pkgStatus === 'active').length;
+  const inactive = clients.filter((c) => (c.daysSince == null || c.daysSince > 30) && c.pkgStatus !== 'active').length;
   const floor = await earliestYm('gym_class_schedules', 'schedule_date', LEADERBOARD_SINCE.slice(0, 7)).catch(() => today.slice(0, 7));
-  return send(res, 200, { clients, total: clients.length, active30, months: monthOptions(today, floor), ym });
+  return send(res, 200, { clients, total: clients.length, active30, withPkg, inactive, months: monthOptions(today, floor), ym });
+});
+
+// Gym member detail — packages + last 5 visits for a specific member (by name).
+route('GET', '/api/unit/gym/member', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const name = String(q.name || '').trim();
+  if (!name) return send(res, 400, { error: 'Name is required.' });
+  const today = todayJakarta();
+  const orders = (await sb(`pt_package_orders?select=id,full_name,phone,order_code&full_name=ilike.${enc(name)}&limit=10`).catch(() => [])) || [];
+  const oids = orders.map((o) => o.id);
+  const phone = (orders[0] || {}).phone || '';
+  let packages = [];
+  if (oids.length) {
+    const vs = (await sb(`pt_package_vouchers?select=id,voucher_code,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active&order_id=in.(${oids.map(enc).join(',')})&order=created_at.desc`).catch(() => [])) || [];
+    packages = vs.map((v) => { const total = v.total_sessions || 0, used = v.used_sessions || 0; const expired = !!(v.expires_at && v.expires_at < today); const active = v.is_active !== false && !expired && (total - used) > 0; return { voucherCode: v.voucher_code, coach: v.coach_name || '', total, used, remaining: Math.max(0, total - used), expired, active }; });
+  }
+  const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  const visits = (await sb(`pt_visits?select=id,visit_at,visit_date,coach_name,status,over_quota&member_name=ilike.${enc(name)}&status=eq.active&order=visit_at.desc&limit=5`).catch(() => [])) || [];
+  const recentVisits = visits.map((v) => ({ date: v.visit_date ? fmtDMon(v.visit_date) : '', time: v.visit_at ? hm(v.visit_at) : '', coach: v.coach_name || '—' }));
+  return send(res, 200, { name, phone, packages, recentVisits });
 });
 
 // ===== GYM GRO: Scan Member (PT package check-in) — quota lives on pt_package_vouchers =====
