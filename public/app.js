@@ -352,7 +352,10 @@ class Component extends DCLogic {
   gymSchedToday() { this.setState({ gymSchedAnchor: this.todayISO() }); this.loadGymSchedule(); }
   gymSchedGoDay(date) {
     const days = (this.state.d.gymSchedData || {}).days || {};
-    const classes = days[date] || [];
+    let classes = days[date] || [];
+    const cf = this.state.gymSchedCoachFilter, tf = this.state.gymSchedTypeFilter;
+    if (cf) classes = classes.filter((c) => c.coach === cf);
+    if (tf) classes = classes.filter((c) => c.type === tf);
     if (classes.length === 1) { this.openGymClassDetail(classes[0].id); return; }
     if (classes.length > 1) { this.setState({ gymDayListDate: date }); return; }
   }
