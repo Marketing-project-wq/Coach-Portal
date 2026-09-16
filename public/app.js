@@ -33,6 +33,7 @@ class Component extends DCLogic {
       gymScanResult: null, gymScanBusy: false, gymScanSaved: null, gymScanReason: '', gymSearchResults: [],
       gymVisitFrom: '', gymVisitTo: '', gymVisitQ: '', gymPkgQ: '', gymCard: null,
       gymMemberTab: 'all', gymMemberSearch: '', gymMemberSort: 'lastVisit', gymMemberSortDir: 'desc', gymMemberDetail: null,
+      gymSchedMode: 'week', gymSchedAnchor: '', gymSchedCoachFilter: '', gymSchedTypeFilter: '', gymSchedDetail: null,
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -58,7 +59,7 @@ class Component extends DCLogic {
   }
   emptyData() {
     return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '',
-      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymClientsWithPkg: 0, gymClientsInactive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [] };
+      gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymClientsWithPkg: 0, gymClientsInactive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [], gymSchedData: null };
   }
   // ---- per-tab session token (multi-tab fix) ----
   // Token lives in sessionStorage (per TAB) so different tabs can hold different accounts without
@@ -311,9 +312,51 @@ class Component extends DCLogic {
     this.gymShowDay(this.state.gymSelDate || this.todayISO());
     this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0, gymClientsWithPkg: r.withPkg || 0, gymClientsInactive: r.inactive || 0 })).catch(() => {});
     if (this.state.role === 'coach' || this.state.role === 'admin') this.loadGymCoachBookings();
+    if (this.state.role === 'gro') this.loadGymSchedule();
   }
   gymShowDay(date) { this.setState({ gymSelDate: date }); if (this.MOCK) return; this.api('/api/unit/gym/day?date=' + encodeURIComponent(date)).then((r) => this.setD({ gymDayClasses: r.classes || [], gymDayLabel: r.dateLabel || '' })).catch(() => {}); }
   gymCalNav(ym) { if (!ym) return; this.setState({ gymCalYm: ym }); if (!this.MOCK) this.loadGymView(); }
+  // ---------- Gym Schedule: full calendar for GRO ----------
+  loadGymSchedule() {
+    if (this.MOCK) return;
+    const mode = this.state.gymSchedMode, anchor = this.state.gymSchedAnchor || this.todayISO();
+    let from, to;
+    if (mode === 'week') {
+      const wd = this._weekDates(anchor); from = wd[0]; to = wd[6];
+    } else if (mode === 'month') {
+      const ym = anchor.slice(0, 7), parts = ym.split('-').map(Number);
+      from = ym + '-01'; to = ym + '-' + String(new Date(parts[0], parts[1], 0).getDate()).padStart(2, '0');
+    } else { from = to = anchor; }
+    this.api('/api/unit/gym/schedule?from=' + from + '&to=' + to)
+      .then((r) => this.setD({ gymSchedData: r })).catch(() => {});
+  }
+  _weekDates(anchor) {
+    const p = anchor.split('-').map(Number), dt = new Date(p[0], p[1] - 1, p[2]);
+    const dow = dt.getDay(), off = dow === 0 ? -6 : 1 - dow, out = [];
+    for (let i = 0; i < 7; i++) { const d = new Date(p[0], p[1] - 1, p[2] + off + i); out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); }
+    return out;
+  }
+  _isoDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  setGymSchedMode(mode) { this.setState({ gymSchedMode: mode }); setTimeout(() => this.loadGymSchedule(), 0); }
+  gymSchedNav(dir) {
+    const mode = this.state.gymSchedMode, anchor = this.state.gymSchedAnchor || this.todayISO();
+    const p = anchor.split('-').map(Number); let nd;
+    if (mode === 'week') nd = new Date(p[0], p[1] - 1, p[2] + (dir * 7));
+    else if (mode === 'month') nd = new Date(p[0], p[1] - 1 + dir, 1);
+    else nd = new Date(p[0], p[1] - 1, p[2] + dir);
+    this.setState({ gymSchedAnchor: this._isoDate(nd) }); this.loadGymSchedule();
+  }
+  gymSchedToday() { this.setState({ gymSchedAnchor: this.todayISO() }); this.loadGymSchedule(); }
+  gymSchedGoDay(date) { this.setState({ gymSchedMode: 'day', gymSchedAnchor: date }); this.loadGymSchedule(); }
+  openGymClassDetail(id) {
+    this.setState({ gymSchedDetail: { loading: true } });
+    this.api('/api/unit/gym/class-detail?id=' + id)
+      .then((r) => this.setState({ gymSchedDetail: r }))
+      .catch(() => this.setState({ gymSchedDetail: null }));
+  }
+  closeGymClassDetail() { this.setState({ gymSchedDetail: null }); }
+  setGymSchedCoachFilter(e) { this.setState({ gymSchedCoachFilter: e && e.target ? e.target.value : '' }); }
+  setGymSchedTypeFilter(e) { this.setState({ gymSchedTypeFilter: e && e.target ? e.target.value : '' }); }
   // ---------- Gym Members: tabs, search, sort, detail ----------
   setGymMemberTab(tab) { this.setState({ gymMemberTab: tab }); }
   setGymMemberSearch(e) { this.setState({ gymMemberSearch: e && e.target ? e.target.value : '' }); }
@@ -2094,6 +2137,89 @@ class Component extends DCLogic {
     const gmd = st.gymMemberDetail;
     const gsc = st.gymScanResult, gss = st.gymScanSaved;
 
+    // ---- GRO full calendar (week / month / day) ----
+    const gymFullCal = isGro && st.unit === 'gym' && scr === 'gymview';
+    const gymMiniCal = !isGro && st.unit === 'gym' && scr === 'gymview';
+    const sd = D.gymSchedData || {};
+    const _COACH_PALETTE = ['#4DD4F2','#3ED598','#FF8A65','#BA68C8','#FFD54F','#64B5F6','#F06292','#81C784','#4FC3F7','#AED581'];
+    const _coachColorMap = {};
+    (sd.coaches || []).forEach((c, i) => { _coachColorMap[c] = _COACH_PALETTE[i % _COACH_PALETTE.length]; });
+    const _scMode = st.gymSchedMode, _scAnchor = st.gymSchedAnchor || this.todayISO();
+    const _scCoach = st.gymSchedCoachFilter, _scType = st.gymSchedTypeFilter;
+    const _scDays = sd.days || {};
+    const _filterBlocks = (blocks) => {
+      let b = blocks || [];
+      if (_scCoach) b = b.filter((x) => x.coach === _scCoach);
+      if (_scType) b = b.filter((x) => x.type === _scType);
+      return b;
+    };
+    const HOUR_PX = 56, START_HOUR = 7, END_HOUR = 22, GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_PX;
+    const _blockPos = (b) => {
+      const [sh, sm] = (b.time || '07:00').split(':').map(Number), [eh, em] = (b.end || b.time || '08:00').split(':').map(Number);
+      const sMin = Math.max((sh * 60 + sm) - START_HOUR * 60, 0), eMin = Math.min((eh * 60 + em) - START_HOUR * 60, (END_HOUR - START_HOUR) * 60);
+      return { top: (sMin / 60) * HOUR_PX, height: Math.max(((eMin - sMin) / 60) * HOUR_PX, 20) };
+    };
+    const _hourLabels = [];
+    for (let h = START_HOUR; h <= END_HOUR; h++) _hourLabels.push({ lbl: String(h).padStart(2, '0') + ':00', top: (h - START_HOUR) * HOUR_PX });
+    const _dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+    const _dayNamesEn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const _dnFn = isID ? _dayNames : _dayNamesEn;
+
+    let scNavLabel = '', weekDayCols = [], monthWeeks = [], dayBlocks = [];
+    const _todayISO = this.todayISO();
+    const _nowH = new Date().getHours(), _nowM = new Date().getMinutes();
+    const _nowTop = Math.max((_nowH * 60 + _nowM - START_HOUR * 60) / 60, 0) * HOUR_PX;
+    const _showNow = _nowH >= START_HOUR && _nowH < END_HOUR;
+
+    if (_scMode === 'week') {
+      const wd = this._weekDates(_scAnchor);
+      const d0 = wd[0].split('-'), d6 = wd[6].split('-');
+      scNavLabel = parseInt(d0[2]) + ' ' + (isID ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(d0[1]) - 1] + ' – ' + parseInt(d6[2]) + ' ' + (isID ? ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(d6[1]) - 1] + ' ' + d6[0];
+      weekDayCols = wd.map((dt) => {
+        const pp = dt.split('-').map(Number), dow = new Date(pp[0], pp[1] - 1, pp[2]).getDay();
+        const isToday = dt === _todayISO;
+        const raw = _filterBlocks(_scDays[dt] || []);
+        const blocks = raw.map((b) => {
+          const pos = _blockPos(b);
+          return { id: b.id, time: b.time, end: b.end, type: b.type, coach: b.coach || '—', paxLabel: b.pax + '/' + b.cap, color: _coachColorMap[b.coach] || '#666', bg: (_coachColorMap[b.coach] || '#666') + '22', top: pos.top + 'px', height: pos.height + 'px', cancelled: !!b.cancelled, cancelledOp: b.cancelled ? '0.4' : '1', pick: () => this.openGymClassDetail(b.id) };
+        });
+        return { date: dt, dayNum: String(pp[2]), dayName: _dnFn[dow], isToday, todayBorder: isToday ? '2px solid var(--volt)' : '1px solid var(--border)', todayBg: isToday ? 'var(--volt-dim)' : 'transparent', blocks, hasBlocks: blocks.length > 0, noBlocks: blocks.length === 0, showNow: isToday && _showNow, nowTop: _nowTop + 'px', goDay: () => this.gymSchedGoDay(dt) };
+      });
+    } else if (_scMode === 'month') {
+      const ym = _scAnchor.slice(0, 7), parts = ym.split('-').map(Number);
+      const mNames = isID ? ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      scNavLabel = mNames[parts[1] - 1] + ' ' + parts[0];
+      const firstDay = new Date(parts[0], parts[1] - 1, 1).getDay();
+      const daysInMonth = new Date(parts[0], parts[1], 0).getDate();
+      const startOff = firstDay === 0 ? 6 : firstDay - 1;
+      let cells = [];
+      for (let i = 0; i < startOff; i++) cells.push({ blank: true });
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = ym + '-' + String(d).padStart(2, '0');
+        const raw = _filterBlocks(_scDays[dt] || []);
+        const isToday = dt === _todayISO;
+        const preview = raw.slice(0, 3).map((b) => ({ type: b.type, coach: b.coach || '', color: _coachColorMap[b.coach] || '#666', time: b.time }));
+        const moreCount = raw.length > 3 ? raw.length - 3 : 0;
+        cells.push({ blank: false, day: d, date: dt, isToday, todayBg: isToday ? 'var(--volt-dim)' : 'transparent', todayBorder: isToday ? '2px solid var(--volt)' : '1px solid var(--border)', preview, hasPreview: preview.length > 0, moreCount, hasMore: moreCount > 0, moreLabel: '+' + moreCount + ' ' + this.t('n_more'), goDay: () => this.gymSchedGoDay(dt) });
+      }
+      const weeks = [];
+      while (cells.length) weeks.push({ cells: cells.splice(0, 7) });
+      if (weeks.length && weeks[weeks.length - 1].cells.length < 7) { while (weeks[weeks.length - 1].cells.length < 7) weeks[weeks.length - 1].cells.push({ blank: true }); }
+      monthWeeks = weeks;
+    } else {
+      const pp = _scAnchor.split('-').map(Number), dow = new Date(pp[0], pp[1] - 1, pp[2]).getDay();
+      const mNames = isID ? ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      scNavLabel = _dnFn[dow] + ', ' + pp[2] + ' ' + mNames[pp[1] - 1] + ' ' + pp[0];
+      const raw = _filterBlocks(_scDays[_scAnchor] || []);
+      dayBlocks = raw.map((b) => {
+        const pos = _blockPos(b);
+        return { id: b.id, time: b.time, end: b.end, type: b.type, coach: b.coach || '—', paxLabel: b.pax + '/' + b.cap, color: _coachColorMap[b.coach] || '#666', bg: (_coachColorMap[b.coach] || '#666') + '22', top: pos.top + 'px', height: pos.height + 'px', cancelled: !!b.cancelled, cancelledOp: b.cancelled ? '0.4' : '1', pick: () => this.openGymClassDetail(b.id) };
+      });
+    }
+
+    const _scDetail = st.gymSchedDetail;
+    const scDetailParticipants = _scDetail && _scDetail.participants ? _scDetail.participants.map((p, i) => ({ n: i + 1, name: p.name || '—' })) : [];
+
     return {
       isGro, goReschedule: () => this.go('reschedule'),
       goValidateCoach: () => this.go('validatecoach'),
@@ -2160,6 +2286,38 @@ class Component extends DCLogic {
       gymDayLabel: D.gymDayLabel || '', gymDay, gymDayHas: gymDay.length > 0, gymDayEmpty: gymDay.length === 0,
       gymClients, gymClientsHas: gymClients.length > 0, gymClientsEmpty: gymClients.length === 0,
       gymClientsTotal: D.gymClientsTotal || 0, gymClientsActive: D.gymClientsActive || 0,
+      // GRO full calendar
+      gymFullCal, gymMiniCal,
+      scIsWeek: _scMode === 'week', scIsMonth: _scMode === 'month', scIsDay: _scMode === 'day',
+      scNavLabel,
+      scModeWeek: () => this.setGymSchedMode('week'), scModeMonth: () => this.setGymSchedMode('month'), scModeDay: () => this.setGymSchedMode('day'),
+      scPrev: () => this.gymSchedNav(-1), scNext: () => this.gymSchedNav(1), scToday: () => this.gymSchedToday(),
+      scWeekBg: _scMode === 'week' ? 'var(--volt)' : 'var(--panel)', scWeekFg: _scMode === 'week' ? '#fff' : 'var(--text)',
+      scMonthBg: _scMode === 'month' ? 'var(--volt)' : 'var(--panel)', scMonthFg: _scMode === 'month' ? '#fff' : 'var(--text)',
+      scDayBg: _scMode === 'day' ? 'var(--volt)' : 'var(--panel)', scDayFg: _scMode === 'day' ? '#fff' : 'var(--text)',
+      scWeekLabel: this.t('sched_week'), scMonthLabel: this.t('sched_month'), scDayLabel: this.t('sched_day'), scTodayLabel: this.t('sched_today'),
+      scCoachOpts: (sd.coaches || []).map((c) => ({ value: c, label: c, picked: _scCoach === c })),
+      scTypeOpts: (sd.types || []).map((t) => ({ value: t, label: t, picked: _scType === t })),
+      scSetCoach: (e) => this.setGymSchedCoachFilter(e), scSetType: (e) => this.setGymSchedTypeFilter(e),
+      scAllCoaches: this.t('all_coaches'), scAllClasses: this.t('all_classes'),
+      scHourLabels: _hourLabels, scGridHeight: GRID_HEIGHT + 'px',
+      weekDayCols, scHasWeekCols: weekDayCols.length > 0,
+      monthWeeks, scHasMonthWeeks: monthWeeks.length > 0,
+      scMonthDow: [1,2,3,4,5,6,0].map((i) => ({ lbl: _dnFn[i] })),
+      dayBlocks, scHasDayBlocks: dayBlocks.length > 0, scNoDayBlocks: dayBlocks.length === 0,
+      scDayShowNow: _scMode === 'day' && _scAnchor === _todayISO && _showNow, scDayNowTop: _nowTop + 'px',
+      scShowDetail: !!(_scDetail && !_scDetail.loading), scDetailLoading: !!(_scDetail && _scDetail.loading),
+      scCloseDetail: () => this.closeGymClassDetail(),
+      scDetailTitle: this.t('class_detail_title'),
+      scDetailType: _scDetail ? (_scDetail.type || '') : '', scDetailDate: _scDetail ? (_scDetail.dateLabel || '') : '',
+      scDetailTime: _scDetail ? ((_scDetail.time || '') + '–' + (_scDetail.end || '')) : '',
+      scDetailCoach: _scDetail ? (_scDetail.coach || '—') : '',
+      scDetailPax: _scDetail ? ((_scDetail.pax || 0) + '/' + (_scDetail.cap || 0)) : '',
+      scDetailCancelled: !!(_scDetail && _scDetail.cancelled),
+      scDetailColor: _scDetail ? (_coachColorMap[_scDetail.coach] || '#666') : '#666',
+      scDetailParticipants: scDetailParticipants, scDetailHasPax: scDetailParticipants.length > 0, scDetailNoPax: !!(_scDetail && !_scDetail.loading && scDetailParticipants.length === 0),
+      scParticipantsLabel: this.t('sched_participants'), scNoPaxLabel: this.t('no_participants'),
+      scNoClassesDay: this.t('no_classes_day'),
       gmClients, gmClientsHas: gmClients.length > 0, gmClientsEmpty: gmClients.length === 0,
       gmTabs: [
         { label: this.t('all_clients') + ' (' + gmAll.length + ')', bg: gmTab === 'all' ? 'var(--volt)' : 'var(--panel)', fg: gmTab === 'all' ? '#fff' : 'var(--text)', border: gmTab === 'all' ? 'var(--volt)' : 'var(--border2)', pick: () => this.setGymMemberTab('all') },

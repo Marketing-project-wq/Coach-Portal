@@ -798,6 +798,42 @@ route('GET', '/api/unit/gym/day', async (req, res, s, q) => {
   const classes = scheds.map((x) => { const t = types[x.class_type_id] || {}; return { time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', color: t.color || null, coach: x.instructor || '', pax: (counts[x.id] || {}).confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled }; });
   return send(res, 200, { date, dateLabel: dLabel(date), classes });
 });
+// Gym schedule for a date range — used by the GRO full-calendar view.
+route('GET', '/api/unit/gym/schedule', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(q.from || '') ? q.from : todayJakarta();
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(q.to || '') ? q.to : from;
+  const types = await gymClassTypes();
+  const rows = (await sbAll(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=gte.${from}&schedule_date=lte.${to}&order=schedule_date.asc,start_time.asc`).catch(() => [])) || [];
+  const ids = rows.map((x) => x.id);
+  const counts = ids.length ? await gymBookingCounts(ids) : {};
+  const days = {}, coachSet = new Set(), typeSet = new Set();
+  for (const x of rows) {
+    const d = x.schedule_date;
+    if (!days[d]) days[d] = [];
+    const t = types[x.class_type_id] || {};
+    const coach = x.instructor || '';
+    if (coach) coachSet.add(coach);
+    const typeName = t.name || 'Class';
+    typeSet.add(typeName);
+    const bc = counts[x.id] || {};
+    days[d].push({ id: x.id, time: hhmm(x.start_time), end: hhmm(x.end_time), type: typeName, typeColor: t.color || null, coach, pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled });
+  }
+  return send(res, 200, { from, to, days, coaches: [...coachSet].sort(), types: [...typeSet].sort() });
+});
+// Gym class detail with participant names — for the detail modal.
+route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const id = String(q.id || '').trim();
+  if (!id) return send(res, 400, { error: 'id required' });
+  const types = await gymClassTypes();
+  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&id=eq.${enc(id)}`).catch(() => [])) || [];
+  if (!scheds.length) return send(res, 404, { error: 'Class not found' });
+  const x = scheds[0], t = types[x.class_type_id] || {};
+  const bc = (await gymBookingCounts([x.id]))[x.id] || {};
+  const bookings = (await sb(`gym_class_bookings?select=full_name,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
+  return send(res, 200, { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, participants: bookings.map((b) => ({ name: b.full_name || '' })) });
+});
 // Gym clients — confirmed bookers in the month window, ranked by visit count.
 route('GET', '/api/unit/gym/clients', async (req, res, s, q) => {
   if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
