@@ -38,7 +38,7 @@ class Component extends DCLogic {
       gymPendingModal: null, gymPendingReason: '', gymPendingNote: '', gymPendingSaving: false,
       gymPendingCount: 0,
       gymPrivateModal: false, gymPvtMemberQ: '', gymPvtMembers: [], gymPvtSelected: null,
-      gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false,
+      gymPvtCoach: '', gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false,
       gymTodaySummary: null,
       d: this.emptyData(),
     };
@@ -432,7 +432,7 @@ class Component extends DCLogic {
       .catch(() => {});
   }
   // ---------- Gym: Private Class Booking ----------
-  openGymPrivateBooking() { this.setState({ gymPrivateModal: true, gymPvtMemberQ: '', gymPvtMembers: [], gymPvtSelected: null, gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false }); }
+  openGymPrivateBooking() { this.setState({ gymPrivateModal: true, gymPvtMemberQ: '', gymPvtMembers: [], gymPvtSelected: null, gymPvtCoach: '', gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false }); }
   closeGymPrivateBooking() { this.setState({ gymPrivateModal: false }); }
   setGymPvtMemberQ(e) {
     const q = e && e.target ? e.target.value : '';
@@ -445,17 +445,18 @@ class Component extends DCLogic {
         .catch(() => {});
     }, 300);
   }
-  selectGymPvtMember(m) { this.setState({ gymPvtSelected: m, gymPvtMemberQ: m.name }); }
+  selectGymPvtMember(m) { this.setState({ gymPvtSelected: m, gymPvtMemberQ: m.name, gymPvtCoach: m.coach || '' }); }
+  setGymPvtCoach(e) { this.setState({ gymPvtCoach: e && e.target ? e.target.value : '' }); }
   setGymPvtDate(e) { this.setState({ gymPvtDate: e && e.target ? e.target.value : '' }); }
   setGymPvtStartTime(e) { this.setState({ gymPvtStartTime: e && e.target ? e.target.value : '' }); }
   setGymPvtEndTime(e) { this.setState({ gymPvtEndTime: e && e.target ? e.target.value : '' }); }
   confirmGymPrivateBooking() {
     const st = this.state;
-    if (st.gymPvtSaving || !st.gymPvtSelected || !st.gymPvtDate || !st.gymPvtStartTime) return;
+    if (st.gymPvtSaving || !st.gymPvtSelected || !st.gymPvtCoach || !st.gymPvtDate || !st.gymPvtStartTime) return;
     this.setState({ gymPvtSaving: true });
     this.api('/api/unit/gym/private-booking', { method: 'POST', body: JSON.stringify({
       memberName: st.gymPvtSelected.name, phone: st.gymPvtSelected.phone || '',
-      coachName: st.gymPvtSelected.coach || '', date: st.gymPvtDate,
+      coachName: st.gymPvtCoach, date: st.gymPvtDate,
       startTime: st.gymPvtStartTime, endTime: st.gymPvtEndTime || null,
       voucherCode: st.gymPvtSelected.voucherCode || ''
     }) })
@@ -2624,15 +2625,18 @@ class Component extends DCLogic {
       gymPvtSelCoach: st.gymPvtSelected ? (st.gymPvtSelected.coach || '—') : '',
       gymPvtSelRemaining: st.gymPvtSelected ? st.gymPvtSelected.remaining : 0,
       gymPvtSelTotal: st.gymPvtSelected ? st.gymPvtSelected.total : 0,
+      gymPvtCoachVal: st.gymPvtCoach || '', setGymPvtCoach: (e) => this.setGymPvtCoach(e),
+      gymPvtCoachOpts: (sd.coaches || []).map((c) => ({ val: c, label: c, picked: st.gymPvtCoach === c })),
       gymPvtDateVal: st.gymPvtDate || '', setGymPvtDate: (e) => this.setGymPvtDate(e),
       gymPvtStartVal: st.gymPvtStartTime || '', setGymPvtStart: (e) => this.setGymPvtStartTime(e),
       gymPvtEndVal: st.gymPvtEndTime || '', setGymPvtEnd: (e) => this.setGymPvtEndTime(e),
-      gymPvtCanConfirm: !!(st.gymPvtSelected && st.gymPvtDate && st.gymPvtStartTime),
-      gymPvtNoConfirm: !(st.gymPvtSelected && st.gymPvtDate && st.gymPvtStartTime),
+      gymPvtCanConfirm: !!(st.gymPvtSelected && st.gymPvtCoach && st.gymPvtDate && st.gymPvtStartTime),
+      gymPvtNoConfirm: !(st.gymPvtSelected && st.gymPvtCoach && st.gymPvtDate && st.gymPvtStartTime),
       gymPvtConfirm: () => this.confirmGymPrivateBooking(), gymPvtSaving: st.gymPvtSaving,
-      tPvtTitle: this.t('pvt_title'), tPvtMember: this.t('pvt_member'), tPvtDate: this.t('pvt_date'),
+      tPvtTitle: this.t('pvt_title'), tPvtMember: this.t('pvt_member'), tPvtCoach: this.t('pvt_coach'), tPvtDate: this.t('pvt_date'),
       tPvtStart: this.t('pvt_start'), tPvtEnd: this.t('pvt_end'), tPvtConfirm: this.t('pvt_confirm'),
       tPvtSearchMember: this.t('pvt_search_member'), tPvtQuotaLeft: this.t('pvt_quota_left'),
+      tPvtSelectCoach: this.t('pvt_select_coach'),
       // Today summary widget
       gymTodaySummary: !!st.gymTodaySummary,
       gymTsTotal: st.gymTodaySummary ? st.gymTodaySummary.totalSessions : 0,

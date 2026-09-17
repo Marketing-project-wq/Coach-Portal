@@ -464,6 +464,8 @@ window.__I18N = (function () {
     pvt_confirm:           { id: 'Konfirmasi Booking',      en: 'Confirm Booking' },
     pvt_search_member:     { id: 'Cari member...',          en: 'Search member...' },
     pvt_quota_left:        { id: 'sisa kuota',              en: 'quota left' },
+    pvt_coach:             { id: 'Coach',                   en: 'Coach' },
+    pvt_select_coach:      { id: 'Pilih coach...',          en: 'Select coach...' },
     pvt_booked:            { id: 'Sesi private berhasil dibuat!', en: 'Private session booked!' },
     // ---- Today Summary ----
     ts_today_title:        { id: 'Ringkasan Hari Ini',      en: "Today's Summary" },

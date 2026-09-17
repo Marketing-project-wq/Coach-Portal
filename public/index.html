@@ -1397,6 +1397,14 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
       <div style="font-size:12px;color:var(--muted);margin-top:2px;">Coach: {{ gymPvtSelCoach }} &#183; {{ gymPvtSelRemaining }}/{{ gymPvtSelTotal }} {{ tPvtQuotaLeft }}</div>
     </div>
     </sc-if>
+    <!-- Coach selection -->
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">{{ tPvtCoach }}</label>
+      <select onchange="{{ setGymPvtCoach }}" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%23666%22 d=%22M2 4l4 4 4-4%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;">
+        <option value="">{{ tPvtSelectCoach }}</option>
+        <sc-for list="{{ gymPvtCoachOpts }}" as="co"><option value="{{ co.val }}" selected="{{ co.picked }}">{{ co.label }}</option></sc-for>
+      </select>
+    </div>
     <!-- Date & time -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
       <div>
