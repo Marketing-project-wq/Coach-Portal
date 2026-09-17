@@ -486,6 +486,28 @@ window.__I18N = (function () {
     session_type:          { id: 'Tipe Sesi',               en: 'Session Type' },
     private_label:         { id: 'Private',                 en: 'Private' },
     group_label:           { id: 'Grup',                    en: 'Group' },
+    // ---- Camera QR Scanner ----
+    start_scan:            { id: 'Mulai Scan',              en: 'Start Scan' },
+    stop_scan:             { id: 'Berhenti',                en: 'Stop' },
+    flash:                 { id: 'Flash',                   en: 'Flash' },
+    camera_error:          { id: 'Gagal membuka kamera.',   en: 'Failed to open camera.' },
+    // ---- Admin CRUD ----
+    admin_new_session:     { id: 'Buat Sesi Baru',          en: 'New Session' },
+    admin_edit_session:    { id: 'Edit Sesi',               en: 'Edit Session' },
+    admin_quota:           { id: 'Kuota',                   en: 'Quota' },
+    admin_save:            { id: 'Simpan',                  en: 'Save' },
+    admin_delete_title:    { id: 'Hapus Sesi',              en: 'Delete Session' },
+    admin_delete_confirm:  { id: 'Apakah Anda yakin ingin menghapus sesi ini? Data peserta juga akan dihapus.', en: 'Are you sure you want to delete this session? Participant data will also be deleted.' },
+    admin_yes:             { id: 'Ya, Kembali',             en: 'Yes, Go Back' },
+    admin_no:              { id: 'Hapus',                   en: 'Delete' },
+    admin_fill_required:   { id: 'Lengkapi tanggal, waktu, dan tipe sesi.', en: 'Fill in date, time, and session type.' },
+    admin_session_created: { id: 'Sesi berhasil dibuat.',   en: 'Session created.' },
+    admin_session_updated: { id: 'Sesi berhasil diupdate.', en: 'Session updated.' },
+    admin_session_deleted: { id: 'Sesi berhasil dihapus.',  en: 'Session deleted.' },
+    // ---- Visit History ----
+    visit_phone:           { id: 'Telepon',                 en: 'Phone' },
+    // ---- Auto No-show ----
+    auto_noshow_done:      { id: 'No-show otomatis ditandai.', en: 'Auto no-show marked.' },
   };
 
   return { dict: dict, dateRepl: dateRepl, toastRepl: toastRepl, T: T };

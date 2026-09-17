@@ -40,6 +40,10 @@ class Component extends DCLogic {
       gymPrivateModal: false, gymPvtMemberQ: '', gymPvtMembers: [], gymPvtSelected: null,
       gymPvtCoach: '', gymPvtDate: '', gymPvtStartTime: '', gymPvtEndTime: '', gymPvtSaving: false,
       gymTodaySummary: null,
+      gymCameraActive: false, gymCameraFlash: false,
+      gymAdminEditModal: null, gymAdminEditSaving: false,
+      gymAdminDeleteId: null, gymAdminDeleteSaving: false,
+      gymClassTypes: [],
       d: this.emptyData(),
     };
     this.MOCK = /[?&]mock=1/.test(location.search);
@@ -318,7 +322,7 @@ class Component extends DCLogic {
     this.gymShowDay(this.state.gymSelDate || this.todayISO());
     this.api('/api/unit/gym/clients' + (this.state.gymClientYm ? ('?month=' + this.state.gymClientYm) : '')).then((r) => this.setD({ gymClients: r.clients || [], gymClientsTotal: r.total || 0, gymClientsActive: r.active30 || 0, gymClientsWithPkg: r.withPkg || 0, gymClientsInactive: r.inactive || 0, gymLowQuota: r.lowQuota || 0, gymExpiredThisMonth: r.expiredThisMonth || 0 })).catch(() => {});
     if (this.state.role === 'coach' || this.state.role === 'admin') this.loadGymCoachBookings();
-    if (this.state.role === 'gro') { this.loadGymSchedule(); this.loadGymPendingCount(); this.loadGymTodaySummary(); }
+    if (this.state.role === 'gro') { this.loadGymSchedule(); this.loadGymPendingCount(); this.loadGymTodaySummary(); this.gymAutoNoShow(); }
   }
   gymShowDay(date) { this.setState({ gymSelDate: date }); if (this.MOCK) return; this.api('/api/unit/gym/day?date=' + encodeURIComponent(date)).then((r) => this.setD({ gymDayClasses: r.classes || [], gymDayLabel: r.dateLabel || '' })).catch(() => {}); }
   gymCalNav(ym) { if (!ym) return; this.setState({ gymCalYm: ym }); if (!this.MOCK) this.loadGymView(); }
@@ -484,6 +488,59 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg(this.t('noshow_marked')); if (this.state.gymSchedDetail) this.openGymClassDetail(this.state.gymSchedDetail.id); this.loadGymSchedule(); })
       .catch((e) => this.toastMsg(e.message || 'Error'));
   }
+  // ---------- Gym: Auto no-show ----------
+  gymAutoNoShow() {
+    if (this.MOCK) return;
+    this.api('/api/unit/gym/auto-noshow', { method: 'POST' }).catch(() => {});
+  }
+  // ---------- Gym Admin: Schedule CRUD ----------
+  loadGymClassTypes() {
+    if (this.MOCK) return;
+    this.api('/api/unit/gym/class-types')
+      .then((r) => this.setState({ gymClassTypes: r.types || [] }))
+      .catch(() => {});
+  }
+  openGymAdminCreate() {
+    this.loadGymClassTypes();
+    this.setState({ gymAdminEditModal: { isNew: true, date: '', startTime: '', endTime: '', instructor: '', classTypeId: '', quota: 20 }, gymAdminEditSaving: false });
+  }
+  openGymAdminEdit(detail) {
+    if (!detail) return;
+    this.loadGymClassTypes();
+    const types = this.state.gymClassTypes || [];
+    const typeMatch = types.find((t) => t.name === detail.type);
+    this.setState({ gymAdminEditModal: { isNew: false, id: detail.id, date: detail.date || '', startTime: detail.time || '', endTime: detail.end || '', instructor: detail.coach || '', classTypeId: typeMatch ? typeMatch.id : '', quota: detail.cap || 20 }, gymAdminEditSaving: false });
+  }
+  closeGymAdminEdit() { this.setState({ gymAdminEditModal: null, gymAdminEditSaving: false }); }
+  setAdminEditField(field, e) {
+    const m = this.state.gymAdminEditModal; if (!m) return;
+    this.setState({ gymAdminEditModal: Object.assign({}, m, { [field]: e && e.target ? e.target.value : e }) });
+  }
+  saveGymAdminEdit() {
+    const m = this.state.gymAdminEditModal;
+    if (!m || this.state.gymAdminEditSaving) return;
+    if (!m.date || !m.startTime || !m.classTypeId) { this.toastMsg(this.t('admin_fill_required')); return; }
+    this.setState({ gymAdminEditSaving: true });
+    if (m.isNew) {
+      this.api('/api/unit/gym/admin/schedule', { method: 'POST', body: JSON.stringify({ date: m.date, startTime: m.startTime, endTime: m.endTime || null, instructor: m.instructor, classTypeId: m.classTypeId, quota: Number(m.quota) || 20 }) })
+        .then(() => { this.closeGymAdminEdit(); this.toastMsg(this.t('admin_session_created')); this.loadGymSchedule(); })
+        .catch((e) => { this.setState({ gymAdminEditSaving: false }); this.toastMsg(e.message || 'Error'); });
+    } else {
+      this.api('/api/unit/gym/admin/schedule/' + m.id, { method: 'PATCH', body: JSON.stringify({ date: m.date, startTime: m.startTime, endTime: m.endTime || null, instructor: m.instructor, classTypeId: m.classTypeId, quota: Number(m.quota) || 1 }) })
+        .then(() => { this.closeGymAdminEdit(); this.closeGymClassDetail(); this.toastMsg(this.t('admin_session_updated')); this.loadGymSchedule(); })
+        .catch((e) => { this.setState({ gymAdminEditSaving: false }); this.toastMsg(e.message || 'Error'); });
+    }
+  }
+  openGymAdminDelete(id) { this.setState({ gymAdminDeleteId: id, gymAdminDeleteSaving: false }); }
+  closeGymAdminDelete() { this.setState({ gymAdminDeleteId: null, gymAdminDeleteSaving: false }); }
+  confirmGymAdminDelete() {
+    const id = this.state.gymAdminDeleteId;
+    if (!id || this.state.gymAdminDeleteSaving) return;
+    this.setState({ gymAdminDeleteSaving: true });
+    this.api('/api/unit/gym/admin/schedule/' + id, { method: 'DELETE' })
+      .then(() => { this.closeGymAdminDelete(); this.closeGymClassDetail(); this.toastMsg(this.t('admin_session_deleted')); this.loadGymSchedule(); })
+      .catch((e) => { this.setState({ gymAdminDeleteSaving: false }); this.toastMsg(e.message || 'Error'); });
+  }
   // ---------- Gym Members: tabs, search, sort, detail ----------
   setGymMemberTab(tab) { this.setState({ gymMemberTab: tab }); }
   setGymMemberSearch(e) { this.setState({ gymMemberSearch: e && e.target ? e.target.value : '' }); }
@@ -559,6 +616,35 @@ class Component extends DCLogic {
       .catch((err) => { this.setState({ gymScanBusy: false }); this.toastMsg((err && err.message) || 'Gagal membatalkan.'); });
   }
   gymScanNew() { this.setState({ gymScanResult: null, gymScanSaved: null, gymScanReason: '', gymSearchResults: [] }); }
+  // ---------- Gym GRO: Camera QR Scanner ----------
+  gymStartCamera() {
+    if (this.state.gymCameraActive || !window.Html5Qrcode) return;
+    this.setState({ gymCameraActive: true });
+    const qr = new Html5Qrcode('qrReader');
+    this._qrScanner = qr;
+    qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } },
+      (code) => {
+        try { if (navigator.vibrate) navigator.vibrate(100); } catch (_e) {}
+        try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = 1200; osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.08); } catch (_e) {}
+        this.gymStopCamera();
+        this.gymScanLookup(code);
+      },
+      () => {}
+    ).catch(() => { this.setState({ gymCameraActive: false }); this.toastMsg(this.t('camera_error')); });
+  }
+  gymStopCamera() {
+    this.setState({ gymCameraActive: false, gymCameraFlash: false });
+    if (this._qrScanner) { try { this._qrScanner.stop().catch(() => {}); } catch (_e) {} this._qrScanner = null; }
+  }
+  gymToggleFlash() {
+    if (!this._qrScanner) return;
+    const on = !this.state.gymCameraFlash;
+    this.setState({ gymCameraFlash: on });
+    try {
+      const track = this._qrScanner.getRunningTrackSettings && this._qrScanner.getRunningTrackCameraCapabilities && this._qrScanner.getRunningTrackCameraCapabilities().torchFeature();
+      if (track && track.apply) track.apply(on);
+    } catch (_e) {}
+  }
   // ---------- Gym GRO: Visit history ----------
   loadGymVisits() {
     if (this.MOCK) return;
@@ -572,9 +658,9 @@ class Component extends DCLogic {
   setGymVisitTo(e) { this.setState({ gymVisitTo: e && e.target ? e.target.value : '' }); if (!this.MOCK) this.loadGymVisits(); }
   setGymVisitQ(e) { this._gymVisitFocus = true; this.setState({ gymVisitQ: e && e.target ? e.target.value : '' }); clearTimeout(this._gvT); this._gvT = setTimeout(() => { if (!this.MOCK) this.loadGymVisits(); }, 300); }
   exportGymVisits() {
-    const rows = (this.state.d.gymVisits || []).map((v) => [v.date, v.time, v.member, v.voucherCode, v.coach, (v.remainingAfter == null ? '' : v.remainingAfter), v.status + (v.overQuota ? ' (over)' : ''), v.reason]);
+    const rows = (this.state.d.gymVisits || []).map((v) => [v.date, v.time, v.member, v.phone || '', v.voucherCode, v.coach, (v.remainingAfter == null ? '' : v.remainingAfter), v.status + (v.overQuota ? ' (over)' : ''), v.reason]);
     if (!rows.length) return this.toastMsg('No data to export.');
-    const head = ['Tanggal', 'Jam', 'Member', 'Voucher', 'Coach', 'Sisa', 'Status', 'Alasan'];
+    const head = ['Tanggal', 'Jam', 'Member', 'Telepon', 'Voucher', 'Coach', 'Sisa', 'Status', 'Alasan'];
     const csv = [head].concat(rows).map((r) => r.map((c) => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'gym-visits.csv'; document.body.appendChild(a); a.click(); a.remove();
@@ -2468,6 +2554,11 @@ class Component extends DCLogic {
       gymMembersLabel: this.t('members'), gymScanLabel: this.t('scan_member'), gymVisitsLabel: this.t('visit_history'), comingSoonText: this.t('coming_soon'),
       // Gym scan member
       gymScanHint: this.t('scan_hint'), gymScanPlaceholder: this.t('scan_placeholder'), gymScanSubmit: (e) => this.gymScanSubmit(e),
+      gymCameraActive: st.gymCameraActive, gymCameraNotActive: !st.gymCameraActive,
+      gymStartCamera: () => this.gymStartCamera(), gymStopCamera: () => this.gymStopCamera(),
+      gymToggleFlash: () => this.gymToggleFlash(), gymFlashOn: st.gymCameraFlash,
+      gymHasQrLib: !!window.Html5Qrcode,
+      tStartScan: this.t('start_scan'), tStopScan: this.t('stop_scan'), tFlash: this.t('flash'), tCameraError: this.t('camera_error'),
       gymSearchPlaceholder: this.t('search_member'), gymScanSearch: (e) => this.gymScanSearch(e),
       gymSearchRows: (st.gymSearchResults || []).map((x) => ({ member: x.member, coach: x.coach || '—', remaining: x.remaining, total: x.total, pick: () => this.gymScanLookup(x.voucherCode) })),
       gymHasSearch: (st.gymSearchResults || []).length > 0,
@@ -2481,14 +2572,14 @@ class Component extends DCLogic {
       showGymScanSaved: !!gss, gymSavedMember: gss ? gss.member : '', gymSavedUsed: gss ? gss.used : 0, gymSavedTotal: gss ? gss.total : 0, gymSavedOver: !!(gss && gss.overQuota), gymSavedCode: gss ? gss.code : '',
       gymScanSavedText: this.t('checkin_recorded'), gymScanCancelLabel: this.t('cancel_checkin'), doGymScanCancel: () => this.gymScanCancel(), gymScanNewBtn: () => this.gymScanNew(), overQuotaTag: this.t('over_quota_tag'),
       // Gym visit history
-      gymVisitRows: (D.gymVisits || []).map((v) => ({ date: v.date, time: v.time, member: v.member, voucher: v.voucherCode, coach: v.coach, remainingAfter: (v.remainingAfter == null ? '—' : String(v.remainingAfter)),
+      gymVisitRows: (D.gymVisits || []).map((v) => ({ date: v.date, time: v.time, member: v.member, phone: v.phone || '', voucher: v.voucherCode, coach: v.coach, remainingAfter: (v.remainingAfter == null ? '—' : String(v.remainingAfter)),
         statusLabel: v.status === 'cancelled' ? this.t('cancelled_tag') : (v.overQuota ? this.t('over_quota_tag') : this.t('present')),
         statusBg: v.status === 'cancelled' ? 'rgba(148,163,184,.2)' : (v.overQuota ? 'rgba(255,82,71,.15)' : 'rgba(62,213,152,.15)'),
         statusFg: v.status === 'cancelled' ? 'var(--muted)' : (v.overQuota ? '#dc2626' : '#16a34a'), reason: v.reason || '' })),
       gymHasVisits: (D.gymVisits || []).length > 0, gymNoVisits: (D.gymVisits || []).length === 0, gymNoVisitsText: this.t('no_visits'),
       gymVisitFromVal: st.gymVisitFrom || '', gymVisitToVal: st.gymVisitTo || '', setGymVisitFrom: (e) => this.setGymVisitFrom(e), setGymVisitTo: (e) => this.setGymVisitTo(e),
       gymVisitQVal: st.gymVisitQ || '', setGymVisitQ: (e) => this.setGymVisitQ(e), exportGymVisits: () => this.exportGymVisits(), exportCsvLabel: this.t('export_csv'),
-      tFromDate: this.t('from_date'), tToDate: this.t('to_date'),
+      tFromDate: this.t('from_date'), tToDate: this.t('to_date'), tVisitPhone: this.t('visit_phone'),
       // Gym coach PT check-in panel (on the gym Schedule screen)
       showGymCoachPanel: (st.role === 'coach' || isAdmin) && st.unit === 'gym' && scr === 'gymview',
       gymCoachRows: (D.gymCoachBookings || []).map((b) => ({ id: b.id, time: b.time, member: b.member, checkedIn: b.checkedIn, notCheckedIn: !b.checkedIn, checkin: () => this.gymCoachCheckin(b.id) })),
@@ -2546,6 +2637,41 @@ class Component extends DCLogic {
       scDetailColor: _scDetail ? (_coachColorMap[_scDetail.coach] || '#666') : '#666',
       scDetailParticipants: scDetailParticipants, scDetailHasPax: scDetailParticipants.length > 0, scDetailNoPax: !!(_scDetail && !_scDetail.loading && scDetailParticipants.length === 0),
       scDetailShowActions: _scIsUpcoming && _scIsGroDetail,
+      scIsAdmin: isAdmin,
+      scAdminEdit: () => this.openGymAdminEdit(_scDetail), scAdminDelete: () => _scDetail ? this.openGymAdminDelete(_scDetail.id) : null,
+      scAdminCreate: () => this.openGymAdminCreate(),
+      // Admin edit modal
+      showAdminEditModal: !!st.gymAdminEditModal,
+      adminEditIsNew: !!(st.gymAdminEditModal && st.gymAdminEditModal.isNew),
+      adminEditNotNew: !!(st.gymAdminEditModal && !st.gymAdminEditModal.isNew),
+      adminEditDate: st.gymAdminEditModal ? st.gymAdminEditModal.date : '',
+      adminEditStart: st.gymAdminEditModal ? st.gymAdminEditModal.startTime : '',
+      adminEditEnd: st.gymAdminEditModal ? st.gymAdminEditModal.endTime : '',
+      adminEditInstructor: st.gymAdminEditModal ? st.gymAdminEditModal.instructor : '',
+      adminEditQuota: st.gymAdminEditModal ? st.gymAdminEditModal.quota : 20,
+      adminEditTypeId: st.gymAdminEditModal ? st.gymAdminEditModal.classTypeId : '',
+      adminEditTypeOpts: (st.gymClassTypes || []).map((t) => ({ val: t.id, label: t.name, picked: st.gymAdminEditModal && st.gymAdminEditModal.classTypeId === t.id })),
+      adminEditCoachOpts: (sd.coaches || []).map((c) => ({ val: c, label: c, picked: st.gymAdminEditModal && st.gymAdminEditModal.instructor === c })),
+      setAdminDate: (e) => this.setAdminEditField('date', e),
+      setAdminStart: (e) => this.setAdminEditField('startTime', e),
+      setAdminEnd: (e) => this.setAdminEditField('endTime', e),
+      setAdminInstructor: (e) => this.setAdminEditField('instructor', e),
+      setAdminQuota: (e) => this.setAdminEditField('quota', e),
+      setAdminTypeId: (e) => this.setAdminEditField('classTypeId', e),
+      closeAdminEdit: () => this.closeGymAdminEdit(),
+      saveAdminEdit: () => this.saveGymAdminEdit(),
+      adminEditSaving: st.gymAdminEditSaving,
+      tAdminNewSession: this.t('admin_new_session'), tAdminEditSession: this.t('admin_edit_session'),
+      tAdminDate: this.t('pvt_date'), tAdminStart: this.t('pvt_start'), tAdminEnd: this.t('pvt_end'),
+      tAdminCoach: this.t('pvt_coach'), tAdminType: this.t('session_type'), tAdminQuota: this.t('admin_quota'),
+      tAdminSave: this.t('admin_save'), tAdminCancel: this.t('rs_cancel'),
+      // Admin delete confirm
+      showAdminDeleteConfirm: !!st.gymAdminDeleteId,
+      closeAdminDelete: () => this.closeGymAdminDelete(),
+      confirmAdminDelete: () => this.confirmGymAdminDelete(),
+      adminDeleteSaving: st.gymAdminDeleteSaving,
+      tAdminDeleteTitle: this.t('admin_delete_title'), tAdminDeleteConfirm: this.t('admin_delete_confirm'),
+      tAdminYes: this.t('admin_yes'), tAdminNo: this.t('admin_no'),
       scDetailIsPrivate: _scIsPrivate, scDetailIsGroup: !_scIsPrivate,
       scDetailSessionBadge: _scIsPrivate ? 'PRIVATE' : 'GRUP',
       scDetailSessionBadgeBg: _scIsPrivate ? '#8B5CF6' : '#3B82F6',
