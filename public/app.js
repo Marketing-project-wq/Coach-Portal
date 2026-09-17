@@ -2462,7 +2462,7 @@ class Component extends DCLogic {
       // Orders, Scan Member, Riwayat) only for GRO & admin. A coach in Gym sees just Schedule
       // (with their PT check-in panel), matching "flow coach sama seperti Arena".
       showGymGroMenu: st.unit === 'gym' && (isGro || isAdmin),
-      hcArena: isHC && st.unit !== 'gym', adminArena: isAdmin && st.unit !== 'gym',
+      hcArena: isHC && st.unit !== 'gym', adminArena: isAdmin,
       notGroGym: !(isGro && st.unit === 'gym'), showGroArena: isGro && st.unit === 'arena', showGroGym: isGro && st.unit === 'gym',
       goGymSchedule: () => this.go('gymview'), goGymMembers: () => this.go('gymmembers'), goGymPackages: () => this.go('gympackages'), goGymScan: () => this.go('gymscan'), goGymVisits: () => this.go('gymvisits'),
       gymMembersLabel: this.t('members'), gymScanLabel: this.t('scan_member'), gymVisitsLabel: this.t('visit_history'), comingSoonText: this.t('coming_soon'),
