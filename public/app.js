@@ -618,7 +618,8 @@ class Component extends DCLogic {
   gymScanNew() { this.setState({ gymScanResult: null, gymScanSaved: null, gymScanReason: '', gymSearchResults: [] }); }
   // ---------- Gym GRO: Camera QR Scanner ----------
   gymStartCamera() {
-    if (this.state.gymCameraActive || !window.Html5Qrcode) return;
+    if (this.state.gymCameraActive) return;
+    if (!window.Html5Qrcode) { this.toastMsg(this.t('camera_error')); return; }
     this.setState({ gymCameraActive: true });
     const qr = new Html5Qrcode('qrReader');
     this._qrScanner = qr;
