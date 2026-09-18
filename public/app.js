@@ -619,19 +619,25 @@ class Component extends DCLogic {
   // ---------- Gym GRO: Camera QR Scanner ----------
   gymStartCamera() {
     if (this.state.gymCameraActive) return;
-    if (!window.Html5Qrcode) { this.toastMsg(this.t('camera_error')); return; }
+    if (!window.Html5Qrcode) { this.toastMsg(this.t('camera_loading')); return; }
     this.setState({ gymCameraActive: true });
-    const qr = new Html5Qrcode('qrReader');
-    this._qrScanner = qr;
-    qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } },
-      (code) => {
-        try { if (navigator.vibrate) navigator.vibrate(100); } catch (_e) {}
-        try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = 1200; osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.08); } catch (_e) {}
-        this.gymStopCamera();
-        this.gymScanLookup(code);
-      },
-      () => {}
-    ).catch(() => { this.setState({ gymCameraActive: false }); this.toastMsg(this.t('camera_error')); });
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const el = document.getElementById('qrReader');
+        if (!el) { this.setState({ gymCameraActive: false }); this.toastMsg(this.t('camera_error')); return; }
+        const qr = new Html5Qrcode('qrReader');
+        this._qrScanner = qr;
+        qr.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } },
+          (code) => {
+            try { if (navigator.vibrate) navigator.vibrate(100); } catch (_e) {}
+            try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = 1200; osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.08); } catch (_e) {}
+            this.gymStopCamera();
+            this.gymScanLookup(code);
+          },
+          () => {}
+        ).catch((err) => { this.setState({ gymCameraActive: false }); this.toastMsg(this.t('camera_error') + (err && err.message ? ': ' + err.message : '')); });
+      }, 100);
+    });
   }
   gymStopCamera() {
     this.setState({ gymCameraActive: false, gymCameraFlash: false });

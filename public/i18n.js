@@ -491,6 +491,7 @@ window.__I18N = (function () {
     stop_scan:             { id: 'Berhenti',                en: 'Stop' },
     flash:                 { id: 'Flash',                   en: 'Flash' },
     camera_error:          { id: 'Gagal membuka kamera.',   en: 'Failed to open camera.' },
+    camera_loading:        { id: 'Library kamera belum siap, coba lagi.', en: 'Camera library not ready, try again.' },
     // ---- Admin CRUD ----
     admin_new_session:     { id: 'Buat Sesi Baru',          en: 'New Session' },
     admin_edit_session:    { id: 'Edit Sesi',               en: 'Edit Session' },
