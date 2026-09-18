@@ -23,6 +23,7 @@ class Component extends DCLogic {
       rschSearch: '', rschStatus: '', vcEdit: {},
       vcDate: '', vcModal: null, vcSaving: false,
       pkgSearch: '', pkgStatus: '', pkgDetail: null,
+      rcDate: '', rcSearch: '', rcStatus: '', rcDetail: null, rcStarting: false,
       reschedule: null, rsSlot: '', rsReason: '', rsReasonOther: '', rsSaving: false,
       menuModal: false, menuBuilder: null,
       reviewCoach: '', boardSort: 'pax',
@@ -56,7 +57,7 @@ class Component extends DCLogic {
   // the user is typing/selecting, so the background refresh never disrupts an action.
   autoRefresh() {
     if (this.MOCK || !this.state.loggedIn) return;
-    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.gymCard || this.state.gymRsModal || this.state.gymPendingModal) return;
+    if (this.state.absen || this.state.reset || this.state.menuModal || this.state.checkoutModal || this.state.reschedule || this.state.pkgDetail || this.state.vcModal || this.state.rcDetail || this.state.gymCard || this.state.gymRsModal || this.state.gymPendingModal) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const scr = this.state.screen;
@@ -68,7 +69,7 @@ class Component extends DCLogic {
     }
   }
   emptyData() {
-    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '',
+    return { today: [], todayLabel: '', jadwalLabel: 'UPCOMING', week: [], weekStart: '', weekRange: '', monthly: [], monthlyYear: '', calCells: [], calMonthLabel: '', calYm: '', calPrevYm: '', calNextYm: '', selDate: '', mPesertaBulan: 0, mKelasBulan: 0, mPesertaTahun: 0, members: [], membersTotal: 0, membersActive: 0, leaderboard: [], recent: [], month: { classes: 0, peserta: 0 }, classDetail: null, subOptions: [], emailLog: [], fbClasses: [], fbParticipants: [], fbClassLabel: '', templates: [], hcToday: [], schedule: { coaches: [], times: [], grid: {} }, subs: { pending: [], history: [] }, rotations: { incoming: [], outgoing: [] }, reviews: [], reviewAvg: 0, reviewCount: 0, reviewCats: [], coaches: [], stats: [], statMonth: '', venues: [], venueBookings: [], venueCoaches: [], venueIsHC: false, classMenus: [], menuCanManage: false, arenaLoc: { set: false, radius_m: 150 }, arenaCalCells: [], arenaCalLabel: '', arenaCalYm: '', arenaCalPrevYm: '', arenaCalNextYm: '', registerRows: [], registerMonths: [], registerCanCheck: false, classPopup: null, coachSess: { rows: [], sessions: [], months: [], monthLabel: '', totals: {}, hoursAvailable: true }, pendingCheckout: [], vcSessions: [], vcAssignable: [], vcBeforeCutoff: false, vcValidationFrom: '', rcBookings: [],
       gymCalCells: [], gymCalLabel: '', gymCalYm: '', gymCalPrevYm: '', gymCalNextYm: '', gymSelDate: '', gymDayClasses: [], gymDayLabel: '', gymClients: [], gymClientsTotal: 0, gymClientsActive: 0, gymClientsWithPkg: 0, gymClientsInactive: 0, gymVisits: [], gymCoachBookings: [], gymPackages: [], gymSchedData: null };
   }
   // ---- per-tab session token (multi-tab fix) ----
@@ -223,6 +224,12 @@ class Component extends DCLogic {
     }
     if (this._pkgFocus && this.state.screen === 'packageorders') {
       const el = (root || document).querySelector('#pkgSearchInput');
+      if (el && document.activeElement !== el) {
+        try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
+      }
+    }
+    if (this._rcFocus && this.state.screen === 'recoverycenter') {
+      const el = (root || document).querySelector('#rcSearchInput');
       if (el && document.activeElement !== el) {
         try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
       }
@@ -722,6 +729,7 @@ class Component extends DCLogic {
     else if (screen === 'gympending') this.loadGymPendingList();
     else if (screen === 'reschedule') this.api('/api/gro/participants/search').then((r) => this.setD({ rschBookings: r.participants || [] })).catch(fail);
     else if (screen === 'validatecoach') this.loadVcSessions();
+    else if (screen === 'recoverycenter') this.loadRcBookings();
     else if (screen === 'renters') this.api('/api/venue/leaderboard?month=' + (this.state.venueLbYm || '')).then((r) => this.setD({ venueRenters: r.renters, venueLbMonths: r.months || [] })).catch(fail);
     else if (screen === 'menu') this.api('/api/coach/menu').then((r) => this.setD({ classMenus: r.menus, menuCanManage: r.canManage, menuClassTypes: r.classTypes || [] })).catch(fail);
     else if (screen === 'settings') this.api('/api/settings/arena-location').then((r) => this.setD({ arenaLoc: r })).catch(fail);
@@ -884,6 +892,37 @@ class Component extends DCLogic {
     this.api('/api/gro/validation/save', { method: 'POST', body: JSON.stringify(payload) })
       .then(() => { this.toastMsg(this.t('validation_saved')); this.closeValidate(); this.loadVcSessions(); })
       .catch((e) => { this.setState({ vcSaving: false }); this.toastMsg(e.message || 'Failed to save validation.'); });
+  }
+  // ---- Recovery Center (GRO): confirm payment, then start the service ----
+  // Only the date is sent to the server (day-scoped query); search + status are filtered
+  // client-side in render, so typing never rebuilds the list mid-keystroke.
+  loadRcBookings() {
+    if (this.MOCK) return;
+    const date = this.state.rcDate || this.todayISO();
+    this.api('/api/gro/recovery/bookings?date=' + encodeURIComponent(date))
+      .then((r) => this.setD({ rcBookings: r.bookings || [] }))
+      .catch((e) => this.toastMsg(e.message || 'Failed to load bookings.'));
+  }
+  setRcDate(e) { const v = e && e.target ? e.target.value : ''; this.setState({ rcDate: v }); if (!this.MOCK) this.loadRcBookings(); }
+  setRcSearch(e) { this._rcFocus = true; this.setState({ rcSearch: e && e.target ? e.target.value : '' }); }
+  setRcStatus(e) { this._rcFocus = false; this.setState({ rcStatus: e && e.target ? e.target.value : '' }); }
+  openRcDetail(b) { this._rcFocus = false; this.setState({ rcDetail: b }); }
+  closeRcDetail() { this.setState({ rcDetail: null }); }
+  // Mark the service as started. When the booking is not recorded as paid, confirm first — the
+  // GRO may have taken payment at the desk, but the prompt keeps "validate payment, then start"
+  // front and centre.
+  rcStart(id, paid) {
+    if (!id || this.state.rcStarting) return;
+    if (!paid && !window.confirm(this.t('rc_confirm_unpaid'))) return;
+    this.setState({ rcStarting: true });
+    this.api('/api/gro/recovery/' + encodeURIComponent(id) + '/start', { method: 'POST', body: JSON.stringify({}) })
+      .then(() => { this.setState({ rcStarting: false, rcDetail: null }); this.toastMsg(this.t('rc_started_toast')); this.loadRcBookings(); })
+      .catch((e) => { this.setState({ rcStarting: false }); this.toastMsg(e.message || 'Failed to start service.'); });
+  }
+  // Format an ISO timestamp as a Jakarta HH:MM label (for "Started 14:05").
+  _rcTime(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }); } catch (_e) { return ''; }
   }
   // Resize/compress an image file to a JPEG data URL so uploads stay small and the PDF light.
   _compressImage(file, maxDim, quality) {
@@ -1613,7 +1652,7 @@ class Component extends DCLogic {
     const user = st.user;
 
     const A = (k) => this.navMeta(scr === k);
-    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile'), checkin: A('checkin'), packageorders: A('packageorders'), reschedule: A('reschedule'), validatecoach: A('validatecoach') };
+    const nav = { dash: A('dash'), email: A('email'), reviews: A('reviews'), monthly: A('monthly'), members: A('members'), leaderboard: A('leaderboard'), venue: A('venue'), venueassign: A('venueassign'), menu: A('menu'), overview: A('overview'), schedule: A('schedule'), subrev: A('subrev'), monitor: A('monitor'), reports: A('reports'), accounts: A('accounts'), renters: A('renters'), templates: A('templates'), settings: A('settings'), perms: A('perms'), profile: A('profile'), checkin: A('checkin'), packageorders: A('packageorders'), reschedule: A('reschedule'), validatecoach: A('validatecoach'), recoverycenter: A('recoverycenter') };
     if (scr === 'detail' || scr === 'subreq') Object.assign(nav.dash, this.navMeta(true));
     if (scr === 'stats') Object.assign(nav.monitor, this.navMeta(true));
     if (scr === 'addcoach') Object.assign(nav.accounts, this.navMeta(true));
@@ -1637,9 +1676,11 @@ class Component extends DCLogic {
     titles.packageorders = ['GRO', 'Package Orders'];
     titles.reschedule = ['GRO', 'Reschedule'];
     titles.validatecoach = ['GRO', this.t('validate_coach')];
+    titles.recoverycenter = ['GRO', this.t('recovery_center')];
     if (scr === 'packageorders') tt = titles.packageorders;
     if (scr === 'reschedule') tt = titles.reschedule;
     if (scr === 'validatecoach') tt = titles.validatecoach;
+    if (scr === 'recoverycenter') tt = titles.recoverycenter;
     titles.gymview = ['20FIT Gym', 'Schedule'];
     titles.gymmembers = ['20FIT Gym', this.t('members')];
     titles.gympackages = ['20FIT Gym', 'Package Orders'];
@@ -1652,7 +1693,7 @@ class Component extends DCLogic {
     if (scr === 'gymvisits') tt = titles.gymvisits;
     titles.gympending = ['20FIT Gym', this.t('rs_pending_list')];
     if (scr === 'gympending') tt = titles.gympending;
-    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach' };
+    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -1783,6 +1824,40 @@ class Component extends DCLogic {
       return true;
     }).map((o) => { const m = pkgStatusMeta(o.statusKey); return Object.assign({}, o, { statusBg: m.bg, statusCol: m.col, open: () => this.openPkgDetail(o) }); });
     const pd = st.pkgDetail; const pdMeta = pd ? pkgStatusMeta(pd.statusKey) : null;
+    // ---- Recovery Center (GRO): payment validation + start ----
+    const rcFmtRp = (n) => 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
+    const rcPayMeta = (k) => k === 'paid' ? { label: this.t('paid_status'), bg: 'rgba(28,138,75,.14)', col: C.green }
+      : k === 'cancelled' ? { label: this.t('cancelled_tag'), bg: 'rgba(228,0,43,.14)', col: C.red }
+      : { label: this.t('unpaid_status'), bg: 'rgba(199,122,0,.16)', col: C.amber };
+    const rcTerm = (st.rcSearch || '').trim().toLowerCase();
+    const rcList = (D.rcBookings || []).filter((b) => {
+      if (st.rcStatus === 'started' && !b.started) return false;
+      if (st.rcStatus && st.rcStatus !== 'started' && b.payKey !== st.rcStatus) return false;
+      if (rcTerm && ((b.name || '') + ' ' + (b.code || '') + ' ' + (b.phone || '')).toLowerCase().indexOf(rcTerm) < 0) return false;
+      return true;
+    });
+    const rcRows = rcList.map((b, i) => {
+      const pm = rcPayMeta(b.payKey);
+      const cancelled = b.payKey === 'cancelled';
+      const canStart = !cancelled && !b.started;
+      const startedLabel = b.started ? (this.t('started_at') + ' ' + this._rcTime(b.startedAt)) : '';
+      return Object.assign({}, b, {
+        no: i + 1,
+        timeLabel: b.time || '—', timeCol: b.time ? C.text : C.muted2,
+        therapistLabel: b.therapist || '—', therapistCol: b.therapist ? C.text : C.muted2,
+        payLabel: pm.label, payBg: pm.bg, payCol: pm.col,
+        hasVoucher: !!b.voucherCode, voucherLabel: b.voucherCode || '—', voucherCol: b.voucherCode ? C.text : C.muted2,
+        startedLabel,
+        actLabel: b.started ? startedLabel : (cancelled ? this.t('cancelled_tag') : this.t('start_service')),
+        actDisabled: !canStart, actBg: b.started ? 'rgba(28,138,75,.14)' : (cancelled ? 'var(--border2)' : C.green),
+        actFg: b.started ? C.green : (cancelled ? C.muted : '#ffffff'), actCursor: canStart ? 'pointer' : 'default',
+        actTitle: cancelled ? this.t('rc_cancelled_hint') : (b.started ? this.t('already_started') : this.t('rc_start_hint')),
+        start: (e) => { if (e && e.stopPropagation) e.stopPropagation(); if (canStart) this.rcStart(b.id, b.payKey === 'paid'); },
+        open: () => this.openRcDetail(b),
+      });
+    });
+    const rcd = st.rcDetail; const rcdMeta = rcd ? rcPayMeta(rcd.payKey) : null;
+    const rcdCanStart = !!(rcd && rcd.payKey !== 'cancelled' && !rcd.started);
     // venue bookings that fall on the selected schedule day (shown inside the Schedule screen)
     const scheduleVenues = (D.venues || []).map((v) => Object.assign({}, v, { customer: v.customer || 'Arena booking', timeLabel: v.time ? (v.time + (v.end ? ' ' + v.end : '')) : 'Flexible time', hasArena: !!v.arena, hasPhone: !!v.phone, hasNotes: !!v.notes, canAbsen: !!v.canAbsen, started: !!v.started, openAbsen: () => this.openVenueAbsen(v) }));
     const hasScheduleVenues = scheduleVenues.length > 0;
@@ -2542,6 +2617,7 @@ class Component extends DCLogic {
     return {
       isGro, goReschedule: () => this.go('reschedule'),
       goValidateCoach: () => this.go('validatecoach'),
+      goRecoveryCenter: () => this.go('recoverycenter'),
       // Unit switcher — shown for admin & coach; picks which unit's data the view shows.
       // Units-driven switcher (list from /api/units, never hardcoded). Shown to admin, coach & GRO.
       showUnitSwitch: (isAdmin || st.role === 'coach') && (st.units || []).length > 1,
@@ -2909,6 +2985,28 @@ class Component extends DCLogic {
       pdPackage: pd ? pd.package : '', pdSessions: pd ? pd.sessionsLabel : '', pdBuyDate: pd ? pd.buyDateLabel : '',
       pdStatusLabel: pd ? pd.statusLabel : '', pdStatusBg: pdMeta ? pdMeta.bg : '', pdStatusCol: pdMeta ? pdMeta.col : '',
       pdVoucher: pd ? pd.voucherCode : '', pdHasVoucher: !!(pd && pd.voucherCode), pdNotes: pd ? pd.notes : '', pdHasNotes: !!(pd && pd.notes),
+      // Recovery Center (GRO) — page, list + detail modal
+      rcNavBg: scr === 'recoverycenter' ? 'var(--raised)' : 'transparent',
+      rcTitle: this.t('recovery_center'), rcSubtitle: this.t('rc_subtitle'),
+      rcDateVal: st.rcDate || this.todayISO(), setRcDate: (e) => this.setRcDate(e),
+      rcSearchVal: st.rcSearch || '', setRcSearch: (e) => this.setRcSearch(e), rcSearchPlaceholder: this.t('rc_search_placeholder'),
+      rcStatusOpts: [{ v: '', l: this.t('all_status') }, { v: 'paid', l: this.t('paid_status') }, { v: 'pending', l: this.t('unpaid_status') }, { v: 'started', l: this.t('started_filter') }, { v: 'cancelled', l: this.t('cancelled_tag') }].map((o) => ({ value: o.v, label: o.l, picked: st.rcStatus === o.v })), setRcStatus: (e) => this.setRcStatus(e),
+      rcRows, rcHasRows: rcRows.length > 0, rcNoRows: rcRows.length === 0, rcNoBookingsText: this.t('rc_no_bookings'),
+      rcCountLabel: rcRows.length + ' ' + this.t('rc_count'),
+      rcColNo: this.t('no'), rcColTime: this.t('time'), rcColCustomer: this.t('customer'), rcColService: this.t('service'), rcColTherapist: this.t('therapist'), rcColPayment: this.t('payment'), rcColVoucher: this.t('voucher'),
+      showRcDetail: !!rcd, closeRcDetail: () => this.closeRcDetail(), rcDetailTitle: this.t('booking_detail'), rcCloseLabel: this.t('close'),
+      rcdCode: rcd ? rcd.code : '', rcdName: rcd ? rcd.name : '', rcdPhone: rcd ? rcd.phone : '', rcdHasPhone: !!(rcd && rcd.phone), rcdEmail: rcd ? rcd.email : '', rcdHasEmail: !!(rcd && rcd.email),
+      rcdService: rcd ? rcd.service : '', rcdWhen: rcd ? ((rcd.dateLabel || '') + (rcd.time ? (' · ' + rcd.time) : '')) : '', rcdTherapist: rcd ? (rcd.therapist || '—') : '',
+      rcdServiceLabel: this.t('service'), rcdAppointmentLabel: this.t('appointment'), rcdTherapistLabel: this.t('therapist'), rcdPaymentLabel: this.t('payment'), rcdPriceLabel: this.t('price'), rcdVoucherLabel: this.t('voucher'), rcdMethodLabel: this.t('payment_method'), rcdRefLabel: this.t('payment_ref'), rcdNotesLabel: this.t('notes_label'),
+      rcdPayLabel: rcdMeta ? rcdMeta.label : '', rcdPayBg: rcdMeta ? rcdMeta.bg : '', rcdPayCol: rcdMeta ? rcdMeta.col : '',
+      rcdPrice: rcd ? rcFmtRp(rcd.price) : '', rcdHasDiscount: !!(rcd && rcd.discount > 0), rcdDiscount: rcd ? ('– ' + rcFmtRp(rcd.discount)) : '', rcdHasPriceBefore: !!(rcd && rcd.priceBefore && rcd.priceBefore !== rcd.price), rcdPriceBefore: rcd && rcd.priceBefore ? rcFmtRp(rcd.priceBefore) : '',
+      rcdHasVoucher: !!(rcd && rcd.voucherCode), rcdVoucher: rcd ? rcd.voucherCode : '',
+      rcdHasMethod: !!(rcd && rcd.paymentMethod), rcdMethod: rcd ? rcd.paymentMethod : '', rcdHasRef: !!(rcd && rcd.paymentRef), rcdRef: rcd ? rcd.paymentRef : '',
+      rcdHasNotes: !!(rcd && rcd.notes), rcdNotes: rcd ? rcd.notes : '',
+      rcdStarted: !!(rcd && rcd.started), rcdStartedLabel: rcd && rcd.started ? (this.t('started_at') + ' ' + this._rcTime(rcd.startedAt)) : '',
+      rcdCanStart, rcdStartLabel: st.rcStarting ? this.t('starting') : this.t('start_service'), rcdStartDisabled: !rcdCanStart || st.rcStarting,
+      rcdStartBg: rcdCanStart ? C.green : 'var(--border2)', rcdStartCursor: (rcdCanStart && !st.rcStarting) ? 'pointer' : 'not-allowed',
+      rcdStart: () => { if (rcd) this.rcStart(rcd.id, rcd.payKey === 'paid'); },
       isCoachView, showCoachNav: isCoachView || isAdmin, hasIncoming, incomingCount, rotHeader,
       isExternal: this.isExternal, isGro, showReview: !this.isExternal && !isGro, showLeaderboard: !this.isExternal && !isGro,
       showMembers: isHC || isGro, canOpenClass: true,
