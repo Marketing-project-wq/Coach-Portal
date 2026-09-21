@@ -234,6 +234,29 @@ class Component extends DCLogic {
         try { el.focus({ preventScroll: true }); const n = el.value.length; el.setSelectionRange(n, n); } catch (_e) {}
       }
     }
+    if (this.state.screen === 'gymreport' && (this.state.gymReportTab || 'daily') === 'monthly' && window.Chart) {
+      const canvas = (root || document).querySelector('#rptTrendChart');
+      if (canvas) {
+        const d = (this.state.d || {}).gymRptMonthly;
+        if (d && d.dailyTrend && d.dailyTrend.length) {
+          if (this._rptChart) { try { this._rptChart.destroy(); } catch (_e) {} }
+          const labels = d.dailyTrend.map(function(r) { return r.date.slice(8); });
+          const visits = d.dailyTrend.map(function(r) { return r.visits; });
+          const sessions = d.dailyTrend.map(function(r) { return r.sessions; });
+          this._rptChart = new window.Chart(canvas, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [
+                { label: this.t('rpt_total_visits'), data: visits, borderColor: '#E4002B', backgroundColor: 'rgba(228,0,43,.1)', fill: true, tension: 0.3 },
+                { label: this.t('rpt_total_sessions'), data: sessions, borderColor: '#0068C9', backgroundColor: 'rgba(0,104,201,.1)', fill: true, tension: 0.3 }
+              ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+          });
+        }
+      }
+    }
   }
   localizeDOM(root) {
     const I = window.__I18N || {}; const d = I.dict || {}; const dr = I.dateRepl || [];
@@ -288,7 +311,7 @@ class Component extends DCLogic {
     // External coaches may reach Schedule, Monitoring, Coverage, Venue Booking, Class Menu, the
     // class Detail (participant names + level), and their own Account Settings.
     if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
-    const GYM_SCREENS = ['gymview', 'gymmembers', 'gympackages', 'gymscan', 'gymvisits'];
+    const GYM_SCREENS = ['gymview', 'gymmembers', 'gympackages', 'gymscan', 'gymvisits', 'gymreport'];
     // GRO screen scope depends on the unit they are locked to — Gym GRO gets only Gym screens,
     // Arena GRO only the Arena GRO screens (schedule/check-in, venue, class detail, members).
     if (role === 'gro') {
@@ -680,6 +703,65 @@ class Component extends DCLogic {
     const a = document.createElement('a'); a.href = url; a.download = 'gym-visits.csv'; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000); this.toastMsg('CSV file downloaded');
   }
+  // ---------- Gym report ----------
+  loadGymReport() {
+    if (this.MOCK) return;
+    const tab = this.state.gymReportTab || 'daily';
+    this.setState({ gymReportLoading: true });
+    if (tab === 'daily') {
+      const d = this.state.gymReportDate || this.todayISO();
+      this.api('/api/unit/gym/report/daily?date=' + d).then((r) => this.setD({ gymRptDaily: r })).catch(() => {}).finally(() => this.setState({ gymReportLoading: false }));
+    } else {
+      const m = this.state.gymReportMonth || this.todayISO().slice(0, 7);
+      this.api('/api/unit/gym/report/monthly?month=' + m).then((r) => this.setD({ gymRptMonthly: r })).catch(() => {}).finally(() => this.setState({ gymReportLoading: false }));
+    }
+  }
+  setGymReportTab(tab) { this.setState({ gymReportTab: tab }); this.loadGymReport(); }
+  setGymReportDate(e) { this.setState({ gymReportDate: e && e.target ? e.target.value : '' }); this.loadGymReport(); }
+  setGymReportMonth(e) { this.setState({ gymReportMonth: e && e.target ? e.target.value : '' }); this.loadGymReport(); }
+  exportGymDailyCSV() {
+    const d = (this.state.d || {}).gymRptDaily; if (!d) return this.toastMsg('No data.');
+    const rows = [];
+    rows.push(['=== ' + this.t('rpt_by_coach') + ' ===']);
+    rows.push([this.t('rpt_coach_name'), this.t('rpt_sessions'), this.t('rpt_registered'), this.t('rpt_attended'), this.t('rpt_no_show'), this.t('rpt_attendance_rate')]);
+    (d.byCoach || []).forEach(function(c) { rows.push([c.coach, c.sessions, c.registered, c.attended, c.noShow, c.rate]); });
+    rows.push([]);
+    rows.push(['=== ' + this.t('rpt_by_class') + ' ===']);
+    rows.push([this.t('rpt_class_name'), this.t('rpt_type'), this.t('rpt_time'), this.t('rpt_coach_name'), this.t('rpt_capacity'), this.t('rpt_attended'), this.t('rpt_no_show'), this.t('rpt_cancelled')]);
+    (d.byClass || []).forEach(function(c) { rows.push([c.className, c.type || '', c.time, c.coach, c.registered + '/' + c.quota, c.attended, c.noShow, c.cancelled]); });
+    rows.push([]);
+    rows.push(['=== ' + this.t('rpt_visits_detail') + ' ===']);
+    rows.push([this.t('rpt_time'), this.t('rpt_member'), this.t('rpt_coach'), this.t('rpt_package'), this.t('rpt_type'), this.t('rpt_status')]);
+    (d.visits || []).forEach(function(v) { rows.push([v.time, v.member, v.coach || '', v.package || '', v.type, v.status]); });
+    this._downloadCSV(rows, 'gym-report-daily-' + (d.date || '') + '.csv');
+  }
+  exportGymMonthlyCSV() {
+    const d = (this.state.d || {}).gymRptMonthly; if (!d) return this.toastMsg('No data.');
+    const rows = [];
+    rows.push(['=== ' + this.t('rpt_by_coach') + ' ===']);
+    rows.push([this.t('rpt_coach_name'), this.t('rpt_sessions'), this.t('rpt_registered'), this.t('rpt_attended'), this.t('rpt_no_show'), this.t('rpt_attendance_rate')]);
+    (d.byCoach || []).forEach(function(c) { rows.push([c.coach, c.sessions, c.registered, c.attended, c.noShow, c.rate]); });
+    rows.push([]);
+    rows.push(['=== ' + this.t('rpt_by_class') + ' ===']);
+    rows.push([this.t('rpt_class_name'), this.t('rpt_sessions'), this.t('rpt_avg_per_session'), this.t('rpt_attended'), this.t('rpt_attendance_rate')]);
+    (d.byClass || []).forEach(function(c) { rows.push([c.className, c.sessions, c.avgAttendance, c.totalAttended, c.rate]); });
+    rows.push([]);
+    rows.push(['=== ' + this.t('rpt_top_clients') + ' ===']);
+    rows.push(['#', this.t('rpt_member'), this.t('rpt_visits'), this.t('rpt_coach'), this.t('rpt_package')]);
+    (d.topClients || []).forEach(function(c, i) { rows.push([i + 1, c.name, c.visits, c.coach || '', c.package || '']); });
+    rows.push([]);
+    rows.push(['=== ' + this.t('rpt_low_quota') + ' ===']);
+    rows.push([this.t('rpt_member'), this.t('rpt_coach'), this.t('rpt_remaining'), this.t('rpt_total_quota'), this.t('rpt_expires')]);
+    (d.lowQuota || []).forEach(function(q) { rows.push([q.name, q.coach || '', q.remaining, q.total, q.expires || '']); });
+    this._downloadCSV(rows, 'gym-report-monthly-' + (d.month || '') + '.csv');
+  }
+  _downloadCSV(rows, filename) {
+    const csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000); this.toastMsg('CSV file downloaded');
+  }
+  printGymReport() { window.print(); }
   // ---------- Gym coach: PT bookings check-in ----------
   loadGymCoachBookings() { if (this.MOCK) return; this.api('/api/unit/gym/coach/bookings').then((r) => this.setD({ gymCoachBookings: r.bookings || [] })).catch(() => {}); }
   gymCoachCheckin(id) {
@@ -717,6 +799,7 @@ class Component extends DCLogic {
     if (screen === 'dash') { this.api('/api/coach/dashboard').then((d) => this.setD({ month: d.month, todayLabel: d.todayLabel })).catch(fail); this.loadCalendar(); this.showDay(this.todayISO()); this.loadRotations(); if (this.state.role === 'gro') this.loadArenaCalendar(); }
     else if (screen === 'gymview' || screen === 'gymmembers') this.loadGymView();
     else if (screen === 'gymvisits') this.loadGymVisits();
+    else if (screen === 'gymreport') this.loadGymReport();
     else if (screen === 'gympackages') this.loadGymPackages();
     else if (screen === 'monthly') this.api('/api/coach/monthly').then((r) => this.setD({ monthly: r.months, monthlyYear: r.year, mPesertaBulan: r.monthPeserta, mKelasBulan: r.monthClasses, mPesertaTahun: r.yearPeserta })).catch(fail);
     else if (screen === 'members') this.api('/api/coach/members?month=' + (this.state.memberYm || '')).then((r) => this.setD({ members: r.members, membersTotal: r.total, membersActive: r.active30, memberMonths: r.months || [] })).catch(fail);
@@ -1692,8 +1775,10 @@ class Component extends DCLogic {
     if (scr === 'gymscan') tt = titles.gymscan;
     if (scr === 'gymvisits') tt = titles.gymvisits;
     titles.gympending = ['20FIT Gym', this.t('rs_pending_list')];
+    titles.gymreport = ['20FIT Gym', this.t('report')];
     if (scr === 'gympending') tt = titles.gympending;
-    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
+    if (scr === 'gymreport') tt = titles.gymreport;
+    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', gymreport: scr === 'gymreport', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -2633,7 +2718,7 @@ class Component extends DCLogic {
       showGymGroMenu: st.unit === 'gym' && (isGro || isAdmin),
       hcArena: isHC && st.unit !== 'gym', adminArena: isAdmin && st.unit !== 'gym',
       notGroGym: !(isGro && st.unit === 'gym'), showGroArena: isGro && st.unit === 'arena', showGroGym: isGro && st.unit === 'gym',
-      goGymSchedule: () => this.go('gymview'), goGymMembers: () => this.go('gymmembers'), goGymPackages: () => this.go('gympackages'), goGymScan: () => this.go('gymscan'), goGymVisits: () => this.go('gymvisits'),
+      goGymSchedule: () => this.go('gymview'), goGymMembers: () => this.go('gymmembers'), goGymPackages: () => this.go('gympackages'), goGymScan: () => this.go('gymscan'), goGymVisits: () => this.go('gymvisits'), goGymReport: () => this.go('gymreport'),
       gymMembersLabel: this.t('members'), gymScanLabel: this.t('scan_member'), gymVisitsLabel: this.t('visit_history'), comingSoonText: this.t('coming_soon'),
       // Gym scan member
       gymScanHint: this.t('scan_hint'), gymScanPlaceholder: this.t('scan_placeholder'), gymScanSubmit: (e) => this.gymScanSubmit(e),
@@ -2663,6 +2748,76 @@ class Component extends DCLogic {
       gymVisitFromVal: st.gymVisitFrom || '', gymVisitToVal: st.gymVisitTo || '', setGymVisitFrom: (e) => this.setGymVisitFrom(e), setGymVisitTo: (e) => this.setGymVisitTo(e),
       gymVisitQVal: st.gymVisitQ || '', setGymVisitQ: (e) => this.setGymVisitQ(e), exportGymVisits: () => this.exportGymVisits(), exportCsvLabel: this.t('export_csv'),
       tFromDate: this.t('from_date'), tToDate: this.t('to_date'), tVisitPhone: this.t('visit_phone'),
+      // Gym report
+      rptTab: st.gymReportTab || 'daily',
+      rptIsDaily: (st.gymReportTab || 'daily') === 'daily', rptIsMonthly: (st.gymReportTab || 'daily') === 'monthly',
+      rptDailyBg: (st.gymReportTab || 'daily') === 'daily' ? 'var(--volt)' : 'var(--panel)', rptDailyFg: (st.gymReportTab || 'daily') === 'daily' ? '#fff' : 'var(--text)',
+      rptMonthlyBg: (st.gymReportTab || 'daily') === 'monthly' ? 'var(--volt)' : 'var(--panel)', rptMonthlyFg: (st.gymReportTab || 'daily') === 'monthly' ? '#fff' : 'var(--text)',
+      setRptDaily: () => this.setGymReportTab('daily'), setRptMonthly: () => this.setGymReportTab('monthly'),
+      rptDateVal: st.gymReportDate || this.todayISO(), setRptDate: (e) => this.setGymReportDate(e),
+      rptMonthVal: st.gymReportMonth || this.todayISO().slice(0, 7), setRptMonth: (e) => this.setGymReportMonth(e),
+      rptLoading: !!st.gymReportLoading, rptNotLoading: !st.gymReportLoading,
+      rptDailyData: !!D.gymRptDaily, rptMonthlyData: !!D.gymRptMonthly,
+      rptNoData: (st.gymReportTab || 'daily') === 'daily' ? !D.gymRptDaily : !D.gymRptMonthly,
+      rptNoDataText: this.t('rpt_no_data'),
+      // Daily summary cards
+      rptDSessions: D.gymRptDaily ? D.gymRptDaily.summary.totalSessions : 0,
+      rptDVisits: D.gymRptDaily ? D.gymRptDaily.summary.totalVisits : 0,
+      rptDNoShow: D.gymRptDaily ? D.gymRptDaily.summary.totalNoShow : 0,
+      rptDWalkIn: D.gymRptDaily ? D.gymRptDaily.summary.totalWalkIn : 0,
+      rptDCancelled: D.gymRptDaily ? D.gymRptDaily.summary.totalCancelled : 0,
+      rptDRate: D.gymRptDaily ? D.gymRptDaily.summary.attendanceRate : '0%',
+      // Daily by coach
+      rptDCoach: D.gymRptDaily ? (D.gymRptDaily.byCoach || []).map(function(c) { return { name: c.coach, sessions: c.sessions, registered: c.registered, attended: c.attended, noShow: c.noShow, rate: c.rate }; }) : [],
+      rptDHasCoach: !!(D.gymRptDaily && (D.gymRptDaily.byCoach || []).length),
+      // Daily by class
+      rptDClass: D.gymRptDaily ? (D.gymRptDaily.byClass || []).map(function(c) { return { name: c.className, type: c.type || '', time: c.time, coach: c.coach, capacity: c.registered + '/' + c.quota, attended: c.attended, noShow: c.noShow, cancelled: c.cancelled }; }) : [],
+      rptDHasClass: !!(D.gymRptDaily && (D.gymRptDaily.byClass || []).length),
+      // Daily visits
+      rptDVisitRows: D.gymRptDaily ? (D.gymRptDaily.visits || []).map(function(v) { return { time: v.time, member: v.member, coach: v.coach || '—', pkg: v.package || '—', status: v.status, isGroup: v.type === 'group', isPrivate: v.type === 'private', isWalkIn: v.type === 'walk-in', typeBg: v.type === 'group' ? '#3B82F6' : (v.type === 'private' ? '#8B5CF6' : '#f59e0b'), typeLabel: v.type === 'group' ? this.t('rpt_group') : (v.type === 'private' ? this.t('rpt_private') : 'Walk-in') }; }.bind(this)) : [],
+      rptDHasVisits: !!(D.gymRptDaily && (D.gymRptDaily.visits || []).length),
+      // Monthly summary cards
+      rptMVisits: D.gymRptMonthly ? D.gymRptMonthly.summary.totalVisits : 0,
+      rptMAvgDay: D.gymRptMonthly ? D.gymRptMonthly.summary.avgPerDay : 0,
+      rptMSessions: D.gymRptMonthly ? D.gymRptMonthly.summary.totalSessions : 0,
+      rptMNoShow: D.gymRptMonthly ? D.gymRptMonthly.summary.totalNoShow : 0,
+      rptMWalkIn: D.gymRptMonthly ? D.gymRptMonthly.summary.totalWalkIn : 0,
+      rptMCancelled: D.gymRptMonthly ? D.gymRptMonthly.summary.totalCancelled : 0,
+      rptMRate: D.gymRptMonthly ? D.gymRptMonthly.summary.attendanceRate : '0%',
+      rptMDelta: D.gymRptMonthly ? D.gymRptMonthly.summary.visitsDelta : 0,
+      rptMDeltaUp: D.gymRptMonthly ? D.gymRptMonthly.summary.visitsDelta > 0 : false,
+      rptMDeltaDown: D.gymRptMonthly ? D.gymRptMonthly.summary.visitsDelta < 0 : false,
+      rptMDeltaFlat: D.gymRptMonthly ? D.gymRptMonthly.summary.visitsDelta === 0 : true,
+      rptMRateDelta: D.gymRptMonthly ? D.gymRptMonthly.summary.rateDelta : 0,
+      // Monthly by coach
+      rptMCoach: D.gymRptMonthly ? (D.gymRptMonthly.byCoach || []).map(function(c) { return { name: c.coach, sessions: c.sessions, registered: c.registered, attended: c.attended, noShow: c.noShow, rate: c.rate }; }) : [],
+      rptMHasCoach: !!(D.gymRptMonthly && (D.gymRptMonthly.byCoach || []).length),
+      // Monthly by class
+      rptMClass: D.gymRptMonthly ? (D.gymRptMonthly.byClass || []).map(function(c) { return { name: c.className, sessions: c.sessions, avgAttendance: c.avgAttendance, totalAttended: c.totalAttended, rate: c.rate }; }) : [],
+      rptMHasClass: !!(D.gymRptMonthly && (D.gymRptMonthly.byClass || []).length),
+      // Monthly top clients
+      rptMTopClients: D.gymRptMonthly ? (D.gymRptMonthly.topClients || []).map(function(c, i) { return { rank: i + 1, name: c.name, visits: c.visits, coach: c.coach || '—', pkg: c.package || '—' }; }) : [],
+      rptMHasTopClients: !!(D.gymRptMonthly && (D.gymRptMonthly.topClients || []).length),
+      // Monthly low quota alerts
+      rptMLowQuota: D.gymRptMonthly ? (D.gymRptMonthly.lowQuota || []).map(function(q) { return { name: q.name, coach: q.coach || '—', remaining: q.remaining, total: q.total, pct: q.total > 0 ? Math.round(q.remaining / q.total * 100) + '%' : '0%', expires: q.expires || '—' }; }) : [],
+      rptMHasLowQuota: !!(D.gymRptMonthly && (D.gymRptMonthly.lowQuota || []).length),
+      // Labels
+      tRptReport: this.t('report'), tRptDaily: this.t('rpt_daily'), tRptMonthly: this.t('rpt_monthly'),
+      tRptSessions: this.t('rpt_total_sessions'), tRptVisits: this.t('rpt_total_visits'), tRptNoShow: this.t('rpt_no_show'),
+      tRptWalkIn: this.t('rpt_walk_in'), tRptCancelled: this.t('rpt_cancelled'), tRptRate: this.t('rpt_attendance_rate'),
+      tRptCoachName: this.t('rpt_coach_name'), tRptSessionsCol: this.t('rpt_sessions'), tRptRegistered: this.t('rpt_registered'),
+      tRptAttended: this.t('rpt_attended'), tRptClassName: this.t('rpt_class_name'), tRptType: this.t('rpt_type'),
+      tRptTime: this.t('rpt_time'), tRptCapacity: this.t('rpt_capacity'), tRptAvgDay: this.t('rpt_avg_per_day'),
+      tRptAvgSession: this.t('rpt_avg_per_session'), tRptVsLast: this.t('rpt_vs_last_month'),
+      tRptTopClients: this.t('rpt_top_clients'), tRptLowQuota: this.t('rpt_low_quota'),
+      tRptRemaining: this.t('rpt_remaining'), tRptTotalQuota: this.t('rpt_total_quota'), tRptExpires: this.t('rpt_expires'),
+      tRptDownloadDaily: this.t('rpt_download_daily'), tRptDownloadMonthly: this.t('rpt_download_monthly'),
+      tRptPrint: this.t('rpt_print'), tRptByCoach: this.t('rpt_by_coach'), tRptByClass: this.t('rpt_by_class'),
+      tRptVisitsDetail: this.t('rpt_visits_detail'), tRptTotalRow: this.t('rpt_total_row'),
+      tRptMember: this.t('rpt_member'), tRptPackage: this.t('rpt_package'), tRptCoach: this.t('rpt_coach'),
+      tRptStatus: this.t('rpt_status'), tRptVisitsCol: this.t('rpt_visits'), tRptDailyTrend: this.t('rpt_daily_trend'),
+      exportGymDailyCSV: () => this.exportGymDailyCSV(), exportGymMonthlyCSV: () => this.exportGymMonthlyCSV(),
+      printGymReport: () => this.printGymReport(),
       // Gym coach PT check-in panel (on the gym Schedule screen)
       showGymCoachPanel: (st.role === 'coach' || isAdmin) && st.unit === 'gym' && scr === 'gymview',
       gymCoachRows: (D.gymCoachBookings || []).map((b) => ({ id: b.id, time: b.time, member: b.member, checkedIn: b.checkedIn, notCheckedIn: !b.checkedIn, checkin: () => this.gymCoachCheckin(b.id) })),
@@ -2678,7 +2833,7 @@ class Component extends DCLogic {
       gymCardMember: st.gymCard ? st.gymCard.member : '', gymCardCoach: st.gymCard ? (st.gymCard.coach || '—') : '', gymCardCode: st.gymCard ? st.gymCard.voucherCode : '',
       gymCardUsed: st.gymCard ? st.gymCard.used : 0, gymCardTotal: st.gymCard ? st.gymCard.total : 0, gymCardRemaining: st.gymCard ? st.gymCard.remaining : 0,
       tMemberCard: this.t('member_card'), tPrintCard: this.t('print_card'), tShowToGro: this.t('show_to_gro'),
-      gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'),
+      gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'), gymReportNav: this.navMeta(scr === 'gymreport'),
       gymScanBtnBg: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnFg: scr === 'gymscan' ? '#ffffff' : 'var(--text)', gymScanBtnBar: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnWeight: scr === 'gymscan' ? '700' : '600',
       // Gym view (calendar + day list + clients)
       gymCalLabel: D.gymCalLabel || '', gymDow,

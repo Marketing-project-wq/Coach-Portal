@@ -1507,6 +1507,272 @@ route('GET', '/api/unit/gym/class-types', async (req, res, s) => {
   return send(res, 200, { types: list });
 });
 
+// ===== GYM REPORT: Daily =====
+route('GET', '/api/unit/gym/report/daily', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : todayJakarta();
+  const types = await gymClassTypes();
+  const isCoachOnly = s.r === 'coach';
+  const coachName = s.c || '';
+
+  // 1. All sessions on this date
+  let scheds = (await sbAll(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&order=start_time.asc`).catch(() => [])) || [];
+  if (isCoachOnly) scheds = scheds.filter((sc) => instructorHasCoach(sc.instructor, coachName));
+
+  const activeScheds = scheds.filter((sc) => !sc.is_cancelled);
+  const schedIds = activeScheds.map((sc) => sc.id);
+
+  // 2. Bookings for these sessions
+  let allBookings = [];
+  for (let i = 0; i < schedIds.length; i += 100) {
+    const chunk = schedIds.slice(i, i + 100).map(enc).join(',');
+    const bks = (await sbAll(`gym_class_bookings?select=id,schedule_id,full_name,status&schedule_id=in.(${chunk})`).catch(() => [])) || [];
+    allBookings = allBookings.concat(bks);
+  }
+
+  // 3. Visits (scans) on this date
+  let visits = (await sbAll(`pt_visits?select=id,member_name,voucher_code,coach_name,visit_at,status,over_quota,reason&visit_date=eq.${date}&order=visit_at.asc`).catch(() => [])) || [];
+  if (isCoachOnly) visits = visits.filter((v) => (v.coach_name || '').toLowerCase() === coachName.toLowerCase());
+
+  // Voucher info for visits
+  const vcodes = [...new Set(visits.map((v) => v.voucher_code).filter(Boolean))];
+  const vmap = {};
+  for (let i = 0; i < vcodes.length; i += 100) {
+    const chunk = vcodes.slice(i, i + 100).map(enc).join(',');
+    const vs = (await sb(`pt_package_vouchers?select=voucher_code,order_id,coach_name&voucher_code=in.(${chunk})`).catch(() => [])) || [];
+    for (const v of vs) vmap[v.voucher_code] = v;
+  }
+  const orderIds = [...new Set(Object.values(vmap).map((v) => v.order_id).filter(Boolean))];
+  const omap = {};
+  for (let i = 0; i < orderIds.length; i += 100) {
+    const os = (await sb(`pt_package_orders?select=id,full_name,phone,package_name&id=in.(${orderIds.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const o of os) omap[o.id] = o;
+  }
+
+  // Build booking maps
+  const bookingsBySchedule = {};
+  for (const b of allBookings) {
+    if (!bookingsBySchedule[b.schedule_id]) bookingsBySchedule[b.schedule_id] = [];
+    bookingsBySchedule[b.schedule_id].push(b);
+  }
+
+  // Walk-in detection: visit member names NOT in any booking for this date
+  const bookedNames = new Set(allBookings.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').map((b) => (b.full_name || '').toLowerCase()));
+  const activeVisits = visits.filter((v) => v.status === 'active');
+  const walkIns = activeVisits.filter((v) => !bookedNames.has((v.member_name || '').toLowerCase()));
+
+  // Summary
+  const totalRegistered = allBookings.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+  const totalNoShow = allBookings.filter((b) => b.status === 'no_show').length;
+  const totalCancelled = allBookings.filter((b) => b.status === 'cancelled' || b.status === 'rescheduled').length;
+  const totalVisits = activeVisits.length;
+  const rate = totalRegistered > 0 ? Math.round(((totalRegistered - totalNoShow) / totalRegistered) * 100) : 0;
+
+  // By coach
+  const coachMap = {};
+  for (const sc of activeScheds) {
+    const tokens = instructorTokens(sc.instructor);
+    const bks = bookingsBySchedule[sc.id] || [];
+    const reg = bks.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+    const ns = bks.filter((b) => b.status === 'no_show').length;
+    const att = reg - ns;
+    for (const cn of tokens) {
+      const key = cn.toLowerCase();
+      if (!coachMap[key]) coachMap[key] = { coach: cn, sessions: 0, registered: 0, attended: 0, noShow: 0 };
+      coachMap[key].sessions++;
+      coachMap[key].registered += reg;
+      coachMap[key].attended += att;
+      coachMap[key].noShow += ns;
+    }
+  }
+  const byCoach = Object.values(coachMap).map((c) => ({ ...c, rate: c.registered > 0 ? Math.round((c.attended / c.registered) * 100) : 0 }));
+
+  // By class
+  const byClass = activeScheds.map((sc) => {
+    const t = types[sc.class_type_id] || {};
+    const bks = bookingsBySchedule[sc.id] || [];
+    const reg = bks.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+    const ns = bks.filter((b) => b.status === 'no_show').length;
+    return { classType: t.name || 'Class', type: sc.quota === 1 ? 'Private' : 'Group', time: hhmm(sc.start_time) + '-' + hhmm(sc.end_time), coach: sc.instructor || '', quota: sc.quota || 0, registered: reg, attended: reg - ns, noShow: ns };
+  });
+
+  // Visit details
+  const visitDetails = visits.map((v) => {
+    const vc = vmap[v.voucher_code] || {};
+    const o = omap[vc.order_id] || {};
+    const tJkt = v.visit_at ? new Date(v.visit_at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }) : '';
+    return { time: tJkt, member: v.member_name || '', package: o.package_name || '', coach: v.coach_name || '', status: v.status || '', overQuota: !!v.over_quota };
+  });
+
+  return send(res, 200, { date, summary: { totalSessions: activeScheds.length, totalVisits, totalNoShow, totalWalkIn: walkIns.length, totalCancelled, attendanceRate: rate }, byCoach, byClass, visits: visitDetails });
+});
+
+// ===== GYM REPORT: Monthly =====
+route('GET', '/api/unit/gym/report/monthly', async (req, res, s, q) => {
+  if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
+  const ym = /^\d{4}-\d{2}$/.test(q.month || '') ? q.month : todayJakarta().slice(0, 7);
+  const from = ym + '-01';
+  const lastDay = new Date(parseInt(ym.slice(0, 4)), parseInt(ym.slice(5, 7)), 0).getDate();
+  const to = ym + '-' + String(lastDay).padStart(2, '0');
+  const types = await gymClassTypes();
+  const isCoachOnly = s.r === 'coach';
+  const coachName = s.c || '';
+  const today = todayJakarta();
+  const daysInRange = today < to ? Math.max(1, Math.round((new Date(today + 'T23:59:59') - new Date(from + 'T00:00:00')) / 86400000) + 1) : lastDay;
+
+  // 1. All sessions in month
+  let scheds = (await sbAll(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=gte.${from}&schedule_date=lte.${to}&order=schedule_date.asc,start_time.asc`).catch(() => [])) || [];
+  if (isCoachOnly) scheds = scheds.filter((sc) => instructorHasCoach(sc.instructor, coachName));
+  const activeScheds = scheds.filter((sc) => !sc.is_cancelled);
+  const schedIds = activeScheds.map((sc) => sc.id);
+
+  // 2. Bookings
+  let allBookings = [];
+  for (let i = 0; i < schedIds.length; i += 100) {
+    const chunk = schedIds.slice(i, i + 100).map(enc).join(',');
+    const bks = (await sbAll(`gym_class_bookings?select=id,schedule_id,full_name,status&schedule_id=in.(${chunk})`).catch(() => [])) || [];
+    allBookings = allBookings.concat(bks);
+  }
+
+  // 3. Visits in month
+  let visits = (await sbAll(`pt_visits?select=id,member_name,voucher_code,coach_name,visit_date,visit_at,status,over_quota&visit_date=gte.${from}&visit_date=lte.${to}&order=visit_at.asc`).catch(() => [])) || [];
+  if (isCoachOnly) visits = visits.filter((v) => (v.coach_name || '').toLowerCase() === coachName.toLowerCase());
+
+  const activeVisits = visits.filter((v) => v.status === 'active');
+
+  // Walk-in detection
+  const bookedNames = new Set(allBookings.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').map((b) => (b.full_name || '').toLowerCase()));
+  const walkIns = activeVisits.filter((v) => !bookedNames.has((v.member_name || '').toLowerCase()));
+
+  // Summary
+  const totalRegistered = allBookings.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+  const totalNoShow = allBookings.filter((b) => b.status === 'no_show').length;
+  const totalCancelled = allBookings.filter((b) => b.status === 'cancelled' || b.status === 'rescheduled').length;
+  const totalVisits = activeVisits.length;
+  const rate = totalRegistered > 0 ? Math.round(((totalRegistered - totalNoShow) / totalRegistered) * 100) : 0;
+
+  // Prev month for delta
+  const prevYm = parseInt(ym.slice(5, 7)) === 1 ? (parseInt(ym.slice(0, 4)) - 1) + '-12' : ym.slice(0, 5) + String(parseInt(ym.slice(5, 7)) - 1).padStart(2, '0');
+  const prevFrom = prevYm + '-01';
+  const prevLast = new Date(parseInt(prevYm.slice(0, 4)), parseInt(prevYm.slice(5, 7)), 0).getDate();
+  const prevTo = prevYm + '-' + String(prevLast).padStart(2, '0');
+  let prevVisits = (await sbAll(`pt_visits?select=id,status,member_name,coach_name&visit_date=gte.${prevFrom}&visit_date=lte.${prevTo}&status=eq.active`).catch(() => [])) || [];
+  if (isCoachOnly) prevVisits = prevVisits.filter((v) => (v.coach_name || '').toLowerCase() === coachName.toLowerCase());
+  let prevScheds = (await sbAll(`gym_class_schedules?select=id,instructor,is_cancelled&schedule_date=gte.${prevFrom}&schedule_date=lte.${prevTo}`).catch(() => [])) || [];
+  if (isCoachOnly) prevScheds = prevScheds.filter((sc) => instructorHasCoach(sc.instructor, coachName));
+  const prevActive = prevScheds.filter((sc) => !sc.is_cancelled);
+  let prevBookings = [];
+  const prevIds = prevActive.map((sc) => sc.id);
+  for (let i = 0; i < prevIds.length; i += 100) {
+    const chunk = prevIds.slice(i, i + 100).map(enc).join(',');
+    const bks = (await sb(`gym_class_bookings?select=id,status&schedule_id=in.(${chunk})`).catch(() => [])) || [];
+    prevBookings = prevBookings.concat(bks);
+  }
+  const prevReg = prevBookings.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+  const prevNS = prevBookings.filter((b) => b.status === 'no_show').length;
+  const prevRate = prevReg > 0 ? Math.round(((prevReg - prevNS) / prevReg) * 100) : 0;
+  const prevTotalVisits = prevVisits.length;
+  const visitsDelta = prevTotalVisits > 0 ? Math.round(((totalVisits - prevTotalVisits) / prevTotalVisits) * 100 * 10) / 10 : 0;
+  const rateDelta = prevRate > 0 ? rate - prevRate : 0;
+
+  // Daily trend
+  const dailyMap = {};
+  for (let d = 1; d <= lastDay; d++) dailyMap[d] = 0;
+  for (const v of activeVisits) { const d = parseInt((v.visit_date || '').slice(8, 10)); if (d) dailyMap[d]++; }
+  const dailyTrend = [];
+  for (let d = 1; d <= lastDay; d++) dailyTrend.push({ day: d, date: ym + '-' + String(d).padStart(2, '0'), visits: dailyMap[d] || 0 });
+
+  // By coach
+  const bookingsBySchedule = {};
+  for (const b of allBookings) { if (!bookingsBySchedule[b.schedule_id]) bookingsBySchedule[b.schedule_id] = []; bookingsBySchedule[b.schedule_id].push(b); }
+  const coachMap = {};
+  for (const sc of activeScheds) {
+    const tokens = instructorTokens(sc.instructor);
+    const bks = bookingsBySchedule[sc.id] || [];
+    const reg = bks.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+    const ns = bks.filter((b) => b.status === 'no_show').length;
+    for (const cn of tokens) {
+      const key = cn.toLowerCase();
+      if (!coachMap[key]) coachMap[key] = { coach: cn, sessions: 0, registered: 0, attended: 0, noShow: 0 };
+      coachMap[key].sessions++;
+      coachMap[key].registered += reg;
+      coachMap[key].attended += reg - ns;
+      coachMap[key].noShow += ns;
+    }
+  }
+  const byCoach = Object.values(coachMap).map((c) => ({ ...c, rate: c.registered > 0 ? Math.round((c.attended / c.registered) * 100) : 0, avgPerSession: c.sessions > 0 ? Math.round((c.attended / c.sessions) * 10) / 10 : 0 }));
+
+  // By class type (aggregated)
+  const classMap = {};
+  for (const sc of activeScheds) {
+    const t = types[sc.class_type_id] || {};
+    const name = t.name || 'Class';
+    if (!classMap[name]) classMap[name] = { classType: name, sessions: 0, registered: 0, attended: 0, avgPerSession: 0, peakDate: '', peakCount: 0 };
+    const bks = bookingsBySchedule[sc.id] || [];
+    const reg = bks.filter((b) => b.status === 'confirmed' || b.status === 'pending_payment' || b.status === 'no_show').length;
+    const ns = bks.filter((b) => b.status === 'no_show').length;
+    const att = reg - ns;
+    classMap[name].sessions++;
+    classMap[name].registered += reg;
+    classMap[name].attended += att;
+    if (att > classMap[name].peakCount) { classMap[name].peakCount = att; classMap[name].peakDate = sc.schedule_date; }
+  }
+  const byClass = Object.values(classMap).map((c) => ({ ...c, avgPerSession: c.sessions > 0 ? Math.round((c.attended / c.sessions) * 10) / 10 : 0 }));
+
+  // Top 10 clients by visit count
+  const clientMap = {};
+  for (const v of activeVisits) {
+    const n = (v.member_name || '').trim();
+    if (!n) continue;
+    if (!clientMap[n.toLowerCase()]) clientMap[n.toLowerCase()] = { name: n, visits: 0, voucherCode: v.voucher_code };
+    clientMap[n.toLowerCase()].visits++;
+  }
+  const topClientsRaw = Object.values(clientMap).sort((a, b) => b.visits - a.visits).slice(0, 10);
+  // Enrich with package info
+  const topVcodes = [...new Set(topClientsRaw.map((c) => c.voucherCode).filter(Boolean))];
+  const topVmap = {};
+  for (let i = 0; i < topVcodes.length; i += 100) {
+    const chunk = topVcodes.slice(i, i + 100).map(enc).join(',');
+    const vs = (await sb(`pt_package_vouchers?select=voucher_code,order_id,coach_name,total_sessions,used_sessions&voucher_code=in.(${chunk})`).catch(() => [])) || [];
+    for (const v of vs) topVmap[v.voucher_code] = v;
+  }
+  const topOids = [...new Set(Object.values(topVmap).map((v) => v.order_id).filter(Boolean))];
+  const topOmap = {};
+  for (let i = 0; i < topOids.length; i += 100) {
+    const os = (await sb(`pt_package_orders?select=id,package_name&id=in.(${topOids.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const o of os) topOmap[o.id] = o;
+  }
+  const topClients = topClientsRaw.map((c) => {
+    const vc = topVmap[c.voucherCode] || {};
+    const o = topOmap[vc.order_id] || {};
+    return { name: c.name, visits: c.visits, package: o.package_name || '', remaining: Math.max(0, (vc.total_sessions || 0) - (vc.used_sessions || 0)), coach: vc.coach_name || '' };
+  });
+
+  // Low quota clients
+  const lowQuotaVouchers = (await sbAll(`pt_package_vouchers?select=voucher_code,order_id,coach_name,total_sessions,used_sessions,expires_at,is_active&is_active=eq.true`).catch(() => [])) || [];
+  const lowQ = lowQuotaVouchers.filter((v) => {
+    const total = v.total_sessions || 0, used = v.used_sessions || 0, rem = total - used;
+    return total > 0 && rem > 0 && (rem / total) < 0.25 && !(v.expires_at && v.expires_at < today);
+  });
+  const lqOids = [...new Set(lowQ.map((v) => v.order_id).filter(Boolean))];
+  const lqOmap = {};
+  for (let i = 0; i < lqOids.length; i += 100) {
+    const os = (await sb(`pt_package_orders?select=id,full_name,package_name&id=in.(${lqOids.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const o of os) lqOmap[o.id] = o;
+  }
+  let lowQuota = lowQ.map((v) => {
+    const o = lqOmap[v.order_id] || {};
+    const total = v.total_sessions || 0, used = v.used_sessions || 0;
+    return { name: o.full_name || '', package: o.package_name || '', remaining: Math.max(0, total - used), total, coach: v.coach_name || '', expires: v.expires_at || '' };
+  }).filter((v) => v.name).sort((a, b) => a.remaining - b.remaining).slice(0, 20);
+  if (isCoachOnly) lowQuota = lowQuota.filter((v) => v.coach.toLowerCase() === coachName.toLowerCase());
+
+  return send(res, 200, {
+    month: ym, summary: { totalVisits, avgPerDay: Math.round((totalVisits / daysInRange) * 10) / 10, totalSessions: activeScheds.length, totalNoShow, totalWalkIn: walkIns.length, totalCancelled, attendanceRate: rate, prevTotalVisits, visitsDelta, rateDelta },
+    dailyTrend, byCoach, byClass, topClients, lowQuota
+  });
+});
+
 // PT packages list (GRO/admin) — one row per voucher, for the printable member barcode cards.
 route('GET', '/api/unit/gym/packages', async (req, res, s, q) => {
   if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
