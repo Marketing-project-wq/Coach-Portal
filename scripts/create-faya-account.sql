@@ -1,13 +1,12 @@
 -- Create the external coach account for Faya (Nafra Faiza)
 -- Login (username OR email): nafra.faiza@ui.ac.id
 -- Password:                   faya0809
--- Role:                       coach  (external — Gym-only)
--- Unit:                       gym    (restricts access to Gym screens only)
--- coach_name:                 "Faya"  → matches the `instructor` column in gym_class_schedules
+-- Role:                       coach  (external — Arena-only)
+-- Unit:                       arena  (restricts access to Arena screens only)
+-- coach_name:                 "Faya"  → matches the `instructor` column in arena_class_schedules
 --
--- NOTE: Faya is an external coach but is NOT added to the EXTERNAL_COACHES set in server.js
--- because that set forces Arena-only access. Her unit='gym' column already restricts her
--- to Gym screens. She gets the same workspace features as an internal coach, scoped to Gym.
+-- Faya is added to the EXTERNAL_COACHES set in server.js (same as brian, gilang, mae, etc.)
+-- which limits her to Schedule, Monitoring, and Rotation screens only.
 --
 -- This script is the version-controlled record and is safe to re-run.
 -- The password_hash below is a scrypt hash generated with the same algorithm as
@@ -25,7 +24,7 @@ values
     'nafra.faiza@ui.ac.id',
     null,
     true,
-    'gym' )
+    'arena' )
 on conflict (username) do update set
   password_hash  = excluded.password_hash,
   password_plain = excluded.password_plain,
