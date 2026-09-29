@@ -1,12 +1,12 @@
 -- Create the external coach account for Faya (Nafra Faiza)
 -- Login (username OR email): nafra.faiza@ui.ac.id
 -- Password:                   faya0809
--- Role:                       coach  (external — Arena-only)
--- Unit:                       arena  (restricts access to Arena screens only)
--- coach_name:                 "Faya"  → matches the `instructor` column in arena_class_schedules
+-- Role:                       coach  (external — multi-unit)
+-- Unit:                       null   (access to both Arena and Gym)
+-- coach_name:                 "Faya"  → matches the `instructor` column in class schedules
 --
--- Faya is added to the EXTERNAL_COACHES set in server.js (same as brian, gilang, mae, etc.)
--- which limits her to Schedule, Monitoring, and Rotation screens only.
+-- Faya is in EXTERNAL_COACHES set in server.js (limited screen access).
+-- Unit access is controlled by the unit column (null = both units).
 --
 -- This script is the version-controlled record and is safe to re-run.
 -- The password_hash below is a scrypt hash generated with the same algorithm as
@@ -24,7 +24,7 @@ values
     'nafra.faiza@ui.ac.id',
     null,
     true,
-    'arena' )
+    null )
 on conflict (username) do update set
   password_hash  = excluded.password_hash,
   password_plain = excluded.password_plain,

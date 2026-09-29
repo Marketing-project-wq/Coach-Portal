@@ -741,11 +741,7 @@ route('GET', '/api/coach/calendar', async (req, res, s, q) => {
 const PORTAL_UNIT_CODES = ['arena', 'gym'];
 function allowedUnitCodes(s) {
   if (!s) return ['arena'];
-  if (isExternalSession(s)) return ['arena']; // external coaches stay Arena-only
-  // GRO is locked to a single unit (Arena or Gym) so the two never mix. Default Arena
-  // when unset (legacy accounts). Admin / HC keep access to both units.
   if (s.r === 'gro') return [s.unit === 'gym' ? 'gym' : 'arena'];
-  // Coach with explicit unit assignment (e.g. Calysta = gym-only): lock to that unit.
   if (s.r === 'coach' && s.unit === 'gym') return ['gym'];
   if (s.r === 'coach' && s.unit === 'arena') return ['arena'];
   return ['arena', 'gym'];
