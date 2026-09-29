@@ -742,8 +742,11 @@ const PORTAL_UNIT_CODES = ['arena', 'gym'];
 function allowedUnitCodes(s) {
   if (!s) return ['arena'];
   if (s.r === 'gro') return [s.unit === 'gym' ? 'gym' : 'arena'];
-  if (s.r === 'coach' && s.unit === 'gym') return ['gym'];
-  if (s.r === 'coach' && s.unit === 'arena') return ['arena'];
+  if (s.r === 'coach') {
+    if (s.unit === 'gym') return ['gym'];
+    if (s.unit === 'arena' || !s.unit) return ['arena'];
+    return ['arena', 'gym'];
+  }
   return ['arena', 'gym'];
 }
 function unitAllowed(s, code) { return allowedUnitCodes(s).indexOf(String(code || 'arena')) >= 0; }

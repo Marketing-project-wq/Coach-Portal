@@ -2,11 +2,11 @@
 -- Login (username OR email): nafra.faiza@ui.ac.id
 -- Password:                   faya0809
 -- Role:                       coach  (external — multi-unit)
--- Unit:                       null   (access to both Arena and Gym)
+-- Unit:                       'both' (access to both Arena and Gym)
 -- coach_name:                 "Faya"  → matches the `instructor` column in class schedules
 --
 -- Faya is in EXTERNAL_COACHES set in server.js (limited screen access).
--- Unit access is controlled by the unit column (null = both units).
+-- Unit access is controlled by the unit column ('both' = both units, null = arena-only).
 --
 -- This script is the version-controlled record and is safe to re-run.
 -- The password_hash below is a scrypt hash generated with the same algorithm as
@@ -24,7 +24,7 @@ values
     'nafra.faiza@ui.ac.id',
     null,
     true,
-    null )
+    'both' )
 on conflict (username) do update set
   password_hash  = excluded.password_hash,
   password_plain = excluded.password_plain,
