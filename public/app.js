@@ -2707,7 +2707,7 @@ class Component extends DCLogic {
       // Units-driven switcher (list from /api/units, never hardcoded). Shown to admin, coach & GRO.
       showUnitSwitch: (isAdmin || st.role === 'coach') && (st.units || []).length > 1,
       switchUnitLabel: this.t('switch_unit'),
-      unitOpts: (st.units || []).map((u) => { const on = st.unit === u.code; const seg = unitSeg(on); return { code: u.code, label: String(u.name || u.code).replace(/^20FIT\s+/i, ''), on, bg: seg.bg, fg: seg.fg, bar: seg.bar, weight: seg.weight, pick: () => this.setUnit(u.code) }; }),
+      unitOpts: (st.units || []).map((u) => { const on = st.unit === u.code; const seg = unitSeg(on); return { code: u.code, label: String(u.name || u.code).replace(/^20FIT\s+/i, ''), on, bg: seg.bg, fg: seg.fg, bar: seg.bar, weight: seg.weight, pillBg: on ? 'var(--volt)' : 'transparent', pillFg: on ? '#fff' : 'var(--muted)', pick: () => this.setUnit(u.code) }; }),
       // Per-unit menu gating. In Gym mode EVERY role's dashboard becomes Gym-only: all Arena
       // sections hide and only the Gym menu shows. In Arena mode every gate below is identical
       // to before (inArena is true), so the Arena workspace is byte-identical for every role.
