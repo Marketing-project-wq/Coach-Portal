@@ -2827,7 +2827,7 @@ class Component extends DCLogic {
       exportGymDailyCSV: () => this.exportGymDailyCSV(), exportGymMonthlyCSV: () => this.exportGymMonthlyCSV(),
       printGymReport: () => this.printGymReport(),
       // Gym coach PT check-in panel (on the gym Schedule screen)
-      showGymCoachPanel: (st.role === 'coach' || isAdmin) && st.unit === 'gym' && scr === 'gymview',
+      showGymCoachPanel: (isAdmin || isGro) && st.unit === 'gym' && scr === 'gymview',
       gymCoachRows: (D.gymCoachBookings || []).map((b) => ({ id: b.id, time: b.time, member: b.member, checkedIn: b.checkedIn, notCheckedIn: !b.checkedIn, checkin: () => this.gymCoachCheckin(b.id) })),
       gymHasCoachBookings: (D.gymCoachBookings || []).length > 0, gymNoCoachBookings: (D.gymCoachBookings || []).length === 0, tTodaysPt: this.t('todays_pt_sessions'), tCheckInCoach: this.t('check_in_coach'), tCheckedIn: this.t('checked_in'),
       // Gym PT packages + printable member barcode card
@@ -2850,6 +2850,7 @@ class Component extends DCLogic {
       gymDayLabel: D.gymDayLabel || '', gymDay, gymDayHas: gymDay.length > 0, gymDayEmpty: gymDay.length === 0,
       gymClients, gymClientsHas: gymClients.length > 0, gymClientsEmpty: gymClients.length === 0,
       gymClientsTotal: D.gymClientsTotal || 0, gymClientsActive: D.gymClientsActive || 0,
+      gymShowClients: (isAdmin || isGro) && st.unit === 'gym' && scr === 'gymview',
       // GRO full calendar
       gymFullCal, gymMiniCal,
       scIsWeek: _scMode === 'week', scIsMonth: _scMode === 'month', scIsDay: _scMode === 'day',
