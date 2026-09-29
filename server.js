@@ -886,7 +886,9 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   if (!scheds.length) return send(res, 404, { error: 'Class not found' });
   const x = scheds[0], t = types[x.class_type_id] || {};
   const bc = (await gymBookingCounts([x.id]))[x.id] || {};
-  const bookings = (await sb(`gym_class_bookings?select=id,full_name,phone,gender,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
+  const gymBkQ = `gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`;
+  let bookings = await sb(gymBkQ.replace('phone,status', 'phone,gender,status')).catch(() => null);
+  if (!bookings) bookings = (await sb(gymBkQ).catch(() => [])) || [];
   const today = todayJakarta(), nowMin = nowMinutesJakarta();
   const started = x.schedule_date < today || (x.schedule_date === today && hhmmToMin(x.start_time) != null && hhmmToMin(x.start_time) <= nowMin);
   const isUpcoming = !started && !x.is_cancelled;
@@ -2991,8 +2993,10 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // Participant contact (phone/email) + payment status are exposed only to GRO / HC / Admin
   // (for check-in); regular coaches must not see customer contact details.
   const canContact = isGro(s) || requireHC(s);
-  const sel = canContact ? 'id,booking_code,full_name,gender,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,gender,status,created_at,paid_at';
-  const bookings = await sb(`arena_class_bookings?select=${sel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
+  const baseSel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,status,created_at,paid_at';
+  const baseQ = `arena_class_bookings?select=${baseSel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`;
+  let bookings = await sb(baseQ.replace(baseSel, baseSel + ',gender')).catch(() => null);
+  if (!bookings) bookings = await sb(baseQ).catch(() => []);
   const att = await attendanceRows(`schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; const noteMap = {}; for (const a of att || []) { attMap[a.booking_id] = a.status; if (a.note) noteMap[a.booking_id] = a.note; }
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
