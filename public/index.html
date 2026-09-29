@@ -979,7 +979,6 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
             <div>
               <div style="display:flex;align-items:center;gap:12px;"><span style="font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--volt);">{{ detailTime }}</span><h2 style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;margin:0;">{{ detailType }}</h2></div>
               <div style="color:var(--muted);font-size:14px;margin-top:6px;">{{ detailDate }} · {{ detailTimeRange }}</div>
-              <div style="display:flex;gap:12px;margin-top:8px;"><sc-if value="{{ hasMaleCount }}"><span style="font-size:12.5px;font-weight:700;color:#2563eb;">{{ maleCount }} Male</span></sc-if><sc-if value="{{ hasFemaleCount }}"><span style="font-size:12.5px;font-weight:700;color:#db2777;">{{ femaleCount }} Female</span></sc-if></div>
             </div>
             <div style="display:flex;gap:10px;">
               <button onclick="{{ goSubReq }}" style="background:var(--raised);border:1px solid var(--border2);color:var(--text);border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;cursor:pointer;" style-hover="border-color:var(--muted);">Coverage</button>
@@ -998,7 +997,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
           <sc-if value="{{ showParticipantList }}">
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;">
             <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;">
-              <div style="font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Participant List</div>
+              <div style="display:flex;align-items:center;gap:14px;"><div style="font-weight:800;font-family:'Barlow Condensed';font-size:16px;">Participant List</div><sc-if value="{{ hasMaleCount }}"><span style="font-size:12px;font-weight:700;color:#2563eb;">{{ maleCount }} Male</span></sc-if><sc-if value="{{ hasFemaleCount }}"><span style="font-size:12px;font-weight:700;color:#db2777;">{{ femaleCount }} Female</span></sc-if></div>
               <div style="display:flex;align-items:center;gap:9px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;min-width:220px;"><span style="color:var(--muted2);">⌕</span><input placeholder="Search participants…" style="flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:'Manrope';font-size:13.5px;"></div>
             </div>
             <div style="display:flex;align-items:center;padding:11px 20px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted2);">
