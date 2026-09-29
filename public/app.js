@@ -2428,7 +2428,9 @@ class Component extends DCLogic {
       blank: false, day: c.day, date: c.date,
       bg: c.isToday ? 'var(--volt-dim)' : (D.gymSelDate === c.date ? 'var(--raised)' : 'transparent'),
       border: D.gymSelDate === c.date ? 'var(--volt)' : (c.teach ? 'var(--border2)' : 'var(--border)'),
-      col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach, pick: () => this.gymShowDay(c.date),
+      col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach,
+      count: c.count || 0, countLabel: (c.count || 0) + ' cls', countCol: c.isToday ? 'var(--volt)' : 'var(--cyan)',
+      isToday: !!c.isToday, isSel: D.gymSelDate === c.date, pick: () => this.gymShowDay(c.date),
     });
     const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: (x.cap > 0 && x.pax >= x.cap) ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled }));
     const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
