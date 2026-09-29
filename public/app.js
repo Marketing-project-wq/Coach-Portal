@@ -2042,7 +2042,7 @@ class Component extends DCLogic {
       const gCol = gLabel === 'M' ? '#2563eb' : (gLabel === 'F' ? '#db2777' : '');
       const gBg = gLabel === 'M' ? 'rgba(37,99,235,.12)' : (gLabel === 'F' ? 'rgba(219,39,119,.12)' : '');
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
-        hasGender: !!gLabel, genderLabel: gLabel, genderCol: gCol, genderBg: gBg,
+        hasGender: !!gLabel, genderLabel: gLabel, genderFull: gLabel === 'M' ? 'Male' : (gLabel === 'F' ? 'Female' : ''), genderCol: gCol, genderBg: gBg,
         hasLevel: !!lvl, level: lvl ? lvl.label : '', levelCol: lvl ? lvl.col : '', levelBg: lvl ? ('color-mix(in srgb, ' + lvl.col + ' 15%, transparent)') : '',
         addonLabel: p.addonLabel || '', hasAddon: !!p.addonLabel,
         phone: p.phone || '—', email: p.email || '—', hasContact: !!(p.phone || p.email), payment: p.payment || '', payCol: p.payment === 'Lunas' ? C.green : (p.payment === 'Belum' ? C.amber : C.muted), hasPayment: !!p.payment,
@@ -2682,7 +2682,7 @@ class Component extends DCLogic {
       const _gL = _g === 'male' || _g === 'm' || _g === 'l' || _g === 'laki-laki' || _g === 'pria' ? 'M' : (_g === 'female' || _g === 'f' || _g === 'p' || _g === 'perempuan' || _g === 'wanita' ? 'F' : _guessGender(p.name));
       return {
         n: i + 1, name: p.name || '—', phone: p.phone || '',
-        hasGender: !!_gL, genderLabel: _gL, genderCol: _gL === 'M' ? '#2563eb' : (_gL === 'F' ? '#db2777' : ''), genderBg: _gL === 'M' ? 'rgba(37,99,235,.12)' : (_gL === 'F' ? 'rgba(219,39,119,.12)' : ''),
+        hasGender: !!_gL, genderLabel: _gL, genderFull: _gL === 'M' ? 'Male' : (_gL === 'F' ? 'Female' : ''), genderCol: _gL === 'M' ? '#2563eb' : (_gL === 'F' ? '#db2777' : ''), genderBg: _gL === 'M' ? 'rgba(37,99,235,.12)' : (_gL === 'F' ? 'rgba(219,39,119,.12)' : ''),
         pending: !!p.pending, pendingNote: p.pendingNote || '',
         rescheduledFrom: p.rescheduledFrom || '', hasReschFrom: !!p.rescheduledFrom,
         showActions: _scIsUpcoming && _scIsGroDetail && !p.pending,
