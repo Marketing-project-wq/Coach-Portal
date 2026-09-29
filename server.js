@@ -886,7 +886,7 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   if (!scheds.length) return send(res, 404, { error: 'Class not found' });
   const x = scheds[0], t = types[x.class_type_id] || {};
   const bc = (await gymBookingCounts([x.id]))[x.id] || {};
-  const bookings = (await sb(`gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
+  const bookings = (await sb(`gym_class_bookings?select=id,full_name,phone,gender,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
   const today = todayJakarta(), nowMin = nowMinutesJakarta();
   const started = x.schedule_date < today || (x.schedule_date === today && hhmmToMin(x.start_time) != null && hhmmToMin(x.start_time) <= nowMin);
   const isUpcoming = !started && !x.is_cancelled;
@@ -924,7 +924,7 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   }
   const participants = bookings.map((b) => {
     const checkedIn = todayVisits.some((v) => v.member_name && b.full_name && v.member_name.toLowerCase() === b.full_name.toLowerCase());
-    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
+    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', gender: b.gender || null, pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
   });
   const result = { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, sessionType: isPrivate ? 'private' : 'group', participants };
   if (voucherInfo) result.voucher = voucherInfo;
@@ -2991,7 +2991,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // Participant contact (phone/email) + payment status are exposed only to GRO / HC / Admin
   // (for check-in); regular coaches must not see customer contact details.
   const canContact = isGro(s) || requireHC(s);
-  const sel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,status,created_at,paid_at';
+  const sel = canContact ? 'id,booking_code,full_name,gender,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,gender,status,created_at,paid_at';
   const bookings = await sb(`arena_class_bookings?select=${sel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
   const att = await attendanceRows(`schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; const noteMap = {}; for (const a of att || []) { attMap[a.booking_id] = a.status; if (a.note) noteMap[a.booking_id] = a.note; }
@@ -3016,7 +3016,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
     const lp = b.status === 'confirmed' ? latePaidInfo(b.paid_at, sc.schedule_date, sc.end_time) : null;
     if (lp) latePaidCount++;
     const row = {
-      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)',
+      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)', gender: b.gender || null,
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
