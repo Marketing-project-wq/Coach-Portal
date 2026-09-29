@@ -888,7 +888,7 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   const x = scheds[0], t = types[x.class_type_id] || {};
   const bc = (await gymBookingCounts([x.id]))[x.id] || {};
   const gymBkQ = `gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`;
-  let bookings = await sb(gymBkQ.replace('phone,status', 'phone,jenis_kelamin,status')).catch(() => null);
+  let bookings = await sb(gymBkQ.replace('phone,status', 'phone,gender,status')).catch(() => null);
   if (!bookings) bookings = (await sb(gymBkQ).catch(() => [])) || [];
   const today = todayJakarta(), nowMin = nowMinutesJakarta();
   const started = x.schedule_date < today || (x.schedule_date === today && hhmmToMin(x.start_time) != null && hhmmToMin(x.start_time) <= nowMin);
@@ -927,7 +927,7 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   }
   const participants = bookings.map((b) => {
     const checkedIn = todayVisits.some((v) => v.member_name && b.full_name && v.member_name.toLowerCase() === b.full_name.toLowerCase());
-    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', gender: b.jenis_kelamin || null, pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
+    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', gender: b.gender || null, pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
   });
   const result = { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, sessionType: isPrivate ? 'private' : 'group', participants };
   if (voucherInfo) result.voucher = voucherInfo;
@@ -2996,8 +2996,22 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   const canContact = isGro(s) || requireHC(s);
   const baseSel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,status,created_at,paid_at';
   const baseQ = `arena_class_bookings?select=${baseSel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`;
-  let bookings = await sb(baseQ.replace(baseSel, baseSel + ',jenis_kelamin')).catch(() => null);
+  let bookings = await sb(baseQ.replace(baseSel, baseSel + ',gender')).catch(() => null);
   if (!bookings) bookings = await sb(baseQ).catch(() => []);
+  // Children's classes: the booking row belongs to the PARENT/GUARDIAN who bought the ticket, so
+  // arena_class_bookings.gender is the parent's. The attending child's gender lives on the
+  // Youngstars health form and is read here through the youngstars_child_gender view, which
+  // exposes ONLY booking_id + child_gender — no name, date of birth, health condition,
+  // medication or emergency contact can come back through it. A coach sets training load for the
+  // child in the room, so for these classes the child's gender is the one that must win.
+  const isChildClass = /youngstar|kids/i.test(t.name || '');
+  const childGender = {};
+  if (isChildClass && (bookings || []).length) {
+    const ids = (bookings || []).map((b) => b.id);
+    // .catch(() => []) keeps the class detail working if the view is missing on an older DB.
+    const cg = (await sb(`youngstars_child_gender?select=booking_id,child_gender&booking_id=in.(${ids.map(enc).join(',')})`).catch(() => [])) || [];
+    for (const r of cg) if (r.child_gender) childGender[r.booking_id] = r.child_gender;
+  }
   const att = await attendanceRows(`schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; const noteMap = {}; for (const a of att || []) { attMap[a.booking_id] = a.status; if (a.note) noteMap[a.booking_id] = a.note; }
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
@@ -3021,7 +3035,8 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
     const lp = b.status === 'confirmed' ? latePaidInfo(b.paid_at, sc.schedule_date, sc.end_time) : null;
     if (lp) latePaidCount++;
     const row = {
-      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)', gender: b.jenis_kelamin || null,
+      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)',
+      gender: (isChildClass ? childGender[b.id] : b.gender) || null,
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
