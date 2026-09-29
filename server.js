@@ -779,7 +779,11 @@ route('GET', '/api/unit/gym/calendar', async (req, res, s, q) => {
   const ym = (q.ym && /^\d{4}-\d{2}$/.test(q.ym)) ? q.ym : today.slice(0, 7);
   const year = parseInt(ym.slice(0, 4), 10), month = parseInt(ym.slice(5, 7), 10);
   const lastDay = new Date(year, month, 0).getDate();
-  const rows = (await sb(`gym_class_schedules?select=schedule_date&is_cancelled=eq.false&schedule_date=gte.${ym}-01&schedule_date=lte.${ym}-${String(lastDay).padStart(2, '0')}`).catch(() => [])) || [];
+  const coachFilter = s.r === 'coach';
+  let baseQ = `gym_class_schedules?select=schedule_date${coachFilter ? ',instructor' : ''}&is_cancelled=eq.false&schedule_date=gte.${ym}-01&schedule_date=lte.${ym}-${String(lastDay).padStart(2, '0')}`;
+  if (coachFilter) baseQ += `&instructor=ilike.*${enc(s.c)}*`;
+  let rows = (await sb(baseQ).catch(() => [])) || [];
+  if (coachFilter) rows = rows.filter((x) => instructorHasCoach(x.instructor, s.c));
   const cnt = {}; for (const x of rows) cnt[x.schedule_date] = (cnt[x.schedule_date] || 0) + 1;
   const firstDow = (new Date(year, month - 1, 1).getDay() + 6) % 7;
   const cells = [];
@@ -794,7 +798,8 @@ route('GET', '/api/unit/gym/day', async (req, res, s, q) => {
   if (!gymUnitAllowed(s)) return send(res, 403, { error: 'Not available for this role.' });
   const date = /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : todayJakarta();
   const types = await gymClassTypes();
-  const scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&order=start_time.asc`).catch(() => [])) || [];
+  let scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&order=start_time.asc`).catch(() => [])) || [];
+  if (s.r === 'coach') scheds = scheds.filter((x) => instructorHasCoach(x.instructor, s.c));
   const counts = await gymBookingCounts(scheds.map((x) => x.id));
   const classes = scheds.map((x) => { const t = types[x.class_type_id] || {}; return { time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', color: t.color || null, coach: x.instructor || '', pax: (counts[x.id] || {}).confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled }; });
   return send(res, 200, { date, dateLabel: dLabel(date), classes });

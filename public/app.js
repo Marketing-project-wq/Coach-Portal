@@ -2499,15 +2499,21 @@ class Component extends DCLogic {
     // ---- unit switcher (Arena / Gym) + Gym view ----
     const unitSeg = (on) => ({ bg: on ? 'var(--raised)' : 'transparent', fg: on ? 'var(--text)' : 'var(--muted)', bar: on ? 'var(--volt)' : 'transparent', weight: on ? '800' : '600' });
     const gymDow = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((x) => ({ lbl: x }));
-    const gymCells = (D.gymCalCells || []).map((c) => c.blank ? { blank: true } : {
-      blank: false, day: c.day, date: c.date,
-      bg: c.isToday ? 'var(--volt-dim)' : (D.gymSelDate === c.date ? 'var(--raised)' : 'transparent'),
-      border: D.gymSelDate === c.date ? 'var(--volt)' : (c.teach ? 'var(--border2)' : 'var(--border)'),
-      col: c.teach ? 'var(--text)' : 'var(--muted2)', dot: !!c.teach,
-      count: c.count || 0, countLabel: (c.count || 0) + ' cls', countCol: c.isToday ? 'var(--volt)' : 'var(--cyan)',
-      isToday: !!c.isToday, isSel: D.gymSelDate === c.date, pick: () => this.gymShowDay(c.date),
+    const gymCells = (D.gymCalCells || []).map((c) => {
+      if (c.blank) return { blank: true, day: '' };
+      const isSel = D.gymSelDate === c.date;
+      return { blank: false, day: c.day, date: c.date, dot: !!c.teach,
+        count: c.count || 0, countLabel: (c.count || 0) + ' cls',
+        bg: isSel ? 'var(--volt)' : (c.teach ? 'var(--volt-dim)' : 'transparent'),
+        border: isSel ? 'var(--volt)' : (c.isToday ? 'var(--volt)' : (c.teach ? 'rgba(228,0,43,.3)' : 'var(--border)')),
+        col: isSel ? '#ffffff' : (c.teach ? 'var(--volt)' : (c.isToday ? 'var(--text)' : 'var(--muted)')),
+        countCol: isSel ? '#ffffff' : 'var(--volt)',
+        isToday: !!c.isToday, isSel, pick: () => this.gymShowDay(c.date) };
     });
-    const gymDay = (D.gymDayClasses || []).map((x) => ({ time: x.time, end: x.end ? ('– ' + x.end) : '', type: x.type, coach: x.coach || '—', paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: (x.cap > 0 && x.pax >= x.cap) ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled }));
+    const gymDay = (D.gymDayClasses || []).map((x) => {
+      const full = x.cap > 0 && x.pax >= x.cap;
+      return { time: x.time, end: x.end || '', type: x.type, coach: x.coach || '—', peserta: x.pax || 0, paxLabel: (x.pax || 0) + '/' + (x.cap || 0), color: full ? 'var(--volt)' : 'var(--cyan)', cancelled: !!x.cancelled, accent: full ? 'var(--volt)' : 'var(--cyan)', statusLabel: x.cancelled ? 'Cancelled' : (full ? 'Full' : 'Scheduled'), statusBg: x.cancelled ? 'rgba(239,68,68,.15)' : (full ? 'rgba(228,0,43,.15)' : 'rgba(0,104,201,.12)'), statusCol: x.cancelled ? '#ef4444' : (full ? 'var(--volt)' : 'var(--cyan)') };
+    });
     const gymClients = (D.gymClients || []).map((c) => ({ rank: c.rank, name: c.name, phone: c.phone || '—', visits: c.visits, lastVisit: c.lastVisit }));
     const gmTab = st.gymMemberTab, gmAll = D.gymClients || [];
     const gmActive30 = gmAll.filter((c) => c.daysSince != null && c.daysSince <= 30).length;
