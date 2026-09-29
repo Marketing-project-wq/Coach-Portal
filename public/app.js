@@ -2018,8 +2018,8 @@ class Component extends DCLogic {
       const lvl = this.attendanceLevel(v);
       const menus = String(p.menusLabel || '').split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name }));
       const on = p.attendance === 'checked_in';
-      const g = (p.gender || '').toLowerCase();
-      const gLabel = g === 'male' || g === 'm' || g === 'laki-laki' ? 'M' : (g === 'female' || g === 'f' || g === 'perempuan' ? 'F' : '');
+      const g = (p.gender || '').trim().toLowerCase();
+      const gLabel = g === 'male' || g === 'm' || g === 'l' || g === 'laki-laki' || g === 'pria' ? 'M' : (g === 'female' || g === 'f' || g === 'p' || g === 'perempuan' || g === 'wanita' ? 'F' : '');
       const gCol = gLabel === 'M' ? '#2563eb' : (gLabel === 'F' ? '#db2777' : '');
       const gBg = gLabel === 'M' ? 'rgba(37,99,235,.12)' : (gLabel === 'F' ? 'rgba(219,39,119,.12)' : '');
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
@@ -2659,8 +2659,8 @@ class Component extends DCLogic {
     const _scVoucher = _scDetail ? _scDetail.voucher : null;
     const scDetailParticipants = _scDetail && _scDetail.participants ? _scDetail.participants.map((p, i) => {
       const sessionInfo = { id: _scDetail.id, date: _scDetail.date, dateLabel: _scDetail.dateLabel, time: _scDetail.time, end: _scDetail.end, type: _scDetail.type, coach: _scDetail.coach };
-      const _g = (p.gender || '').toLowerCase();
-      const _gL = _g === 'male' || _g === 'm' || _g === 'laki-laki' ? 'M' : (_g === 'female' || _g === 'f' || _g === 'perempuan' ? 'F' : '');
+      const _g = (p.gender || '').trim().toLowerCase();
+      const _gL = _g === 'male' || _g === 'm' || _g === 'l' || _g === 'laki-laki' || _g === 'pria' ? 'M' : (_g === 'female' || _g === 'f' || _g === 'p' || _g === 'perempuan' || _g === 'wanita' ? 'F' : '');
       return {
         n: i + 1, name: p.name || '—', phone: p.phone || '',
         hasGender: !!_gL, genderLabel: _gL, genderCol: _gL === 'M' ? '#2563eb' : (_gL === 'F' ? '#db2777' : ''), genderBg: _gL === 'M' ? 'rgba(37,99,235,.12)' : (_gL === 'F' ? 'rgba(219,39,119,.12)' : ''),
