@@ -1836,9 +1836,14 @@ class Component extends DCLogic {
       const av = this.avatar(m.name);
       const classes = (m.classes || []).map((c) => ({ label: c.count > 1 ? (c.name + ' ×' + c.count) : c.name }));
       const menus = (m.menus || []).map((c) => ({ label: c.count > 1 ? (c.name + ' ×' + c.count) : c.name }));
-      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classes, hasClasses: classes.length > 0, menus, hasMenus: menus.length > 0 };
+      const gLabel = _guessGender(m.name);
+      const genderFull = gLabel === 'M' ? 'Male' : gLabel === 'F' ? 'Female' : '—';
+      const genderCol = gLabel === 'M' ? '#2563eb' : gLabel === 'F' ? '#db2777' : '#9ca3af';
+      return { name: m.name, initials: this.ini(m.name), visits: m.visits, lastVisit: m.lastVisit, lastLabel: r.label, lastCol: r.col, avBg: av[0], avFg: av[1], rank: i + 1, classes, hasClasses: classes.length > 0, menus, hasMenus: menus.length > 0, genderFull, genderCol, genderLabel: gLabel };
     });
     const noMembers = members.length === 0;
+    const _memberMaleCount = members.filter((p) => p.genderLabel === 'M').length;
+    const _memberFemaleCount = members.filter((p) => p.genderLabel === 'F').length;
     const memberYm = st.memberYm || '';
     const memberMonthOpts = (D.memberMonths || []).map((o) => ({ ym: o.ym, label: o.label, picked: memberYm === o.ym }));
     // arena-rental leaderboard (Assign Venue) — customers who book the arena most
@@ -3215,6 +3220,7 @@ class Component extends DCLogic {
       noClasses: (D.today || []).length === 0,
       mPesertaBulan: D.mPesertaBulan || 0, mKelasBulan: D.mKelasBulan || 0, mPesertaTahun: D.mPesertaTahun || 0,
       members, membersTotal: D.membersTotal || 0, membersActive: D.membersActive || 0, noMembers, hasMembers: !noMembers, goMembers: () => this.go('members'),
+      memberMaleCount: _memberMaleCount, memberFemaleCount: _memberFemaleCount, hasMemberMaleCount: _memberMaleCount > 0, hasMemberFemaleCount: _memberFemaleCount > 0,
       memberMonthOpts, hasMemberMonths: memberMonthOpts.length > 0, setMemberMonth: (e) => this.setMemberMonth(e && e.target ? e.target.value : ''),
       venueRenters, hasVenueRenters, noVenueRenters, venueLbMonthOpts, hasVenueLbMonths: venueLbMonthOpts.length > 0, setVenueLbMonth: (e) => this.setVenueLbMonth(e && e.target ? e.target.value : ''), goRenters: () => this.go('renters'),
       leaderboard, noBoard, hasBoard: !noBoard, goLeaderboard: () => this.go('leaderboard'),
