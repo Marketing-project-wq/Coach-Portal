@@ -2049,6 +2049,8 @@ class Component extends DCLogic {
         latePaid: !!p.latePaid, latePaidLabel: p.latePaidLabel || '',
         attBg: on ? C.green : 'transparent', attFg: on ? '#fff' : C.muted, toggle: () => this.markAttend(clsId, p.booking_id, on ? 'none' : 'checked_in') };
     });
+    const _maleCount = participants.filter((p) => p.genderLabel === 'M').length;
+    const _femaleCount = participants.filter((p) => p.genderLabel === 'F').length;
     const showCheckin = isGro; // GRO checks participants in/out from the class detail
     // sub options
     const subOptions = (D.subOptions || []).map((o) => { const dis = !!o.disabled; const picked = st.selSub === o.name; const roleLabel = o.role === 'hc' ? 'Head Coach' : 'Coach'; return { name: o.name, sub: o.spec || roleLabel, disabled: dis, initials: this.ini(o.name), border: dis ? 'var(--border)' : 'var(--border2)', bg: dis ? 'rgba(228,0,43,.04)' : 'var(--panel)', cursor: dis ? 'not-allowed' : 'pointer', nameCol: dis ? 'var(--muted2)' : 'var(--text)', subCol: 'var(--muted)', avBg: dis ? 'rgba(17,17,20,.06)' : 'rgba(228,0,43,.12)', avFg: dis ? '#9A9A9E' : 'var(--volt)', radioBorder: picked ? 'var(--volt)' : (dis ? 'var(--border2)' : 'var(--muted)'), radioFill: picked ? 'var(--volt)' : 'transparent', photo: o.photo || '', hasPhoto: !!o.photo, pick: () => { if (!dis) this.setState({ selSub: o.name }); } }; });
@@ -3240,7 +3242,7 @@ class Component extends DCLogic {
       reviews, reviewAvg: D.reviewAvg || 0, reviewCount: D.reviewCount || 0, reviewCats: D.reviewCats || [], hasReviewCats: (D.reviewCats || []).length > 0, noReviews, reviewLink, copyReviewLink: () => this.copyReviewLink(),
       reviewFilterOn, reviewCoachOpts, setReviewCoach: (e) => this.setReviewCoach(e && e.target ? e.target.value : ''),
       openClass: () => this.go('detail'), goSubReq: () => this.go('subreq'),
-      detailTime, detailType, detailDate, detailTimeRange, absenLabel,
+      detailTime, detailType, detailDate, detailTimeRange, absenLabel, maleCount: _maleCount, femaleCount: _femaleCount, hasMaleCount: _maleCount > 0, hasFemaleCount: _femaleCount > 0,
       coachToday, week, recentClasses, participants, subOptions, emailLog,
       fbClasses, fbParticipants, fbClassLabel: D.fbClassLabel || '', hasFbParticipants, fbNoParticipants, fbEmpty,
       pickFbClass: (e) => this.pickFbClass(e), submitFeedback: () => this.submitFeedback(),
