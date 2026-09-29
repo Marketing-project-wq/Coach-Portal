@@ -141,17 +141,6 @@ function coachSpec(map, name) { const v = (map && name) ? map[String(name).trim(
 // participant data/names. They only get Schedule, Monitoring and Rotation.
 const EXTERNAL_COACHES = new Set(['brian', 'gilang', 'mae', 'sakha', 'ista', 'asa', 'andrew', 'faya']);
 
-const _FEMALE_NAMES = new Set(['ayu','indah','dewi','putri','sari','wati','sri','siti','nur','rina','rini','dina','dini','yuni','maya','nana','lina','tina','ria','rita','wulan','mega','rani','ratna','fitri','novi','evi','sinta','diah','ika','erni','yuli','henny','fanny','jenny','nita','anita','lia','julia','lisa','linda','maria','sarah','diana','citra','ella','bella','stella','jessica','angel','angela','michelle','meishelle','grace','gracia','patricia','natasha','natalia','christine','christina','valentina','olivia','sophia','aurora','amanda','melani','melanie','yolanda','priscilla','felicia','cynthia','monica','veronica','silvia','aisyah','fatimah','zahra','nabila','salma','hana','laras','karin','karina','nadia','nadya','adelia','aurelia','alya','anya','naomi','rachel','ruth','rebecca','elisabeth','elizabeth','elsa','anna','anne','emma','emily','cleopatra','redita','eleasha','yuniko','meishelle','abigail','henny']);
-const _MALE_NAMES = new Set(['ahmad','muhammad','budi','adi','agus','dedi','hadi','rudi','eko','joko','bambang','taufik','rizal','arif','fajar','dimas','bayu','ryan','kevin','david','daniel','michael','james','john','william','robert','thomas','andrew','brian','gilang','alex','alexander','andre','andreas','andi','anton','arief','bagus','cahyo','danny','denny','edo','erick','erik','faisal','farhan','galih','haris','hendri','hendro','herman','ian','ivan','irfan','irwan','jason','jordan','joshua','kenichi','leo','liam','lukman','marco','mario','martin','max','naufal','nicholas','oscar','patrick','peter','rafi','raihan','randy','ray','reza','rico','ridwan','rio','rizki','roy','sandro','sandy','stefan','steven','surya','tegar','tommy','tony','victor','vincent','yoga','yusuf','wahyu','wawan','zaki']);
-function guessGender(fullName) {
-  const first = String(fullName || '').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
-  if (!first) return null;
-  if (_FEMALE_NAMES.has(first)) return 'F';
-  if (_MALE_NAMES.has(first)) return 'M';
-  if (/wati$|sari$|dewi$|putri$|ningsih$|ningrum$|astuti$/.test(first)) return 'F';
-  if (/wan$|man$|din$|dra$|anto$/.test(first)) return 'M';
-  return null;
-}
 function isExternalCoach(name) {
   const words = String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   return words.some((w) => EXTERNAL_COACHES.has(w));
@@ -898,7 +887,9 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   if (!scheds.length) return send(res, 404, { error: 'Class not found' });
   const x = scheds[0], t = types[x.class_type_id] || {};
   const bc = (await gymBookingCounts([x.id]))[x.id] || {};
-  const bookings = (await sb(`gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`).catch(() => [])) || [];
+  const gymBkQ = `gym_class_bookings?select=id,full_name,phone,status&schedule_id=eq.${enc(id)}&status=in.(confirmed,pending_payment)&order=full_name.asc`;
+  let bookings = await sb(gymBkQ.replace('phone,status', 'phone,gender,status')).catch(() => null);
+  if (!bookings) bookings = (await sb(gymBkQ).catch(() => [])) || [];
   const today = todayJakarta(), nowMin = nowMinutesJakarta();
   const started = x.schedule_date < today || (x.schedule_date === today && hhmmToMin(x.start_time) != null && hhmmToMin(x.start_time) <= nowMin);
   const isUpcoming = !started && !x.is_cancelled;
@@ -936,7 +927,7 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
   }
   const participants = bookings.map((b) => {
     const checkedIn = todayVisits.some((v) => v.member_name && b.full_name && v.member_name.toLowerCase() === b.full_name.toLowerCase());
-    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', gender: guessGender(b.full_name), pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
+    return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', gender: b.gender || null, pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
   });
   const result = { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, sessionType: isPrivate ? 'private' : 'group', participants };
   if (voucherInfo) result.voucher = voucherInfo;
@@ -3003,8 +2994,10 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
   // Participant contact (phone/email) + payment status are exposed only to GRO / HC / Admin
   // (for check-in); regular coaches must not see customer contact details.
   const canContact = isGro(s) || requireHC(s);
-  const sel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,status,created_at,paid_at';
-  const bookings = await sb(`arena_class_bookings?select=${sel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`);
+  const baseSel = canContact ? 'id,booking_code,full_name,status,created_at,phone,email,paid_at' : 'id,booking_code,full_name,status,created_at,paid_at';
+  const baseQ = `arena_class_bookings?select=${baseSel}&schedule_id=eq.${enc(params.id)}&order=created_at.asc`;
+  let bookings = await sb(baseQ.replace(baseSel, baseSel + ',gender')).catch(() => null);
+  if (!bookings) bookings = await sb(baseQ).catch(() => []);
   const att = await attendanceRows(`schedule_id=eq.${enc(params.id)}`);
   const attMap = {}; const noteMap = {}; for (const a of att || []) { attMap[a.booking_id] = a.status; if (a.note) noteMap[a.booking_id] = a.note; }
   const sess0 = (await sb(`arena_class_sessions?select=status&schedule_id=eq.${enc(params.id)}&limit=1`) || [])[0];
@@ -3028,7 +3021,7 @@ route('GET', '/api/coach/class/:id', async (req, res, s, q, params) => {
     const lp = b.status === 'confirmed' ? latePaidInfo(b.paid_at, sc.schedule_date, sc.end_time) : null;
     if (lp) latePaidCount++;
     const row = {
-      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)', gender: guessGender(b.full_name),
+      booking_id: b.id, booking: b.booking_code, name: b.full_name || '(no name)', gender: b.gender || null,
       bookingStatus: b.status, attendance: attMap[b.id] || null,
       status: attMap[b.id] === 'checked_in' ? 'Checked-in' : attMap[b.id] === 'no_show' ? 'No-show' : 'Confirmed',
       visits: h ? h.visits : 0, lastVisit: h && h.last ? fmtDMon(h.last) : '', daysSince: h ? daysSinceISO(h.last, today) : null,
