@@ -2,7 +2,7 @@
 -- Login (username OR email): nafra.faiza@ui.ac.id
 -- Password:                   faya0809
 -- Role:                       coach  (external — multi-unit)
--- Unit:                       'both' (access to both Arena and Gym)
+-- Unit:                       null   (arena-only for now)
 -- coach_name:                 "Faya"  → matches the `instructor` column in class schedules
 --
 -- Faya is in EXTERNAL_COACHES set in server.js (limited screen access).
@@ -24,7 +24,7 @@ values
     'nafra.faiza@ui.ac.id',
     null,
     true,
-    'both' )
+    null )
 on conflict (username) do update set
   password_hash  = excluded.password_hash,
   password_plain = excluded.password_plain,
