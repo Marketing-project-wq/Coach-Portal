@@ -3,6 +3,25 @@
  * Sources every screen from the backend API; falls back to sample data with ?mock=1. */
 /* External coaches: participants may review them, but they cannot see participant
  * data/names. They only get Schedule, Monitoring and Rotation. */
+
+const _MALE_NAMES = new Set(['adi','agus','ahmad','akbar','alvin','andi','andri','andrew','angga','anggoro','anton','arief','arif','arya','asep','bagas','bagus','bambang','bayu','bima','boby','bobby','budi','cahyo','candra','chandra','christian','damar','dani','danny','danu','david','dedi','deny','deni','dewa','dicky','dimas','dion','dwi','edi','eka','eko','fabian','fadli','fahmi','fahri','faisal','fajar','fandi','farhan','faris','fauzan','fauzi','galih','galang','gilang','gunawan','hafiz','hadi','hanif','hari','hendra','hendri','henry','herman','hero','hidayat','ikhsan','ilham','imam','irfan','irwan','ivan','jaka','jefri','joko','jonathan','kevin','krisna','kurnia','luthfi','mahendra','michael','muhammad','naufal','nugroho','oki','oscar','prasetyo','purnomo','putra','rahmat','raka','rama','randi','randy','rangga','reza','ridho','ridwan','rifki','rio','riski','rizal','rizki','rizky','robby','robi','rudi','ryan','satria','septian','sigit','surya','taufik','tegar','tommy','tri','umar','wahyu','wawan','wilfred','william','wisnu','yogi','yoga','yudha','yudi','yusuf','zaki']);
+const _FEMALE_NAMES = new Set(['adelia','agnes','aisyah','ajeng','amelia','ananda','andi','anggi','anisa','anissa','annisa','arum','astri','astrid','ayu','bella','bunga','cantika','celine','chelsea','cinta','citra','clara','cleo','clio','cut','dea','della','desi','devi','dewi','diana','dian','dina','dwi','ela','elsa','emma','evi','farah','fatimah','feby','fiona','fitri','gita','hana','hanny','henny','ika','ima','intan','irma','jasmine','jessica','julia','kartika','kirana','laras','lestari','lia','lina','linda','lisa','luna','maria','maya','mega','meisha','meishelle','mela','mia','nadia','naila','najwa','nana','ninda','nisa','nova','novi','nurul','olivia','patricia','putri','rachel','rahma','rahmawati','rani','ratna','rena','rini','rina','risa','rita','rosa','salma','sari','sarah','sekar','shinta','siska','siti','sri','stella','suci','tiara','tika','tina','tri','uli','ulfa','vera','vina','wati','widya','winda','wulan','yanti','yasmin','yeni','yolanda','yulia','yuniko','zahra','zara']);
+function _guessGender(fullName) {
+  if (!fullName) return '';
+  const parts = fullName.trim().toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  const first = parts[0];
+  if (_MALE_NAMES.has(first)) return 'M';
+  if (_FEMALE_NAMES.has(first)) return 'F';
+  for (let i = 1; i < parts.length; i++) {
+    if (_MALE_NAMES.has(parts[i])) return 'M';
+    if (_FEMALE_NAMES.has(parts[i])) return 'F';
+  }
+  const last = parts[parts.length - 1];
+  if (/wati$|sari$|dewi$|ningsih$|asih$|yanti$|wulan$|astuti$|ayumi$|putri$/.test(last)) return 'F';
+  if (/wan$|anto$|ardi$|adi$|udin$/.test(last)) return 'M';
+  return '';
+}
 const EXTERNAL_COACHES = ['brian', 'gilang', 'mae', 'sakha', 'ista', 'asa', 'andrew'];
 function isExternalName(name) {
   const words = String(name || '').replace(/^coach\s*/i, '').trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -2019,7 +2038,7 @@ class Component extends DCLogic {
       const menus = String(p.menusLabel || '').split(',').map((s) => s.trim()).filter(Boolean).map((name) => ({ name }));
       const on = p.attendance === 'checked_in';
       const g = (p.gender || '').trim().toLowerCase();
-      const gLabel = g === 'male' || g === 'm' || g === 'l' || g === 'laki-laki' || g === 'pria' ? 'M' : (g === 'female' || g === 'f' || g === 'p' || g === 'perempuan' || g === 'wanita' ? 'F' : '');
+      const gLabel = g === 'male' || g === 'm' || g === 'l' || g === 'laki-laki' || g === 'pria' ? 'M' : (g === 'female' || g === 'f' || g === 'p' || g === 'perempuan' || g === 'wanita' ? 'F' : _guessGender(p.name));
       const gCol = gLabel === 'M' ? '#2563eb' : (gLabel === 'F' ? '#db2777' : '');
       const gBg = gLabel === 'M' ? 'rgba(37,99,235,.12)' : (gLabel === 'F' ? 'rgba(219,39,119,.12)' : '');
       return { n: i + 1, name: p.name, visits: v, attendInfo: v > 0 ? (v + ' visits · ') : '', lastLabel: r.label, lastCol: r.col, menus, hasMenus: menus.length > 0,
@@ -2660,7 +2679,7 @@ class Component extends DCLogic {
     const scDetailParticipants = _scDetail && _scDetail.participants ? _scDetail.participants.map((p, i) => {
       const sessionInfo = { id: _scDetail.id, date: _scDetail.date, dateLabel: _scDetail.dateLabel, time: _scDetail.time, end: _scDetail.end, type: _scDetail.type, coach: _scDetail.coach };
       const _g = (p.gender || '').trim().toLowerCase();
-      const _gL = _g === 'male' || _g === 'm' || _g === 'l' || _g === 'laki-laki' || _g === 'pria' ? 'M' : (_g === 'female' || _g === 'f' || _g === 'p' || _g === 'perempuan' || _g === 'wanita' ? 'F' : '');
+      const _gL = _g === 'male' || _g === 'm' || _g === 'l' || _g === 'laki-laki' || _g === 'pria' ? 'M' : (_g === 'female' || _g === 'f' || _g === 'p' || _g === 'perempuan' || _g === 'wanita' ? 'F' : _guessGender(p.name));
       return {
         n: i + 1, name: p.name || '—', phone: p.phone || '',
         hasGender: !!_gL, genderLabel: _gL, genderCol: _gL === 'M' ? '#2563eb' : (_gL === 'F' ? '#db2777' : ''), genderBg: _gL === 'M' ? 'rgba(37,99,235,.12)' : (_gL === 'F' ? 'rgba(219,39,119,.12)' : ''),
