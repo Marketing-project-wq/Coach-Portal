@@ -2205,6 +2205,83 @@ route('GET', '/api/gro/package-orders', async (req, res, s, q) => {
   return send(res, 200, { orders: rows, count: rows.length });
 });
 
+// ===== GRO: GYM MEMBERSHIP (read-only) =====
+// gym_memberships + gym_membership_orders from the same Supabase tables as AdminHub Gym.
+// GRO/admin can view membership status, remaining time, and member history.
+route('GET', '/api/unit/gym/memberships', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const thisMonth = today.slice(0, 7);
+  const memberships = (await sbAll('gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&order=end_date.asc.nullslast')) || [];
+  const orderIds = [...new Set(memberships.map((m) => m.order_id).filter(Boolean))];
+  const omap = {};
+  for (let i = 0; i < orderIds.length; i += 100) {
+    const os = (await sb(`gym_membership_orders?select=id,order_code,payment_method,paid_at,channel&id=in.(${orderIds.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const o of os) omap[o.id] = o;
+  }
+  const term = String(q.q || '').trim().toLowerCase();
+  let rows = memberships.map((m) => {
+    const o = omap[m.order_id] || {};
+    const endD = m.end_date || '';
+    const startD = m.start_date || '';
+    let statusKey, daysLeft = null;
+    if (!m.is_active) { statusKey = 'inactive'; }
+    else if (endD && endD < today) { statusKey = 'expired'; daysLeft = -Math.round((new Date(today + 'T00:00:00') - new Date(endD + 'T00:00:00')) / 86400000); }
+    else if (endD) { daysLeft = Math.round((new Date(endD + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); statusKey = daysLeft <= 30 ? 'expiring' : 'active'; }
+    else { statusKey = 'active'; }
+    return {
+      id: m.id, orderCode: o.order_code || '', name: m.full_name || '', phone: m.phone || '', email: m.email || '',
+      planName: m.plan_name || '', durationMonths: m.duration_months || 0,
+      startDate: startD, endDate: endD, daysLeft,
+      statusKey, isActive: m.is_active !== false,
+      payment: o.payment_method || '', paidAt: o.paid_at || '', channel: o.channel || '',
+      source: m.source || '',
+    };
+  });
+  if (term) rows = rows.filter((r) => (r.name + ' ' + r.phone + ' ' + r.orderCode).toLowerCase().indexOf(term) >= 0);
+  const statusFilter = String(q.status || '').trim().toLowerCase();
+  if (statusFilter === 'active') rows = rows.filter((r) => r.statusKey === 'active');
+  else if (statusFilter === 'expiring') rows = rows.filter((r) => r.statusKey === 'expiring');
+  else if (statusFilter === 'expired') rows = rows.filter((r) => r.statusKey === 'expired');
+  else if (statusFilter === 'inactive') rows = rows.filter((r) => r.statusKey === 'inactive');
+  const dateFrom = String(q.from || '').trim();
+  const dateTo = String(q.to || '').trim();
+  if (dateFrom) rows = rows.filter((r) => r.endDate >= dateFrom);
+  if (dateTo) rows = rows.filter((r) => r.endDate <= dateTo);
+  const allRows = memberships;
+  const activeCount = allRows.filter((m) => m.is_active && m.end_date && m.end_date >= today).length;
+  const expiringCount = allRows.filter((m) => { if (!m.is_active || !m.end_date || m.end_date < today) return false; const d = Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); return d <= 30; }).length;
+  const expiredThisMonth = allRows.filter((m) => m.is_active !== false && m.end_date && m.end_date < today && m.end_date >= thisMonth + '-01').length;
+  const newThisMonth = allRows.filter((m) => m.start_date && m.start_date >= thisMonth + '-01' && m.start_date <= today).length;
+  return send(res, 200, { memberships: rows, total: rows.length, activeCount, expiringCount, expiredThisMonth, newThisMonth });
+});
+
+route('GET', '/api/unit/gym/memberships/:id', async (req, res, s, q, params) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const m = await sb(`gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&id=eq.${enc(params.id)}`).catch(() => null);
+  if (!m) return send(res, 404, { error: 'Membership not found.' });
+  const o = m.order_id ? (await sb(`gym_membership_orders?select=id,order_code,payment_method,paid_at,channel,price,status&id=eq.${enc(m.order_id)}`).catch(() => null)) : null;
+  const today = todayJakarta();
+  let daysLeft = null;
+  if (m.end_date && m.is_active !== false) { daysLeft = Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); }
+  const history = (await sb(`gym_memberships?select=id,plan_name,duration_months,start_date,end_date,is_active&phone=eq.${enc(m.phone)}&id=neq.${enc(m.id)}&order=start_date.desc`).catch(() => [])) || [];
+  return send(res, 200, {
+    membership: {
+      id: m.id, name: m.full_name || '', phone: m.phone || '', email: m.email || '',
+      planName: m.plan_name || '', durationMonths: m.duration_months || 0,
+      startDate: m.start_date || '', endDate: m.end_date || '', daysLeft,
+      isActive: m.is_active !== false, source: m.source || '',
+      orderCode: o ? (o.order_code || '') : '', payment: o ? (o.payment_method || '') : '',
+      paidAt: o ? (o.paid_at || '') : '', channel: o ? (o.channel || '') : '',
+      price: o ? (o.price || 0) : 0, orderStatus: o ? (o.status || '') : '',
+    },
+    history: history.map((h) => ({
+      id: h.id, planName: h.plan_name || '', durationMonths: h.duration_months || 0,
+      startDate: h.start_date || '', endDate: h.end_date || '', isActive: h.is_active !== false,
+    })),
+  });
+});
+
 // ===== RECOVERY CENTER — GRO validates payment, then starts the service =====
 // Recovery Center bookings (Sport Massage / Taping / Recovery Pump, booked at
 // booking.20fit.id/book) share the clinic's `clinic_bookings` table. They are told apart from
