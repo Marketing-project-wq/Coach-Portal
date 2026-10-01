@@ -358,6 +358,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
         <button onclick="{{ goGymMembers }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymMembersNav.bg }};color:{{ gymMembersNav.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymMembersNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">{{ gymMembersLabel }}</button>
         <button onclick="{{ goGymPackages }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymPackagesNav.bg }};color:{{ gymPackagesNav.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymPackagesNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Package PT</button>
         <button onclick="{{ goGymMembership }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymMembershipNav.bg }};color:{{ gymMembershipNav.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymMembershipNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Membership Gym</button>
+        <button onclick="{{ goGymDaypass }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymDaypassNav.bg }};color:{{ gymDaypassNav.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymDaypassNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">Day Pass</button>
         <div style="height:1px;background:rgba(255,255,255,.14);margin:13px 6px 14px;"></div>
         <button onclick="{{ goGymScan }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymScanBtnBg }};color:{{ gymScanBtnFg }};font-family:'Manrope';font-weight:{{ gymScanBtnWeight }};font-size:14px;text-align:left;border-left:3px solid {{ gymScanBtnBar }};transition:background .15s;" style-hover="background:var(--panel2);">{{ gymScanLabel }}</button>
         <button onclick="{{ goGymVisits }}" style="display:flex;align-items:center;gap:11px;margin-top:4px;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;background:{{ gymVisitsNav.bg }};color:{{ gymVisitsNav.fg }};font-family:'Manrope';font-weight:600;font-size:14px;text-align:left;border-left:3px solid {{ gymVisitsNav.bar }};transition:background .15s;" style-hover="background:var(--panel2);">{{ gymVisitsLabel }}</button>
@@ -868,6 +869,76 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
                   <span style="font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(148,163,184,.2);color:var(--muted);text-transform:uppercase;">{{ h.status }}</span>
                 </div></sc-for>
               </div></sc-if>
+            </div>
+          </div></sc-if>
+
+        </div></sc-if>
+
+        <!-- Gym Day Pass Orders page -->
+        <sc-if value="{{ s.gymdaypass }}"><div style="max-width:1080px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:22px;">20FIT Gym &#183; Day Pass Orders</div><button onclick="{{ exportDaypass }}" style="background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:8px 16px;font-family:'Manrope';font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;" style-hover="border-color:var(--volt);">&#128229; Export CSV</button></div>
+
+          <!-- Summary cards -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Day Pass Hari Ini</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:var(--cyan);">{{ gymDpTodayCount }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Confirmed</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:#16a34a;">{{ gymDpConfirmedToday }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Pending</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:#d97706;">{{ gymDpPendingToday }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Total Bulan Ini</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:var(--text);">{{ gymDpTotalMonth }}</div></div>
+          </div>
+
+          <!-- Filters -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+            <input value="{{ dpSearchVal }}" oninput="{{ setDpSearch }}" placeholder="Cari nama, telepon, kode order..." style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;box-sizing:border-box;">
+            <select onchange="{{ setDpStatus }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;cursor:pointer;"><option value="">Semua Status</option><option value="confirmed">Confirmed</option><option value="pending_payment">Pending</option><option value="cancelled">Cancelled</option></select>
+            <input type="date" value="{{ dpDateFromVal }}" onchange="{{ setDpDateFrom }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:12px;outline:0;">
+            <span style="font-size:12px;color:var(--muted);">s/d</span>
+            <input type="date" value="{{ dpDateToVal }}" onchange="{{ setDpDateTo }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:12px;outline:0;">
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap;">{{ gymDpCountLabel }}</span>
+          </div>
+
+          <!-- Table -->
+          <sc-if value="{{ gymDpHas }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:960px;">
+            <div style="display:grid;grid-template-columns:140px 1.2fr 90px 1fr 110px 90px 80px 70px 80px 70px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">
+              <div style="padding:11px 14px;">Order Code</div><div style="padding:11px 10px;">Produk</div><div style="padding:11px 10px;">Tgl Bayar</div><div style="padding:11px 10px;">Nama</div><div style="padding:11px 10px;">Telp</div><div style="padding:11px 10px;text-align:right;">Amount</div><div style="padding:11px 8px;">Status</div><div style="padding:11px 8px;">Pass</div><div style="padding:11px 8px;">Payment</div><div style="padding:11px 8px;">Channel</div>
+            </div>
+            <sc-for list="{{ gymDpRows }}" as="dp"><div onclick="{{ dp.open }}" style="display:grid;grid-template-columns:140px 1.2fr 90px 1fr 110px 90px 80px 70px 80px 70px;border-top:1px solid var(--border);align-items:center;cursor:pointer;background:{{ dp.rowBg }};" style-hover="background:var(--panel2);">
+              <div style="padding:10px 14px;font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted);">{{ dp.orderCode }}</div>
+              <div style="padding:10px 10px;font-size:12px;">{{ dp.productName }}</div>
+              <div style="padding:10px 10px;font-size:11.5px;color:var(--muted);">{{ dp.paidLabel }}</div>
+              <div style="padding:10px 10px;font-weight:700;font-size:13px;">{{ dp.name }}</div>
+              <div style="padding:10px 10px;font-family:'JetBrains Mono';font-size:11px;color:var(--muted);">{{ dp.phone }}</div>
+              <div style="padding:10px 10px;text-align:right;font-family:'JetBrains Mono';font-size:11.5px;">{{ dp.priceLabel }}</div>
+              <div style="padding:10px 8px;"><span style="font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:100px;background:{{ dp.statusBg }};color:{{ dp.statusCol }};white-space:nowrap;">{{ dp.statusLabel }}</span></div>
+              <div style="padding:10px 8px;font-size:11.5px;font-weight:700;color:{{ dp.passCol }};">{{ dp.passLabel }}</div>
+              <div style="padding:10px 8px;font-size:11px;color:var(--muted);">{{ dp.payment }}</div>
+              <div style="padding:10px 8px;font-size:11px;color:var(--muted);">{{ dp.channel }}</div>
+            </div></sc-for>
+          </div></div></div></sc-if>
+
+          <sc-if value="{{ gymDpNone }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:40px 24px;text-align:center;color:var(--muted);">No day pass orders found.</div></sc-if>
+
+          <!-- Detail overlay -->
+          <sc-if value="{{ showDpDetail }}"><div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px;" onclick="{{ closeDpDetail }}">
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;padding:24px 22px;" onclick="event.stopPropagation();">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;">Day Pass Detail</div><button onclick="{{ closeDpDetail }}" style="background:var(--panel2);border:1px solid var(--border2);color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button></div>
+
+              <div style="font-weight:800;font-size:17px;margin-bottom:2px;">{{ dpName }}</div>
+              <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">{{ dpPhone }} &#183; {{ dpEmail }}</div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Order Code</div><div style="font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;margin-top:3px;">{{ dpOrderCode }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Status</div><div style="font-size:13px;font-weight:700;margin-top:3px;text-transform:uppercase;">{{ dpStatus }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Produk</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ dpProduct }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Amount</div><div style="font-family:'JetBrains Mono';font-size:13px;font-weight:700;margin-top:3px;">{{ dpPrice }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Tgl Bayar</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ dpPaidAt }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Tgl Order</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ dpCreatedAt }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Payment</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ dpPayment }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Pass</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ dpPassDetail }}</div></div>
+              </div>
+
+              <sc-if value="{{ dpChannel }}"><div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Channel: <strong>{{ dpChannel }}</strong></div></sc-if>
+              <sc-if value="{{ dpPaymentRef }}"><div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Ref: <span style="font-family:'JetBrains Mono';font-size:11px;">{{ dpPaymentRef }}</span></div></sc-if>
+              <sc-if value="{{ dpHasNotes }}"><div style="font-size:12px;color:var(--muted);">Catatan: {{ dpNotes }}</div></sc-if>
             </div>
           </div></sc-if>
 

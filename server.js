@@ -2287,6 +2287,58 @@ route('GET', '/api/unit/gym/memberships/:id', async (req, res, s, q, params) => 
   });
 });
 
+// ===== GYM DAY PASS ORDERS (read-only for GRO, mirrors adminhub gym_day_pass_orders) =====
+route('GET', '/api/unit/gym/daypass-orders', async (req, res, s, q) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const today = todayJakarta();
+  const thisMonth = today.slice(0, 7);
+  const orders = (await sbAll('gym_day_pass_orders?select=id,order_code,product_name,price,full_name,email,phone,status,payment_method,paid_at,channel,created_at&order=created_at.desc').catch(() => [])) || [];
+  const orderIds = orders.map((o) => o.id);
+  const passMap = {};
+  for (let i = 0; i < orderIds.length; i += 100) {
+    const ps = (await sb(`gym_day_passes?select=order_id,redeemed_at,is_active&order_id=in.(${orderIds.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const p of ps) passMap[p.order_id] = p;
+  }
+  let rows = orders.map((o) => {
+    const p = passMap[o.id];
+    const passLabel = !p ? null : p.redeemed_at ? 'Used' : 'Belum';
+    const isToday = (o.paid_at && o.paid_at.slice(0, 10) === today) || (!o.paid_at && o.created_at && o.created_at.slice(0, 10) === today);
+    return {
+      id: o.id, orderCode: o.order_code || '', productName: o.product_name || '', price: o.price || 0,
+      name: o.full_name || '', phone: o.phone || '', email: o.email || '',
+      status: o.status || '', payment: o.payment_method || '', channel: o.channel || '',
+      paidAt: o.paid_at || '', createdAt: o.created_at || '', passLabel, isToday,
+    };
+  });
+  if (q.q) { const lq = q.q.toLowerCase(); rows = rows.filter((r) => r.name.toLowerCase().includes(lq) || r.phone.includes(lq) || r.orderCode.toLowerCase().includes(lq)); }
+  if (q.status) rows = rows.filter((r) => r.status === q.status);
+  if (q.from) rows = rows.filter((r) => { const d = r.paidAt ? r.paidAt.slice(0, 10) : r.createdAt.slice(0, 10); return d >= q.from; });
+  if (q.to) rows = rows.filter((r) => { const d = r.paidAt ? r.paidAt.slice(0, 10) : r.createdAt.slice(0, 10); return d <= q.to; });
+  const todayOrders = orders.filter((o) => (o.paid_at && o.paid_at.slice(0, 10) === today) || (!o.paid_at && o.created_at && o.created_at.slice(0, 10) === today));
+  const todayCount = todayOrders.length;
+  const confirmedToday = todayOrders.filter((o) => o.status === 'confirmed').length;
+  const pendingToday = todayOrders.filter((o) => o.status === 'pending_payment').length;
+  const totalThisMonth = orders.filter((o) => (o.created_at || '').slice(0, 7) === thisMonth).length;
+  return send(res, 200, { orders: rows, total: rows.length, todayCount, confirmedToday, pendingToday, totalThisMonth });
+});
+
+route('GET', '/api/unit/gym/daypass-orders/:id', async (req, res, s, q, params) => {
+  if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const o = ((await sb(`gym_day_pass_orders?select=id,order_code,product_name,price,full_name,email,phone,notes,status,payment_method,payment_ref,paid_at,channel,created_at,updated_at&id=eq.${enc(params.id)}`).catch(() => [])) || [])[0];
+  if (!o) return send(res, 404, { error: 'Order not found.' });
+  const p = ((await sb(`gym_day_passes?select=order_id,redeemed_at,is_active,redeemed_by&order_id=eq.${enc(o.id)}`).catch(() => [])) || [])[0];
+  const passLabel = !p ? null : p.redeemed_at ? 'Used' : 'Belum';
+  return send(res, 200, {
+    order: {
+      id: o.id, orderCode: o.order_code || '', productName: o.product_name || '', price: o.price || 0,
+      name: o.full_name || '', phone: o.phone || '', email: o.email || '',
+      status: o.status || '', payment: o.payment_method || '', paymentRef: o.payment_ref || '',
+      channel: o.channel || '', paidAt: o.paid_at || '', createdAt: o.created_at || '',
+      notes: o.notes || '', passLabel, passRedeemedAt: p ? (p.redeemed_at || '') : '',
+    },
+  });
+});
+
 // ===== RECOVERY CENTER — GRO validates payment, then starts the service =====
 // Recovery Center bookings (Sport Massage / Taping / Recovery Pump, booked at
 // booking.20fit.id/book) share the clinic's `clinic_bookings` table. They are told apart from

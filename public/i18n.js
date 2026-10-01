@@ -343,6 +343,10 @@ window.__I18N = (function () {
     from_date:             { id: 'Dari',                      en: 'From' },
     to_date:               { id: 'Sampai',                    en: 'To' },
     no_visits:             { id: 'Belum ada kunjungan pada rentang ini', en: 'No visits in this range' },
+    // Gym Day Pass
+    daypass_orders:        { id: 'Day Pass Orders',           en: 'Day Pass Orders' },
+    daypass_today:         { id: 'Day Pass Hari Ini',         en: "Today's Day Pass" },
+    total_this_month:      { id: 'Total Bulan Ini',           en: 'Total This Month' },
     // Gym PT packages + printable member barcode card
     pt_packages:           { id: 'Paket PT',                  en: 'PT Packages' },
     barcode_card:          { id: 'Kartu Barcode',             en: 'Barcode Card' },
