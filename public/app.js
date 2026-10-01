@@ -818,7 +818,7 @@ class Component extends DCLogic {
     if (st.mbrDateFrom) qs.push('from=' + st.mbrDateFrom);
     if (st.mbrDateTo) qs.push('to=' + st.mbrDateTo);
     const url = '/api/unit/gym/memberships' + (qs.length ? '?' + qs.join('&') : '');
-    this.api(url).then((r) => this.setD({ gymMbr: r.memberships || [], gymMbrTotal: r.total, gymMbrActiveCount: r.activeCount, gymMbrExpiringCount: r.expiringCount, gymMbrExpiredThisMonth: r.expiredThisMonth, gymMbrNewThisMonth: r.newThisMonth })).catch(() => {});
+    this.api(url).then((r) => this.setD({ gymMbr: r.memberships || [], gymMbrTotal: r.total, gymMbrActiveCount: r.activeCount, gymMbrExpiringCount: r.expiringCount, gymMbrExpiredCount: r.expiredCount, gymMbrNewThisMonth: r.newThisMonth })).catch(() => {});
   }
   setMbrSearch(e) { this._mbrFocus = true; this.setState({ mbrQ: e && e.target ? e.target.value : '' }); clearTimeout(this._mbrT); this._mbrT = setTimeout(() => { if (!this.MOCK) this.loadGymMembership(); }, 300); }
   setMbrStatus(e) { this._mbrFocus = false; this.setState({ mbrStatus: e && e.target ? e.target.value : '' }); if (!this.MOCK) this.loadGymMembership(); }
@@ -833,8 +833,8 @@ class Component extends DCLogic {
   exportMembership() {
     const D = this.state.d;
     const isID = this.lang === 'id';
-    const rows = (D.gymMbr || []).map((m) => [m.orderCode, m.name, m.phone, m.planName, m.startDate, m.endDate, m.daysLeft != null ? m.daysLeft : '', m.statusKey, m.payment]);
-    const header = isID ? ['Kode Order', 'Nama', 'Telp', 'Paket', 'Tgl Mulai', 'Tgl Berakhir', 'Sisa Hari', 'Status', 'Payment'] : ['Order Code', 'Name', 'Phone', 'Package', 'Start Date', 'End Date', 'Days Left', 'Status', 'Payment'];
+    const rows = (D.gymMbr || []).map((m) => [m.orderCode, m.planName, m.name, m.phone, m.price || '', m.paidAt ? m.paidAt.slice(0, 10) : '', m.daysLeft != null ? m.daysLeft : '', m.statusKey, m.payment, m.channel]);
+    const header = isID ? ['Kode Order', 'Paket', 'Nama', 'Telp', 'Amount', 'Tgl Bayar', 'Sisa Hari', 'Status', 'Payment', 'Channel'] : ['Order Code', 'Package', 'Name', 'Phone', 'Amount', 'Paid Date', 'Days Left', 'Status', 'Payment', 'Channel'];
     rows.unshift(header);
     const today = this.todayISO();
     this._downloadCSV(rows, 'membership-gym-' + today + '.csv');
@@ -2917,7 +2917,8 @@ class Component extends DCLogic {
       gymMbrRows: (D.gymMbr || []).map((m) => {
         const isID = this.lang === 'id';
         let remainLabel, remainCol;
-        if (m.statusKey === 'inactive') { remainLabel = isID ? 'Dibatalkan' : 'Cancelled'; remainCol = 'var(--muted)'; }
+        if (m.statusKey === 'cancelled') { remainLabel = '-'; remainCol = 'var(--muted)'; }
+        else if (m.statusKey === 'pending_payment') { remainLabel = '-'; remainCol = 'var(--muted)'; }
         else if (m.statusKey === 'expired') { const ago = Math.abs(m.daysLeft || 0); remainLabel = 'Expired ' + ago + (isID ? ' hari lalu' : (ago === 1 ? ' day ago' : ' days ago')); remainCol = '#dc2626'; }
         else if (m.daysLeft != null) {
           if (m.daysLeft > 60) { const mo = Math.floor(m.daysLeft / 30); remainLabel = mo + (isID ? ' bulan lagi' : (mo === 1 ? ' month left' : ' months left')); }
@@ -2925,16 +2926,23 @@ class Component extends DCLogic {
           remainCol = m.daysLeft <= 7 ? '#dc2626' : m.daysLeft <= 30 ? '#d97706' : '#16a34a';
         } else { remainLabel = '-'; remainCol = 'var(--muted)'; }
         const stMeta = m.statusKey === 'active' ? { bg: 'rgba(28,138,75,.14)', col: '#16a34a', label: isID ? 'Aktif' : 'Active' }
+          : m.statusKey === 'confirmed' ? { bg: 'rgba(28,138,75,.14)', col: '#16a34a', label: 'Confirmed' }
           : m.statusKey === 'expiring' ? { bg: 'rgba(217,119,6,.14)', col: '#d97706', label: isID ? 'Hampir Habis' : 'Expiring' }
           : m.statusKey === 'expired' ? { bg: 'rgba(220,38,38,.14)', col: '#dc2626', label: 'Expired' }
-          : { bg: 'rgba(148,163,184,.2)', col: 'var(--muted)', label: isID ? 'Nonaktif' : 'Inactive' };
+          : m.statusKey === 'cancelled' ? { bg: 'rgba(220,38,38,.14)', col: '#dc2626', label: 'Cancelled' }
+          : m.statusKey === 'pending_payment' ? { bg: 'rgba(217,119,6,.14)', col: '#d97706', label: 'Pending' }
+          : { bg: 'rgba(148,163,184,.2)', col: 'var(--muted)', label: m.statusKey };
+        const fmtPrice = m.price ? 'Rp ' + Number(m.price).toLocaleString('id-ID') : '-';
+        const paidLabel = m.paidAt ? this.fmtDateLocale(m.paidAt.slice(0, 10), { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
         return Object.assign({}, m, { remainLabel, remainCol, statusBg: stMeta.bg, statusCol: stMeta.col, statusLabel: stMeta.label,
-          startLabel: m.startDate ? this.fmtDateLocale(m.startDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-', endLabel: m.endDate ? this.fmtDateLocale(m.endDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+          priceLabel: fmtPrice, paidLabel,
+          startLabel: m.startDate ? this.fmtDateLocale(m.startDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+          endLabel: m.endDate ? this.fmtDateLocale(m.endDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
           open: () => this.openMbrDetail(m.id) });
       }),
       gymMbrHas: (D.gymMbr || []).length > 0, gymMbrNone: (D.gymMbr || []).length === 0,
-      gymMbrTotal: D.gymMbrTotal || 0, gymMbrActiveCount: D.gymMbrActiveCount || 0, gymMbrExpiringCount: D.gymMbrExpiringCount || 0, gymMbrExpiredThisMonth: D.gymMbrExpiredThisMonth || 0, gymMbrNewThisMonth: D.gymMbrNewThisMonth || 0,
-      gymMbrCountLabel: (D.gymMbrTotal || 0) + (this.lang === 'id' ? ' dari ' : ' of ') + ((D.gymMbr || []).length || 0) + ' membership',
+      gymMbrTotal: D.gymMbrTotal || 0, gymMbrActiveCount: D.gymMbrActiveCount || 0, gymMbrExpiringCount: D.gymMbrExpiringCount || 0, gymMbrExpiredCount: D.gymMbrExpiredCount || 0, gymMbrNewThisMonth: D.gymMbrNewThisMonth || 0,
+      gymMbrCountLabel: (D.gymMbrTotal || 0) + ' orders',
       setMbrSearch: (e) => this.setMbrSearch(e), setMbrStatus: (e) => this.setMbrStatus(e),
       setMbrDateFrom: (e) => this.setMbrDateFrom(e), setMbrDateTo: (e) => this.setMbrDateTo(e),
       mbrSearchVal: st.mbrQ || '', mbrStatusVal: st.mbrStatus || '', mbrDateFromVal: st.mbrDateFrom || '', mbrDateToVal: st.mbrDateTo || '',
@@ -2943,12 +2951,14 @@ class Component extends DCLogic {
       mdName: st.mbrDetail ? st.mbrDetail.name : '', mdPhone: st.mbrDetail ? st.mbrDetail.phone : '', mdEmail: st.mbrDetail ? st.mbrDetail.email : '',
       mdOrderCode: st.mbrDetail ? st.mbrDetail.orderCode : '', mdPlan: st.mbrDetail ? st.mbrDetail.planName : '',
       mdDuration: st.mbrDetail ? (st.mbrDetail.durationMonths + (this.lang === 'id' ? ' bulan' : ' months')) : '',
+      mdPrice: st.mbrDetail && st.mbrDetail.price ? 'Rp ' + Number(st.mbrDetail.price).toLocaleString('id-ID') : '-',
       mdStart: st.mbrDetail && st.mbrDetail.startDate ? this.fmtDateLocale(st.mbrDetail.startDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
       mdEnd: st.mbrDetail && st.mbrDetail.endDate ? this.fmtDateLocale(st.mbrDetail.endDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
       mdDaysLeft: st.mbrDetail ? (st.mbrDetail.daysLeft != null ? String(st.mbrDetail.daysLeft) : '-') : '-',
       mdPayment: st.mbrDetail ? (st.mbrDetail.payment || '-') : '-', mdChannel: st.mbrDetail ? (st.mbrDetail.channel || '-') : '-',
-      mdStatus: st.mbrDetail ? (st.mbrDetail.isActive ? (st.mbrDetail.daysLeft != null && st.mbrDetail.daysLeft < 0 ? 'Expired' : (this.lang === 'id' ? 'Aktif' : 'Active')) : (this.lang === 'id' ? 'Nonaktif' : 'Inactive')) : '',
-      mbrHistory: (st.mbrHistory || []).map((h) => ({ planName: h.planName, duration: h.durationMonths + (this.lang === 'id' ? ' bln' : ' mo'), start: h.startDate ? this.fmtDateLocale(h.startDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-', end: h.endDate ? this.fmtDateLocale(h.endDate, { day: 'numeric', month: 'short', year: 'numeric' }) : '-', active: h.isActive })),
+      mdOrderStatus: st.mbrDetail ? (st.mbrDetail.orderStatus || '-') : '-',
+      mdPaidAt: st.mbrDetail && st.mbrDetail.paidAt ? this.fmtDateLocale(st.mbrDetail.paidAt.slice(0, 10), { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+      mbrHistory: (st.mbrHistory || []).map((h) => ({ orderCode: h.orderCode, planName: h.planName, price: h.price ? 'Rp ' + Number(h.price).toLocaleString('id-ID') : '-', status: h.status || '', paidAt: h.paidAt ? this.fmtDateLocale(h.paidAt.slice(0, 10), { day: 'numeric', month: 'short', year: 'numeric' }) : '-', createdAt: h.createdAt ? this.fmtDateLocale(h.createdAt.slice(0, 10), { day: 'numeric', month: 'short', year: 'numeric' }) : '-' })),
       mbrHasHistory: (st.mbrHistory || []).length > 0,
       gymSchedNav: this.navMeta(scr === 'gymview'), gymMembersNav: this.navMeta(scr === 'gymmembers'), gymPackagesNav: this.navMeta(scr === 'gympackages'), gymMembershipNav: this.navMeta(scr === 'gymmembership'), gymScanNav: this.navMeta(scr === 'gymscan'), gymVisitsNav: this.navMeta(scr === 'gymvisits'), gymReportNav: this.navMeta(scr === 'gymreport'),
       gymScanBtnBg: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnFg: scr === 'gymscan' ? '#ffffff' : 'var(--text)', gymScanBtnBar: scr === 'gymscan' ? 'var(--volt)' : 'transparent', gymScanBtnWeight: scr === 'gymscan' ? '700' : '600',

@@ -803,34 +803,36 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Active</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:#16a34a;">{{ gymMbrActiveCount }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Expiring Soon</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:#d97706;">{{ gymMbrExpiringCount }}</div></div>
-            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Expired This Month</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:#dc2626;">{{ gymMbrExpiredThisMonth }}</div></div>
+            <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Expired</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:#dc2626;">{{ gymMbrExpiredCount }}</div></div>
             <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">New This Month</div><div style="font-family:'Barlow Condensed';font-weight:800;font-size:26px;color:var(--cyan);">{{ gymMbrNewThisMonth }}</div></div>
           </div>
 
           <!-- Filters -->
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
-            <input value="{{ mbrSearchVal }}" oninput="{{ setMbrSearch }}" placeholder="Search name, phone, order..." style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;box-sizing:border-box;">
-            <select onchange="{{ setMbrStatus }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;cursor:pointer;"><option value="">All Status</option><option value="active">Active</option><option value="expiring">Expiring</option><option value="expired">Expired</option><option value="inactive">Inactive</option></select>
+            <input value="{{ mbrSearchVal }}" oninput="{{ setMbrSearch }}" placeholder="Cari nama, kode order, telp..." style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;box-sizing:border-box;">
+            <select onchange="{{ setMbrStatus }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:13px;outline:0;cursor:pointer;"><option value="">Semua Status</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option><option value="pending">Pending</option><option value="expiring">Expiring</option><option value="expired">Expired</option></select>
             <input type="date" value="{{ mbrDateFromVal }}" onchange="{{ setMbrDateFrom }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:12px;outline:0;">
+            <span style="font-size:12px;color:var(--muted);">s/d</span>
             <input type="date" value="{{ mbrDateToVal }}" onchange="{{ setMbrDateTo }}" style="background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Manrope';font-size:12px;outline:0;">
             <span style="font-size:12px;color:var(--muted);white-space:nowrap;">{{ gymMbrCountLabel }}</span>
           </div>
 
           <!-- Table -->
-          <sc-if value="{{ gymMbrHas }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:820px;">
-            <div style="display:grid;grid-template-columns:120px 1.4fr 110px 1fr 100px 100px 110px 80px 90px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">
-              <div style="padding:11px 14px;">Order Code</div><div style="padding:11px 14px;">Nama</div><div style="padding:11px 14px;">Telp</div><div style="padding:11px 14px;">Paket</div><div style="padding:11px 14px;">Tgl Mulai</div><div style="padding:11px 14px;">Tgl Berakhir</div><div style="padding:11px 14px;">Sisa Waktu</div><div style="padding:11px 10px;">Status</div><div style="padding:11px 10px;">Payment</div>
+          <sc-if value="{{ gymMbrHas }}"><div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;"><div style="overflow-x:auto;"><div style="min-width:960px;">
+            <div style="display:grid;grid-template-columns:140px 1fr 90px 1.2fr 110px 100px 110px 90px 80px 70px;background:var(--panel2);color:var(--muted2);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">
+              <div style="padding:11px 14px;">Order Code</div><div style="padding:11px 10px;">Paket</div><div style="padding:11px 10px;">Tgl Bayar</div><div style="padding:11px 10px;">Nama</div><div style="padding:11px 10px;">Telp</div><div style="padding:11px 10px;text-align:right;">Amount</div><div style="padding:11px 10px;">Sisa Waktu</div><div style="padding:11px 8px;">Status</div><div style="padding:11px 8px;">Payment</div><div style="padding:11px 8px;">Channel</div>
             </div>
-            <sc-for list="{{ gymMbrRows }}" as="m"><div onclick="{{ m.open }}" style="display:grid;grid-template-columns:120px 1.4fr 110px 1fr 100px 100px 110px 80px 90px;border-top:1px solid var(--border);align-items:center;cursor:pointer;" style-hover="background:var(--panel2);">
-              <div style="padding:10px 14px;font-family:'JetBrains Mono';font-size:11px;color:var(--muted);">{{ m.orderCode }}</div>
-              <div style="padding:10px 14px;font-weight:700;font-size:13px;">{{ m.name }}</div>
-              <div style="padding:10px 14px;font-family:'JetBrains Mono';font-size:11.5px;color:var(--muted);">{{ m.phone }}</div>
-              <div style="padding:10px 14px;font-size:12.5px;">{{ m.planName }}</div>
-              <div style="padding:10px 14px;font-size:12px;color:var(--muted);">{{ m.startLabel }}</div>
-              <div style="padding:10px 14px;font-size:12px;color:var(--muted);">{{ m.endLabel }}</div>
-              <div style="padding:10px 14px;font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:{{ m.remainCol }};">{{ m.remainLabel }}</div>
-              <div style="padding:10px 10px;"><span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px;background:{{ m.statusBg }};color:{{ m.statusCol }};white-space:nowrap;">{{ m.statusLabel }}</span></div>
-              <div style="padding:10px 10px;font-size:11px;color:var(--muted);">{{ m.payment }}</div>
+            <sc-for list="{{ gymMbrRows }}" as="m"><div onclick="{{ m.open }}" style="display:grid;grid-template-columns:140px 1fr 90px 1.2fr 110px 100px 110px 90px 80px 70px;border-top:1px solid var(--border);align-items:center;cursor:pointer;" style-hover="background:var(--panel2);">
+              <div style="padding:10px 14px;font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted);">{{ m.orderCode }}</div>
+              <div style="padding:10px 10px;font-size:12px;">{{ m.planName }}</div>
+              <div style="padding:10px 10px;font-size:11.5px;color:var(--muted);">{{ m.paidLabel }}</div>
+              <div style="padding:10px 10px;font-weight:700;font-size:13px;">{{ m.name }}</div>
+              <div style="padding:10px 10px;font-family:'JetBrains Mono';font-size:11px;color:var(--muted);">{{ m.phone }}</div>
+              <div style="padding:10px 10px;text-align:right;font-family:'JetBrains Mono';font-size:11.5px;">{{ m.priceLabel }}</div>
+              <div style="padding:10px 10px;font-family:'JetBrains Mono';font-weight:700;font-size:11.5px;color:{{ m.remainCol }};">{{ m.remainLabel }}</div>
+              <div style="padding:10px 8px;"><span style="font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:100px;background:{{ m.statusBg }};color:{{ m.statusCol }};white-space:nowrap;">{{ m.statusLabel }}</span></div>
+              <div style="padding:10px 8px;font-size:11px;color:var(--muted);">{{ m.payment }}</div>
+              <div style="padding:10px 8px;font-size:11px;color:var(--muted);">{{ m.channel }}</div>
             </div></sc-for>
           </div></div></div></sc-if>
 
@@ -839,16 +841,18 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
           <!-- Detail overlay -->
           <sc-if value="{{ showMbrDetail }}"><div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px;" onclick="{{ closeMbrDetail }}">
             <div style="background:var(--bg);border:1px solid var(--border);border-radius:20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;padding:24px 22px;" onclick="event.stopPropagation();">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;">Member Detail</div><button onclick="{{ closeMbrDetail }}" style="background:var(--panel2);border:1px solid var(--border2);color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><div style="font-family:'Barlow Condensed';font-weight:800;font-size:20px;">Order Detail</div><button onclick="{{ closeMbrDetail }}" style="background:var(--panel2);border:1px solid var(--border2);color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button></div>
 
               <div style="font-weight:800;font-size:17px;margin-bottom:2px;">{{ mdName }}</div>
               <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">{{ mdPhone }} &#183; {{ mdEmail }}</div>
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Order Code</div><div style="font-family:'JetBrains Mono';font-size:12px;font-weight:700;margin-top:3px;">{{ mdOrderCode }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Order Code</div><div style="font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;margin-top:3px;">{{ mdOrderCode }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Order Status</div><div style="font-size:13px;font-weight:700;margin-top:3px;text-transform:uppercase;">{{ mdOrderStatus }}</div></div>
                 <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Paket</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdPlan }}</div></div>
                 <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Durasi</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdDuration }}</div></div>
-                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Status</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdStatus }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Amount</div><div style="font-family:'JetBrains Mono';font-size:13px;font-weight:700;margin-top:3px;">{{ mdPrice }}</div></div>
+                <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Tgl Bayar</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdPaidAt }}</div></div>
                 <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Tgl Mulai</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdStart }}</div></div>
                 <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Tgl Berakhir</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdEnd }}</div></div>
                 <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 14px;"><div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);">Sisa Hari</div><div style="font-size:13px;font-weight:700;margin-top:3px;">{{ mdDaysLeft }}</div></div>
@@ -858,10 +862,10 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
               <sc-if value="{{ mdChannel }}"><div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Channel: <strong>{{ mdChannel }}</strong></div></sc-if>
 
               <sc-if value="{{ mbrHasHistory }}"><div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
-                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:15px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em;">Membership History</div>
+                <div style="font-family:'Barlow Condensed';font-weight:800;font-size:15px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em;">Order History</div>
                 <sc-for list="{{ mbrHistory }}" as="h"><div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                  <div><div style="font-weight:700;font-size:12.5px;">{{ h.planName }}</div><div style="font-size:11px;color:var(--muted);">{{ h.start }} - {{ h.end }} &#183; {{ h.duration }}</div></div>
-                  <sc-if value="{{ h.active }}"><span style="font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(28,138,75,.14);color:#16a34a;">Active</span></sc-if>
+                  <div><div style="font-weight:700;font-size:12.5px;">{{ h.planName }} &#183; {{ h.price }}</div><div style="font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted);">{{ h.orderCode }}</div></div>
+                  <span style="font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(148,163,184,.2);color:var(--muted);text-transform:uppercase;">{{ h.status }}</span>
                 </div></sc-for>
               </div></sc-if>
             </div>

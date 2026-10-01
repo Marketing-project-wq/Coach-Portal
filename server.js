@@ -2206,78 +2206,83 @@ route('GET', '/api/gro/package-orders', async (req, res, s, q) => {
 });
 
 // ===== GRO: GYM MEMBERSHIP (read-only) =====
-// gym_memberships + gym_membership_orders from the same Supabase tables as AdminHub Gym.
-// GRO/admin can view membership status, remaining time, and member history.
+// Primary source: gym_membership_orders (all orders, like AdminHub).
+// Left-joined with gym_memberships for start/end dates + Sisa Waktu on confirmed orders.
 route('GET', '/api/unit/gym/memberships', async (req, res, s, q) => {
   if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
   const today = todayJakarta();
   const thisMonth = today.slice(0, 7);
-  const memberships = (await sbAll('gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&order=end_date.asc.nullslast').catch(() => [])) || [];
-  const orderIds = [...new Set(memberships.map((m) => m.order_id).filter(Boolean))];
-  const omap = {};
+  const orders = (await sbAll('gym_membership_orders?select=id,order_code,plan_name,duration_months,price,full_name,email,phone,status,payment_method,paid_at,channel,created_at&order=created_at.desc').catch(() => [])) || [];
+  const orderIds = orders.map((o) => o.id);
+  const mmap = {};
   for (let i = 0; i < orderIds.length; i += 100) {
-    const os = (await sb(`gym_membership_orders?select=id,order_code,payment_method,paid_at,channel&id=in.(${orderIds.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
-    for (const o of os) omap[o.id] = o;
+    const ms = (await sb(`gym_memberships?select=id,order_id,start_date,end_date,is_active&order_id=in.(${orderIds.slice(i, i + 100).map(enc).join(',')})`).catch(() => [])) || [];
+    for (const m of ms) mmap[m.order_id] = m;
   }
   const term = String(q.q || '').trim().toLowerCase();
-  let rows = memberships.map((m) => {
-    const o = omap[m.order_id] || {};
-    const endD = m.end_date || '';
+  let rows = orders.map((o) => {
+    const m = mmap[o.id] || {};
     const startD = m.start_date || '';
-    let statusKey, daysLeft = null;
-    if (!m.is_active) { statusKey = 'inactive'; }
-    else if (endD && endD < today) { statusKey = 'expired'; daysLeft = -Math.round((new Date(today + 'T00:00:00') - new Date(endD + 'T00:00:00')) / 86400000); }
-    else if (endD) { daysLeft = Math.round((new Date(endD + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); statusKey = daysLeft <= 30 ? 'expiring' : 'active'; }
-    else { statusKey = 'active'; }
+    const endD = m.end_date || '';
+    let statusKey = o.status || 'pending_payment';
+    let daysLeft = null;
+    if (statusKey === 'confirmed' && endD) {
+      daysLeft = Math.round((new Date(endD + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+      if (m.is_active === false) statusKey = 'inactive';
+      else if (daysLeft < 0) statusKey = 'expired';
+      else if (daysLeft <= 30) statusKey = 'expiring';
+      else statusKey = 'active';
+    }
     return {
-      id: m.id, orderCode: o.order_code || '', name: m.full_name || '', phone: m.phone || '', email: m.email || '',
-      planName: m.plan_name || '', durationMonths: m.duration_months || 0,
-      startDate: startD, endDate: endD, daysLeft,
-      statusKey, isActive: m.is_active !== false,
+      id: o.id, mbrId: m.id || null, orderCode: o.order_code || '', name: o.full_name || '', phone: o.phone || '', email: o.email || '',
+      planName: o.plan_name || '', durationMonths: o.duration_months || 0, price: o.price || 0,
+      startDate: startD, endDate: endD, daysLeft, statusKey,
       payment: o.payment_method || '', paidAt: o.paid_at || '', channel: o.channel || '',
-      source: m.source || '',
+      createdAt: o.created_at || '',
     };
   });
   if (term) rows = rows.filter((r) => (r.name + ' ' + r.phone + ' ' + r.orderCode).toLowerCase().indexOf(term) >= 0);
-  const statusFilter = String(q.status || '').trim().toLowerCase();
-  if (statusFilter === 'active') rows = rows.filter((r) => r.statusKey === 'active');
-  else if (statusFilter === 'expiring') rows = rows.filter((r) => r.statusKey === 'expiring');
-  else if (statusFilter === 'expired') rows = rows.filter((r) => r.statusKey === 'expired');
-  else if (statusFilter === 'inactive') rows = rows.filter((r) => r.statusKey === 'inactive');
+  const sf = String(q.status || '').trim().toLowerCase();
+  if (sf === 'confirmed' || sf === 'active') rows = rows.filter((r) => r.statusKey === 'active' || r.statusKey === 'expiring' || r.statusKey === 'confirmed');
+  else if (sf === 'expiring') rows = rows.filter((r) => r.statusKey === 'expiring');
+  else if (sf === 'expired') rows = rows.filter((r) => r.statusKey === 'expired');
+  else if (sf === 'cancelled') rows = rows.filter((r) => r.statusKey === 'cancelled');
+  else if (sf === 'pending') rows = rows.filter((r) => r.statusKey === 'pending_payment');
   const dateFrom = String(q.from || '').trim();
   const dateTo = String(q.to || '').trim();
-  if (dateFrom) rows = rows.filter((r) => r.endDate >= dateFrom);
-  if (dateTo) rows = rows.filter((r) => r.endDate <= dateTo);
-  const allRows = memberships;
-  const activeCount = allRows.filter((m) => m.is_active && m.end_date && m.end_date >= today).length;
-  const expiringCount = allRows.filter((m) => { if (!m.is_active || !m.end_date || m.end_date < today) return false; const d = Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); return d <= 30; }).length;
-  const expiredThisMonth = allRows.filter((m) => m.is_active !== false && m.end_date && m.end_date < today && m.end_date >= thisMonth + '-01').length;
-  const newThisMonth = allRows.filter((m) => m.start_date && m.start_date >= thisMonth + '-01' && m.start_date <= today).length;
-  return send(res, 200, { memberships: rows, total: rows.length, activeCount, expiringCount, expiredThisMonth, newThisMonth });
+  if (dateFrom) rows = rows.filter((r) => (r.paidAt || r.createdAt).slice(0, 10) >= dateFrom);
+  if (dateTo) rows = rows.filter((r) => (r.paidAt || r.createdAt).slice(0, 10) <= dateTo);
+  const confirmed = orders.filter((o) => o.status === 'confirmed');
+  const confirmedIds = new Set(confirmed.map((o) => o.id));
+  const activeCount = confirmed.filter((o) => { const m = mmap[o.id]; return m && m.is_active && m.end_date && m.end_date >= today; }).length;
+  const expiringCount = confirmed.filter((o) => { const m = mmap[o.id]; if (!m || !m.is_active || !m.end_date || m.end_date < today) return false; return Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) <= 30; }).length;
+  const expiredCount = confirmed.filter((o) => { const m = mmap[o.id]; return m && m.end_date && m.end_date < today; }).length;
+  const newThisMonth = orders.filter((o) => o.created_at && o.created_at.slice(0, 7) === thisMonth).length;
+  return send(res, 200, { memberships: rows, total: rows.length, activeCount, expiringCount, expiredCount, newThisMonth });
 });
 
 route('GET', '/api/unit/gym/memberships/:id', async (req, res, s, q, params) => {
   if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
-  const m = ((await sb(`gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&id=eq.${enc(params.id)}`).catch(() => [])) || [])[0];
-  if (!m) return send(res, 404, { error: 'Membership not found.' });
-  const o = m.order_id ? ((await sb(`gym_membership_orders?select=id,order_code,payment_method,paid_at,channel,price,status&id=eq.${enc(m.order_id)}`).catch(() => [])) || [])[0] : null;
+  const o = ((await sb(`gym_membership_orders?select=id,order_code,plan_name,duration_months,price,full_name,email,phone,status,payment_method,payment_ref,paid_at,channel,notes,created_at&id=eq.${enc(params.id)}`).catch(() => [])) || [])[0];
+  if (!o) return send(res, 404, { error: 'Order not found.' });
+  const m = ((await sb(`gym_memberships?select=id,start_date,end_date,is_active,source&order_id=eq.${enc(o.id)}`).catch(() => [])) || [])[0];
   const today = todayJakarta();
   let daysLeft = null;
-  if (m.end_date && m.is_active !== false) { daysLeft = Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); }
-  const history = (await sb(`gym_memberships?select=id,plan_name,duration_months,start_date,end_date,is_active&phone=eq.${enc(m.phone)}&id=neq.${enc(m.id)}&order=start_date.desc`).catch(() => [])) || [];
+  if (m && m.end_date && m.is_active !== false) { daysLeft = Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); }
+  const history = (await sb(`gym_membership_orders?select=id,order_code,plan_name,duration_months,price,status,paid_at,created_at&phone=eq.${enc(o.phone)}&id=neq.${enc(o.id)}&order=created_at.desc`).catch(() => [])) || [];
   return send(res, 200, {
     membership: {
-      id: m.id, name: m.full_name || '', phone: m.phone || '', email: m.email || '',
-      planName: m.plan_name || '', durationMonths: m.duration_months || 0,
-      startDate: m.start_date || '', endDate: m.end_date || '', daysLeft,
-      isActive: m.is_active !== false, source: m.source || '',
-      orderCode: o ? (o.order_code || '') : '', payment: o ? (o.payment_method || '') : '',
-      paidAt: o ? (o.paid_at || '') : '', channel: o ? (o.channel || '') : '',
-      price: o ? (o.price || 0) : 0, orderStatus: o ? (o.status || '') : '',
+      id: o.id, name: o.full_name || '', phone: o.phone || '', email: o.email || '',
+      planName: o.plan_name || '', durationMonths: o.duration_months || 0, price: o.price || 0,
+      startDate: m ? (m.start_date || '') : '', endDate: m ? (m.end_date || '') : '', daysLeft,
+      isActive: m ? m.is_active !== false : false, source: m ? (m.source || '') : '',
+      orderCode: o.order_code || '', orderStatus: o.status || '',
+      payment: o.payment_method || '', paidAt: o.paid_at || '', channel: o.channel || '',
+      notes: o.notes || '', createdAt: o.created_at || '',
     },
     history: history.map((h) => ({
-      id: h.id, planName: h.plan_name || '', durationMonths: h.duration_months || 0,
-      startDate: h.start_date || '', endDate: h.end_date || '', isActive: h.is_active !== false,
+      id: h.id, orderCode: h.order_code || '', planName: h.plan_name || '', durationMonths: h.duration_months || 0,
+      price: h.price || 0, status: h.status || '', paidAt: h.paid_at || '', createdAt: h.created_at || '',
     })),
   });
 });
