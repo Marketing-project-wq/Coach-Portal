@@ -890,6 +890,7 @@ class Component extends DCLogic {
         this.accountUnit = res.coach.unit || 'arena';
         this.setState({ token: res.token, loggedIn: true, user: this.userObj(res.coach) });
         this.applyRole(res.coach.role);
+        this.loadUnits();
       }).catch((e) => this.toastMsg(e.message || 'Login failed.'));
   }
   logout() { this.tokenClear(); this.setState({ loggedIn: false, token: '', d: this.emptyData() }); }
