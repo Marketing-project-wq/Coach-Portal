@@ -2212,7 +2212,7 @@ route('GET', '/api/unit/gym/memberships', async (req, res, s, q) => {
   if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
   const today = todayJakarta();
   const thisMonth = today.slice(0, 7);
-  const memberships = (await sbAll('gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&order=end_date.asc.nullslast')) || [];
+  const memberships = (await sbAll('gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&order=end_date.asc.nullslast').catch(() => [])) || [];
   const orderIds = [...new Set(memberships.map((m) => m.order_id).filter(Boolean))];
   const omap = {};
   for (let i = 0; i < orderIds.length; i += 100) {
@@ -2258,9 +2258,9 @@ route('GET', '/api/unit/gym/memberships', async (req, res, s, q) => {
 
 route('GET', '/api/unit/gym/memberships/:id', async (req, res, s, q, params) => {
   if (!gymScanAllowed(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
-  const m = await sb(`gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&id=eq.${enc(params.id)}`).catch(() => null);
+  const m = ((await sb(`gym_memberships?select=id,order_id,full_name,email,phone,plan_name,duration_months,start_date,end_date,is_active,source&id=eq.${enc(params.id)}`).catch(() => [])) || [])[0];
   if (!m) return send(res, 404, { error: 'Membership not found.' });
-  const o = m.order_id ? (await sb(`gym_membership_orders?select=id,order_code,payment_method,paid_at,channel,price,status&id=eq.${enc(m.order_id)}`).catch(() => null)) : null;
+  const o = m.order_id ? ((await sb(`gym_membership_orders?select=id,order_code,payment_method,paid_at,channel,price,status&id=eq.${enc(m.order_id)}`).catch(() => [])) || [])[0] : null;
   const today = todayJakarta();
   let daysLeft = null;
   if (m.end_date && m.is_active !== false) { daysLeft = Math.round((new Date(m.end_date + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000); }
