@@ -1817,7 +1817,7 @@ class Component extends DCLogic {
     if (scr === 'recoverycenter') tt = titles.recoverycenter;
     titles.gymview = ['20FIT Gym', 'Schedule'];
     titles.gymmembers = ['20FIT Gym', this.t('members')];
-    titles.gympackages = ['20FIT Gym', 'Package Orders'];
+    titles.gympackages = ['20FIT Gym', 'Package PT'];
     titles.gymscan = ['20FIT Gym', this.t('scan_member')];
     titles.gymvisits = ['20FIT Gym', this.t('visit_history')];
     if (scr === 'gymview') tt = titles.gymview;
@@ -1825,7 +1825,7 @@ class Component extends DCLogic {
     if (scr === 'gympackages') tt = titles.gympackages;
     if (scr === 'gymscan') tt = titles.gymscan;
     if (scr === 'gymvisits') tt = titles.gymvisits;
-    titles.gymmembership = ['20FIT Gym', 'Membership'];
+    titles.gymmembership = ['20FIT Gym', 'Membership Gym'];
     titles.gympending = ['20FIT Gym', this.t('rs_pending_list')];
     titles.gymreport = ['20FIT Gym', this.t('report')];
     if (scr === 'gymmembership') tt = titles.gymmembership;
