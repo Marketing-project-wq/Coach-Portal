@@ -3229,7 +3229,7 @@ class Component extends DCLogic {
       rsSaveLabel: st.rsSaving ? (isID ? 'Menyimpan…' : 'Saving…') : this.t('save'), submitReschedule: () => this.submitReschedule(),
       showClassPopup: !!cp, closeClassPopup: () => this.closeClassPopup(),
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
-      cpConfirmed: cpConfirmed + (isID ? ' Terkonfirmasi' : ' Confirmed'), cpPending: cpPending + (isID ? ' Menunggu' : ' Pending'), cpQuota: cpConfirmed + ' / ' + (cpSched.quota || 0) + (isID ? ' Kuota' : ' Quota'),
+      cpConfirmed: cpConfirmed + (isID ? ' Terkonfirmasi' : ' Confirmed'), cpPending: cpPending + (isID ? ' Menunggu' : ' Pending'), cpQuota: (cpConfirmed + cpPending) + ' / ' + (cpSched.quota || 0) + (isID ? ' Kuota' : ' Quota'),
       cpParticipants, cpHasParticipants: cpParticipants.length > 0, cpNoParticipants: !!cp && cpParticipants.length === 0, cpCanCheck: isGro,
       cpHasLatePaid: (cpSched.latePaidCount || 0) > 0, cpLatePaidNote: (cpSched.latePaidCount || 0) + (isID ? ' peserta bayar setelah kelas' : ' participants paid after class'),
       cpCanManageCoach: isGro, cpCoachStatusLabel: cpCoachStatus.label, cpCoachStatusCol: cpCoachStatus.col,

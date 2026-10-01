@@ -805,7 +805,7 @@ route('GET', '/api/unit/gym/day', async (req, res, s, q) => {
   let scheds = (await sb(`gym_class_schedules?select=id,schedule_date,start_time,end_time,class_type_id,instructor,quota,is_cancelled&schedule_date=eq.${date}&order=start_time.asc`).catch(() => [])) || [];
   if (s.r === 'coach') scheds = scheds.filter((x) => instructorHasCoach(x.instructor, s.c));
   const counts = await gymBookingCounts(scheds.map((x) => x.id));
-  const classes = scheds.map((x) => { const t = types[x.class_type_id] || {}; return { time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', color: t.color || null, coach: x.instructor || '', pax: (counts[x.id] || {}).confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled }; });
+  const classes = scheds.map((x) => { const t = types[x.class_type_id] || {}; return { time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', color: t.color || null, coach: x.instructor || '', pax: ((counts[x.id] || {}).confirmed || 0) + ((counts[x.id] || {}).pending || 0), cap: x.quota || 0, cancelled: !!x.is_cancelled }; });
   return send(res, 200, { date, dateLabel: dLabel(date), classes });
 });
 // Gym schedule for a date range — used by the GRO full-calendar view.
@@ -870,7 +870,7 @@ route('GET', '/api/unit/gym/schedule', async (req, res, s, q) => {
     else if (d < today) { liveStatus = 'completed'; }
     else if (d === today && endMin != null && nowMin > endMin) { liveStatus = 'completed'; }
     else if (d === today && startMin != null && nowMin >= startMin && (endMin == null || nowMin <= endMin)) { liveStatus = 'live'; }
-    const entry = { id: x.id, time: hhmm(x.start_time), end: hhmm(x.end_time), type: typeName, typeColor: t.color || null, coach, pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, sessionType: isPrivate ? 'private' : 'group', liveStatus };
+    const entry = { id: x.id, time: hhmm(x.start_time), end: hhmm(x.end_time), type: typeName, typeColor: t.color || null, coach, pax: (bc.confirmed || 0) + (bc.pending || 0), cap: x.quota || 0, cancelled: !!x.is_cancelled, sessionType: isPrivate ? 'private' : 'group', liveStatus };
     if (isPrivate && privateMemberMap[x.id]) entry.memberName = privateMemberMap[x.id];
     if (checkinMap[x.id]) { entry.checkedInCount = checkinMap[x.id].checkedIn; entry.bookedCount = checkinMap[x.id].booked; }
     days[d].push(entry);
@@ -929,7 +929,7 @@ route('GET', '/api/unit/gym/class-detail', async (req, res, s, q) => {
     const checkedIn = todayVisits.some((v) => v.member_name && b.full_name && v.member_name.toLowerCase() === b.full_name.toLowerCase());
     return { bookingId: b.id, name: b.full_name || '', phone: b.phone || '', gender: b.gender || null, pending: !!pendingMap[b.id], pendingNote: (pendingMap[b.id] || {}).note || '', rescheduledFrom: reschFromMap[b.id] || '', checkedIn };
   });
-  const result = { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: bc.confirmed || 0, cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, sessionType: isPrivate ? 'private' : 'group', participants };
+  const result = { id: x.id, date: x.schedule_date, dateLabel: dLabel(x.schedule_date), time: hhmm(x.start_time), end: hhmm(x.end_time), type: t.name || 'Class', typeColor: t.color || null, coach: x.instructor || '', pax: (bc.confirmed || 0) + (bc.pending || 0), cap: x.quota || 0, cancelled: !!x.is_cancelled, isUpcoming, isGro: true, sessionType: isPrivate ? 'private' : 'group', participants };
   if (voucherInfo) result.voucher = voucherInfo;
   // Compute live status
   const endMin = hhmmToMin(x.end_time), startMin = hhmmToMin(x.start_time);
