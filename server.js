@@ -1830,7 +1830,7 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
       validationStatus: vStatus,
     });
   }
-  const vb = (await sbAll(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,status,coach_id,customer_type,rent_type,checked_in_at,booking_code,phone,email,notes,price,payment_method&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
+  const vb = (await sbAll(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,status,coach_id,customer_type,rent_type,booking_code,phone,email,notes,price,payment_method&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
   const vbDir = await coachDirectory();
   for (const b of vb) {
     if (String(b.status || '').toLowerCase() === 'cancelled') continue;
@@ -1841,7 +1841,7 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
       timeRange: hhmm(b.start_time) + (b.end_time ? ('-' + hhmm(b.end_time)) : ''),
       label: (b.full_name || 'Venue booking') + (coachName ? (' · ' + coachName) : ''),
       coach: coachName, status: b.status || '', customerType: b.customer_type || '', rentType: b.rent_type || '',
-      isOpenGym, checkedInAt: b.checked_in_at || '', code: b.booking_code || '',
+      isOpenGym, code: b.booking_code || '',
       phone: b.phone || '', email: b.email || '', notes: b.notes || '',
       price: b.price || 0, paymentMethod: b.payment_method || '',
     });
@@ -2526,7 +2526,7 @@ function venueBookingRow(b, assignMap, ptRates, coachById) {
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
     time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: (a && !dismissed) ? a.coach_name : '', dismissed, status: b.status || '',
     coachId: b.coach_id || '', bookingCoach, customerType: b.customer_type || '', rentType: b.rent_type || '',
-    isOpenGym, checkedInAt: b.checked_in_at || '' };
+    isOpenGym };
 }
 // Venue booking ids a coach is responsible for: dispatched via the old arena_venue_assignments
 // flow OR set as a booking's coach_id (new optional field). Union, deduped — so the coach sees
@@ -2572,7 +2572,7 @@ async function coachVenueCards(coach, from, to, today) {
 async function myVenueBookings(coach, assignMap, ptRates, from, coachById) {
   const ids = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === coach);
   if (!ids.length) return [];
-  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type,checked_in_at&id=in.(${ids.map(enc).join(',')})`;
+  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type&id=in.(${ids.map(enc).join(',')})`;
   if (from) q += `&booking_date=gte.${from}`;
   const rows = ((await sb(q + '&order=booking_date.asc,start_time.asc')) || []).filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
   return rows.map((b) => venueBookingRow(b, assignMap, ptRates, coachById));
@@ -2587,7 +2587,7 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
     // Fetch ALL upcoming bookings (paged, no 200 cap). Exclude cancelled in JS rather than
     // via `status=neq.cancelled` so rows with a NULL status are NOT dropped by PostgREST.
     const [rawRows, mine] = await Promise.all([
-      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type,checked_in_at&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
+      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
       myVenueBookings(s.c, assignMap, ptRates, today, dir.byId),
     ]);
     const rows = rawRows.filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
@@ -2599,13 +2599,21 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
 // GRO check-in for arena bookings (open gym). Records checked_in_at timestamp.
 route('POST', '/api/gro/arena/:id/checkin', async (req, res, s, q, params) => {
   if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
-  const rows = (await sb(`arena_bookings?select=id,status,checked_in_at&id=eq.${enc(params.id)}&limit=1`)) || [];
+  const rows = (await sb(`arena_bookings?select=id,status&id=eq.${enc(params.id)}&limit=1`)) || [];
   const b = rows[0];
   if (!b) return send(res, 404, { error: 'Booking tidak ditemukan.' });
   if (String(b.status || '').toLowerCase() === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
-  if (b.checked_in_at) return send(res, 200, { ok: true, checkedInAt: b.checked_in_at, already: true });
+  // Try reading checked_in_at (column may not exist yet).
+  try {
+    const chk = (await sb(`arena_bookings?select=checked_in_at&id=eq.${enc(params.id)}&limit=1`)) || [];
+    if (chk[0] && chk[0].checked_in_at) return send(res, 200, { ok: true, checkedInAt: chk[0].checked_in_at, already: true });
+  } catch (_) { /* column may not exist yet — proceed to patch */ }
   const nowIso = new Date().toISOString();
-  await sb(`arena_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ checked_in_at: nowIso }) });
+  try {
+    await sb(`arena_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ checked_in_at: nowIso }) });
+  } catch (_) {
+    return send(res, 400, { error: 'Kolom checked_in_at belum ada di tabel arena_bookings. Tambahkan kolom tersebut di Supabase.' });
+  }
   return send(res, 200, { ok: true, checkedInAt: nowIso });
 });
 // Email every active coach when the responsible coach for an arena+coach booking is set/changed.

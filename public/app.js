@@ -1635,11 +1635,6 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg('Hidden · no coach needed'); this.loadScreen(this.state.screen); })
       .catch((e) => this.toastMsg(e.message));
   }
-  checkinArenaBooking(id) {
-    this.api('/api/gro/arena/' + encodeURIComponent(id) + '/checkin', { method: 'POST' })
-      .then(() => { this.toastMsg('Check-in berhasil'); this.loadScreen(this.state.screen); })
-      .catch((e) => this.toastMsg(e.message));
-  }
   // Reveal the coach dropdown on a booking that has no coach yet (keeps coachless cards clean by default).
   startSetCoach(id) { this.setState({ vcEdit: Object.assign({}, this.state.vcEdit, { [id]: true }) }); }
   // Set/clear the optional coach on a venue booking (arena_bookings.coach_id). Empty = Tanpa coach.
@@ -1974,10 +1969,7 @@ class Component extends DCLogic {
         timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Time not set',
         needsCoach: b.needsCoach, coach: b.coach || '', assigned,
         payLabel, payBg, payCol,
-        isOpenGym: !!b.isOpenGym, checkedIn: !!b.checkedInAt,
-        checkinLabel: b.checkedInAt ? ('Checked in · ' + new Date(b.checkedInAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })) : '',
-        showCheckin: isGro && !!b.isOpenGym && !b.checkedInAt,
-        doCheckin: () => this.checkinArenaBooking(b.id),
+        isOpenGym: !!b.isOpenGym,
         typeLabel: b.needsCoach ? 'Arena + Coach' : (b.isOpenGym ? 'Open Gym' : 'Arena'), typeCol: b.needsCoach ? C.volt : (b.isOpenGym ? '#8B5CF6' : C.cyan),
         typeBg: b.needsCoach ? 'var(--volt-dim)' : (b.isOpenGym ? 'rgba(139,92,246,.12)' : 'rgba(0,104,201,.1)'),
         assignLabel: assigned ? ('✓ ' + b.coach) : 'No coach yet', assignCol: assigned ? C.green : C.amber,
