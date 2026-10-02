@@ -1835,7 +1835,8 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
   for (const b of vb) {
     if (String(b.status || '').toLowerCase() === 'cancelled') continue;
     const coachName = b.coach_id ? (vbDir.byId[b.coach_id] || '') : '';
-    const isOpenGym = b.customer_type === 'individual' && b.rent_type === 'venue_only';
+    const durationH = (b.start_time && b.end_time) ? ((parseInt(b.end_time) * 60 + parseInt((b.end_time+'::').split(':')[1])) - (parseInt(b.start_time) * 60 + parseInt((b.start_time+'::').split(':')[1]))) / 60 : 0;
+    const isOpenGym = (b.customer_type === 'individual' && b.rent_type === 'venue_only') || (durationH >= 4 && !b.coach_id);
     (byDay[b.booking_date] = byDay[b.booking_date] || []).push({
       kind: 'venue', id: b.id, time: hhmm(b.start_time), sort: hhmm(b.start_time),
       timeRange: hhmm(b.start_time) + (b.end_time ? ('-' + hhmm(b.end_time)) : ''),
@@ -2521,7 +2522,8 @@ function venueBookingRow(b, assignMap, ptRates, coachById) {
   const a = assignMap[b.id];
   const dismissed = !!(a && a.coach_name === NO_COACH);
   const bookingCoach = (coachById && b.coach_id) ? (coachById[b.coach_id] || '') : '';
-  const isOpenGym = b.customer_type === 'individual' && b.rent_type === 'venue_only';
+  const durationH = (b.start_time && b.end_time) ? ((parseInt(b.end_time) * 60 + parseInt((b.end_time+'::').split(':')[1])) - (parseInt(b.start_time) * 60 + parseInt((b.start_time+'::').split(':')[1]))) / 60 : 0;
+  const isOpenGym = (b.customer_type === 'individual' && b.rent_type === 'venue_only') || (durationH >= 4 && !b.coach_id);
   return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(no name)',
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
     time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: (a && !dismissed) ? a.coach_name : '', dismissed, status: b.status || '',
@@ -2595,12 +2597,6 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
   }
   const bookings = await myVenueBookings(s.c, assignMap, ptRates, null, dir.byId);
   return send(res, 200, { bookings, coaches: [], coachList: [], isHC: false });
-});
-// DEBUG: check arena_bookings field values (temporary)
-route('GET', '/api/gro/arena-debug', async (req, res, s) => {
-  if (!isGro(s)) return send(res, 403, { error: 'GRO only' });
-  const rows = (await sbAll(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,customer_type,rent_type,status&booking_date=gte.2026-10-01&booking_date=lte.2026-10-03&order=booking_date.asc,start_time.asc`)) || [];
-  return send(res, 200, rows.map(r => ({ id: r.id, name: r.full_name, date: r.booking_date, time: (r.start_time||'')+'–'+(r.end_time||''), customer_type: r.customer_type, rent_type: r.rent_type, status: r.status })));
 });
 // GRO: fetch check-in/out status for an arena booking (columns may not exist yet).
 route('GET', '/api/gro/arena/:id/status', async (req, res, s, q, params) => {
