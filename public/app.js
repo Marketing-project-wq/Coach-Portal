@@ -941,6 +941,14 @@ class Component extends DCLogic {
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => this.setState({ classPopup: d })).catch((e) => this.toastMsg(e.message));
   }
   closeClassPopup() { this.setState({ classPopup: null }); }
+  openVenuePopup(e) { if (!e) return; this.setState({ venuePopup: e }); }
+  closeVenuePopup() { this.setState({ venuePopup: null }); }
+  venuePopupCheckin() {
+    const vp = this.state.venuePopup; if (!vp || !vp.id) return;
+    this.api('/api/gro/arena/' + encodeURIComponent(vp.id) + '/checkin', { method: 'POST' })
+      .then((r) => { this.toastMsg('Check-in berhasil'); this.setState({ venuePopup: Object.assign({}, vp, { checkedInAt: r.checkedInAt || new Date().toISOString() }) }); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   // GRO checks the coach in/out on their behalf straight from the Kalender Arena popup (helps when
   // the coach forgets). Server attributes it to the real instructor and skips the coach GPS lock.
   popupCoachCheckin() {
@@ -2398,7 +2406,7 @@ class Component extends DCLogic {
             const isPending = String(e.status || '').toLowerCase() === 'pending_payment';
             const statusLabel = isPending ? 'PENDING' : 'CONFIRMED';
             const vBg = isPending ? '#92400E' : '#2B3242';
-            return { text: (e.timeRange || e.time) + ' ' + e.label, bg: vBg, fg: '#ffffff', paxBg: isPending ? 'rgba(251,191,36,.35)' : 'rgba(74,222,128,.3)', cursor: 'default', hasPax: true, pax: statusLabel, open: () => {} };
+            return { text: (e.timeRange || e.time) + ' ' + e.label, bg: vBg, fg: '#ffffff', paxBg: isPending ? 'rgba(251,191,36,.35)' : 'rgba(74,222,128,.3)', cursor: 'pointer', hasPax: true, pax: statusLabel, open: () => this.openVenuePopup(e) };
           }
           // Colour each class bar by its type (arena_class_types.color); fall back to the brand red.
           const bg = e.color || C.volt; const fg = contrastText(bg);
@@ -2492,6 +2500,20 @@ class Component extends DCLogic {
         note: p.note || '', saveNote: (e) => this.saveNote(cpSched.schedule_id, p.booking_id, e && e.target ? e.target.value : ''),
       };
     });
+
+    // Venue popup (modal) — opened by clicking a venue booking in the Arena Calendar.
+    const vp = st.venuePopup;
+    const vpIsPending = vp ? String(vp.status || '').toLowerCase() === 'pending_payment' : false;
+    const vpIsOpenGym = vp ? !!vp.isOpenGym : false;
+    const vpCheckedIn = vp ? !!vp.checkedInAt : false;
+    const vpCheckinTime = vpCheckedIn ? new Date(vp.checkedInAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+    const vpPayLabel = vpIsPending ? 'PENDING PAYMENT' : 'CONFIRMED';
+    const vpPayBg = vpIsPending ? 'rgba(199,122,0,.16)' : 'rgba(28,138,75,.14)';
+    const vpPayCol = vpIsPending ? C.amber : C.green;
+    const vpTypeLabel = vp ? (vpIsOpenGym ? 'Open Gym' : (vp.coach ? 'Arena + Coach' : 'Arena')) : '';
+    const vpTypeCol = vp ? (vpIsOpenGym ? '#8B5CF6' : (vp.coach ? C.volt : C.cyan)) : '';
+    const vpTypeBg = vp ? (vpIsOpenGym ? 'rgba(139,92,246,.12)' : (vp.coach ? 'var(--volt-dim)' : 'rgba(0,104,201,.1)')) : '';
+    const vpPriceFmt = vp && vp.price ? 'Rp ' + Number(vp.price).toLocaleString('id-ID') : '';
 
     // RESCHEDULE (GRO) — step 1 is a full page of class bookings (table); step 2 is the slot-picker modal.
     const RSCH_STATUS = [{ v: '', l: 'All Status' }, { v: 'confirmed', l: 'Confirmed' }, { v: 'pending', l: 'Pending' }, { v: 'checkedin', l: 'Checked in' }];
@@ -3309,6 +3331,17 @@ class Component extends DCLogic {
       rsHasSummary: !!rsSummary, rsSummary,
       rsCanSave, rsSaveDisabled: !rsCanSave, rsSaveBg: rsCanSave ? 'var(--volt)' : 'var(--border2)', rsSaveCursor: rsCanSave ? 'pointer' : 'not-allowed',
       rsSaveLabel: st.rsSaving ? (isID ? 'Menyimpan…' : 'Saving…') : this.t('save'), submitReschedule: () => this.submitReschedule(),
+      showVenuePopup: !!vp, closeVenuePopup: () => this.closeVenuePopup(),
+      vpCustomer: vp ? (vp.label || 'Venue booking') : '', vpCode: vp ? (vp.code || '') : '', vpHasCode: !!(vp && vp.code),
+      vpTimeRange: vp ? (vp.timeRange || vp.time || '') : '', vpCoach: vp ? (vp.coach || '') : '', vpHasCoach: !!(vp && vp.coach),
+      vpPayLabel, vpPayBg, vpPayCol, vpTypeLabel, vpTypeCol, vpTypeBg,
+      vpPhone: vp ? (vp.phone || '-') : '', vpEmail: vp ? (vp.email || '-') : '',
+      vpNotes: vp ? (vp.notes || '') : '', vpHasNotes: !!(vp && vp.notes),
+      vpPrice: vpPriceFmt, vpHasPrice: !!(vp && vp.price),
+      vpPayMethod: vp ? (vp.paymentMethod || '') : '', vpHasPayMethod: !!(vp && vp.paymentMethod),
+      vpIsOpenGym, vpCheckedIn, vpCheckinTime: vpCheckedIn ? ('Checked in · ' + vpCheckinTime) : '',
+      vpCanCheckin: isGro && vpIsOpenGym && !vpCheckedIn,
+      vpDoCheckin: () => this.venuePopupCheckin(),
       showClassPopup: !!cp, closeClassPopup: () => this.closeClassPopup(),
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
       cpConfirmed: cpConfirmed + (isID ? ' Terkonfirmasi' : ' Confirmed'), cpPending: cpPending + (isID ? ' Menunggu' : ' Pending'), cpQuota: (cpConfirmed + cpPending) + ' / ' + (cpSched.quota || 0) + (isID ? ' Kuota' : ' Quota'),

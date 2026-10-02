@@ -1830,16 +1830,20 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
       validationStatus: vStatus,
     });
   }
-  const vb = (await sbAll(`arena_bookings?select=full_name,booking_date,start_time,end_time,status,coach_id,customer_type,rent_type&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
+  const vb = (await sbAll(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,status,coach_id,customer_type,rent_type,checked_in_at,booking_code,phone,email,notes,price,payment_method&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
   const vbDir = await coachDirectory();
   for (const b of vb) {
     if (String(b.status || '').toLowerCase() === 'cancelled') continue;
     const coachName = b.coach_id ? (vbDir.byId[b.coach_id] || '') : '';
+    const isOpenGym = b.customer_type === 'individual' && b.rent_type === 'venue_only';
     (byDay[b.booking_date] = byDay[b.booking_date] || []).push({
-      kind: 'venue', time: hhmm(b.start_time), sort: hhmm(b.start_time),
+      kind: 'venue', id: b.id, time: hhmm(b.start_time), sort: hhmm(b.start_time),
       timeRange: hhmm(b.start_time) + (b.end_time ? ('-' + hhmm(b.end_time)) : ''),
       label: (b.full_name || 'Venue booking') + (coachName ? (' · ' + coachName) : ''),
       coach: coachName, status: b.status || '', customerType: b.customer_type || '', rentType: b.rent_type || '',
+      isOpenGym, checkedInAt: b.checked_in_at || '', code: b.booking_code || '',
+      phone: b.phone || '', email: b.email || '', notes: b.notes || '',
+      price: b.price || 0, paymentMethod: b.payment_method || '',
     });
   }
   for (const d in byDay) byDay[d].sort((a, b) => a.sort.localeCompare(b.sort));
