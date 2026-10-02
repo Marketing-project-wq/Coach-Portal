@@ -2596,6 +2596,12 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
   const bookings = await myVenueBookings(s.c, assignMap, ptRates, null, dir.byId);
   return send(res, 200, { bookings, coaches: [], coachList: [], isHC: false });
 });
+// DEBUG: check arena_bookings field values (temporary)
+route('GET', '/api/gro/arena-debug', async (req, res, s) => {
+  if (!isGro(s)) return send(res, 403, { error: 'GRO only' });
+  const rows = (await sbAll(`arena_bookings?select=id,full_name,booking_date,start_time,end_time,customer_type,rent_type,status&booking_date=gte.2026-10-01&booking_date=lte.2026-10-03&order=booking_date.asc,start_time.asc`)) || [];
+  return send(res, 200, rows.map(r => ({ id: r.id, name: r.full_name, date: r.booking_date, time: (r.start_time||'')+'–'+(r.end_time||''), customer_type: r.customer_type, rent_type: r.rent_type, status: r.status })));
+});
 // GRO: fetch check-in/out status for an arena booking (columns may not exist yet).
 route('GET', '/api/gro/arena/:id/status', async (req, res, s, q, params) => {
   if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
