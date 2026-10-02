@@ -2618,6 +2618,7 @@ route('POST', '/api/gro/arena/:id/checkin', async (req, res, s, q, params) => {
   const b = rows[0];
   if (!b) return send(res, 404, { error: 'Booking tidak ditemukan.' });
   if (String(b.status || '').toLowerCase() === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
+  if (String(b.status || '').toLowerCase() === 'pending_payment') return send(res, 400, { error: 'Booking masih pending payment. Tidak bisa check-in.' });
   try {
     const chk = (await sb(`arena_bookings?select=checked_in_at&id=eq.${enc(params.id)}&limit=1`)) || [];
     if (chk[0] && chk[0].checked_in_at) return send(res, 200, { ok: true, checkedInAt: chk[0].checked_in_at, already: true });

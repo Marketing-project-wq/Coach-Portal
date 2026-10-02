@@ -3349,7 +3349,7 @@ class Component extends DCLogic {
       vpPayMethod: vp ? (vp.paymentMethod || '') : '', vpHasPayMethod: !!(vp && vp.paymentMethod),
       vpIsOpenGym, vpCheckedIn, vpCheckinTime: vpCheckedIn ? ('Checked in · ' + vpCheckinTime) : '',
       vpCheckedOut, vpCheckoutTime: vpCheckedOut ? ('Checked out · ' + vpCheckoutTime) : '',
-      vpCanCheckin: isGro && !vpCheckedIn,
+      vpCanCheckin: isGro && !vpCheckedIn && !vpIsPending,
       vpCanCheckout: isGro && vpCheckedIn && !vpCheckedOut,
       vpDoCheckin: () => this.venuePopupCheckin(),
       vpDoCheckout: () => this.venuePopupCheckout(),
