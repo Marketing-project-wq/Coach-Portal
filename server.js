@@ -2517,10 +2517,12 @@ function venueBookingRow(b, assignMap, ptRates, coachById) {
   const a = assignMap[b.id];
   const dismissed = !!(a && a.coach_name === NO_COACH);
   const bookingCoach = (coachById && b.coach_id) ? (coachById[b.coach_id] || '') : '';
+  const isOpenGym = b.customer_type === 'individual' && b.rent_type === 'venue_only';
   return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(no name)',
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
     time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: (a && !dismissed) ? a.coach_name : '', dismissed, status: b.status || '',
-    coachId: b.coach_id || '', bookingCoach, customerType: b.customer_type || '', rentType: b.rent_type || '' };
+    coachId: b.coach_id || '', bookingCoach, customerType: b.customer_type || '', rentType: b.rent_type || '',
+    isOpenGym, checkedInAt: b.checked_in_at || '' };
 }
 // Venue booking ids a coach is responsible for: dispatched via the old arena_venue_assignments
 // flow OR set as a booking's coach_id (new optional field). Union, deduped — so the coach sees
@@ -2566,7 +2568,7 @@ async function coachVenueCards(coach, from, to, today) {
 async function myVenueBookings(coach, assignMap, ptRates, from, coachById) {
   const ids = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === coach);
   if (!ids.length) return [];
-  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type&id=in.(${ids.map(enc).join(',')})`;
+  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type,checked_in_at&id=in.(${ids.map(enc).join(',')})`;
   if (from) q += `&booking_date=gte.${from}`;
   const rows = ((await sb(q + '&order=booking_date.asc,start_time.asc')) || []).filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
   return rows.map((b) => venueBookingRow(b, assignMap, ptRates, coachById));
@@ -2581,7 +2583,7 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
     // Fetch ALL upcoming bookings (paged, no 200 cap). Exclude cancelled in JS rather than
     // via `status=neq.cancelled` so rows with a NULL status are NOT dropped by PostgREST.
     const [rawRows, mine] = await Promise.all([
-      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
+      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type,checked_in_at&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
       myVenueBookings(s.c, assignMap, ptRates, today, dir.byId),
     ]);
     const rows = rawRows.filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
@@ -2589,6 +2591,18 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
   }
   const bookings = await myVenueBookings(s.c, assignMap, ptRates, null, dir.byId);
   return send(res, 200, { bookings, coaches: [], coachList: [], isHC: false });
+});
+// GRO check-in for arena bookings (open gym). Records checked_in_at timestamp.
+route('POST', '/api/gro/arena/:id/checkin', async (req, res, s, q, params) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const rows = (await sb(`arena_bookings?select=id,status,checked_in_at&id=eq.${enc(params.id)}&limit=1`)) || [];
+  const b = rows[0];
+  if (!b) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  if (String(b.status || '').toLowerCase() === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
+  if (b.checked_in_at) return send(res, 200, { ok: true, checkedInAt: b.checked_in_at, already: true });
+  const nowIso = new Date().toISOString();
+  await sb(`arena_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ checked_in_at: nowIso }) });
+  return send(res, 200, { ok: true, checkedInAt: nowIso });
 });
 // Email every active coach when the responsible coach for an arena+coach booking is set/changed.
 // Fire-and-forget: it never blocks or fails the assignment, and is a safe no-op until

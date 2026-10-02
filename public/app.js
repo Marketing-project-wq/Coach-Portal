@@ -1627,6 +1627,11 @@ class Component extends DCLogic {
       .then(() => { this.toastMsg('Hidden · no coach needed'); this.loadScreen(this.state.screen); })
       .catch((e) => this.toastMsg(e.message));
   }
+  checkinArenaBooking(id) {
+    this.api('/api/gro/arena/' + encodeURIComponent(id) + '/checkin', { method: 'POST' })
+      .then(() => { this.toastMsg('Check-in berhasil'); this.loadScreen(this.state.screen); })
+      .catch((e) => this.toastMsg(e.message));
+  }
   // Reveal the coach dropdown on a booking that has no coach yet (keeps coachless cards clean by default).
   startSetCoach(id) { this.setState({ vcEdit: Object.assign({}, this.state.vcEdit, { [id]: true }) }); }
   // Set/clear the optional coach on a venue booking (arena_bookings.coach_id). Empty = Tanpa coach.
@@ -1961,8 +1966,12 @@ class Component extends DCLogic {
         timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Time not set',
         needsCoach: b.needsCoach, coach: b.coach || '', assigned,
         payLabel, payBg, payCol,
-        typeLabel: b.needsCoach ? 'Arena + Coach' : 'Arena', typeCol: b.needsCoach ? C.volt : C.cyan,
-        typeBg: b.needsCoach ? 'var(--volt-dim)' : 'rgba(0,104,201,.1)',
+        isOpenGym: !!b.isOpenGym, checkedIn: !!b.checkedInAt,
+        checkinLabel: b.checkedInAt ? ('Checked in · ' + new Date(b.checkedInAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })) : '',
+        showCheckin: isGro && !!b.isOpenGym && !b.checkedInAt,
+        doCheckin: () => this.checkinArenaBooking(b.id),
+        typeLabel: b.needsCoach ? 'Arena + Coach' : (b.isOpenGym ? 'Open Gym' : 'Arena'), typeCol: b.needsCoach ? C.volt : (b.isOpenGym ? '#8B5CF6' : C.cyan),
+        typeBg: b.needsCoach ? 'var(--volt-dim)' : (b.isOpenGym ? 'rgba(139,92,246,.12)' : 'rgba(0,104,201,.1)'),
         assignLabel: assigned ? ('✓ ' + b.coach) : 'No coach yet', assignCol: assigned ? C.green : C.amber,
         coachOpts: venueCoachOpts.map((o) => Object.assign({}, o, { picked: o.name === b.coach })),
         reassign: (e) => this.assignVenue(b.id, e && e.target ? e.target.value : ''), unassign: () => this.unassignVenue(b.id),
@@ -1981,15 +1990,12 @@ class Component extends DCLogic {
         setCoach: (e) => this.setBookingCoach(b.id, e && e.target ? e.target.value : ''),
       };
     };
-    // "Open gym" = individual + venue_only → shown in schedule/calendar, not in venue booking list.
-    const isOpenGym = (b) => b.customerType === 'individual' && b.rentType === 'venue_only';
     // Two separate screens:
     //  • "Venue Booking" (own) → bookings assigned to me. HC gets D.venueMine; a coach's whole list IS their own.
     //  • "Assign Venue" (dispatch, HC/admin only) → all upcoming bookings with the coach dropdown.
-    // GRO isn't assigned venues but must see every arena booking (to check guests in), so show
-    // the full list rather than "assigned to me". HC keeps their own list; a coach's list is theirs.
+    // GRO sees every arena booking (including open gym with check-in capability).
     const venueRaw = (venueIsHC && !isGro) ? (D.venueMine || []) : (D.venueBookings || []);
-    const venueOwn = (isGro ? venueRaw.filter((b) => !isOpenGym(b)) : venueRaw).map((b) => mapVenueBooking(b, 'coach'));
+    const venueOwn = venueRaw.map((b) => mapVenueBooking(b, 'coach'));
     const noVenueOwn = venueOwn.length === 0;
     const venueAllHC = venueIsHC ? (D.venueBookings || []) : [];
     // Bookings marked "no coach needed" (e.g. clubs with their own trainer) are hidden from dispatch.
