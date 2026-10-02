@@ -941,6 +941,9 @@ class Component extends DCLogic {
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => this.setState({ classPopup: d })).catch((e) => this.toastMsg(e.message));
   }
   closeClassPopup() { this.setState({ classPopup: null }); }
+  openOpenGymList(entries) { this.setState({ openGymList: entries || [] }); }
+  closeOpenGymList() { this.setState({ openGymList: null }); }
+  openOpenGymDetail(e) { this.setState({ openGymList: null }); this.openVenuePopup(e); }
   openVenuePopup(e) {
     if (!e) return;
     this.setState({ venuePopup: e });
@@ -2407,7 +2410,16 @@ class Component extends DCLogic {
         show: true, day: c.day, date: c.date,
         bg: c.isToday ? C.voltDim : 'var(--panel2)', border: c.isToday ? C.volt : 'var(--border)',
         numCol: c.isToday ? C.volt : C.text,
-        events: (c.events || []).map((e) => {
+        events: (() => {
+          const raw = c.events || [];
+          const openGymEntries = raw.filter((e) => e.kind === 'venue' && e.isOpenGym);
+          const otherEntries = raw.filter((e) => !(e.kind === 'venue' && e.isOpenGym));
+          if (openGymEntries.length > 0) otherEntries.push({ kind: 'openGymGroup', count: openGymEntries.length, entries: openGymEntries, sort: openGymEntries[0].sort });
+          otherEntries.sort((a, b) => (a.sort || '').localeCompare(b.sort || ''));
+          return otherEntries.map((e) => {
+          if (e.kind === 'openGymGroup') {
+            return { text: 'Open Gym', bg: '#8B5CF6', fg: '#ffffff', paxBg: 'rgba(255,255,255,.3)', cursor: 'pointer', hasPax: true, pax: String(e.count), open: () => this.openOpenGymList(e.entries) };
+          }
           if (e.kind === 'venue') {
             const isPending = String(e.status || '').toLowerCase() === 'pending_payment';
             const statusLabel = isPending ? 'PENDING' : 'CONFIRMED';
@@ -2417,7 +2429,7 @@ class Component extends DCLogic {
           // Colour each class bar by its type (arena_class_types.color); fall back to the brand red.
           const bg = e.color || C.volt; const fg = contrastText(bg);
           return { text: e.time + ' ' + e.label, bg, fg, paxBg: fg === '#ffffff' ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.55)', cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId) };
-        }),
+        }); })(),
       };
     });
     // Team Schedule (Head Coach) — month calendar of the whole team's classes, coloured by whether
@@ -3339,6 +3351,14 @@ class Component extends DCLogic {
       rsHasSummary: !!rsSummary, rsSummary,
       rsCanSave, rsSaveDisabled: !rsCanSave, rsSaveBg: rsCanSave ? 'var(--volt)' : 'var(--border2)', rsSaveCursor: rsCanSave ? 'pointer' : 'not-allowed',
       rsSaveLabel: st.rsSaving ? (isID ? 'Menyimpan…' : 'Saving…') : this.t('save'), submitReschedule: () => this.submitReschedule(),
+      showOpenGymList: !!(st.openGymList && st.openGymList.length),
+      closeOpenGymList: () => this.closeOpenGymList(),
+      ogCount: st.openGymList ? st.openGymList.length : 0,
+      ogTitle: 'Open Gym · ' + (st.openGymList ? st.openGymList.length : 0) + ' orang',
+      ogItems: (st.openGymList || []).map((e) => {
+        const ip = String(e.status || '').toLowerCase() === 'pending_payment';
+        return { name: e.label || 'Open Gym', time: e.timeRange || e.time || '', payLabel: ip ? 'PENDING' : 'CONFIRMED', payBg: ip ? 'rgba(199,122,0,.16)' : 'rgba(28,138,75,.14)', payCol: ip ? C.amber : C.green, open: () => this.openOpenGymDetail(e) };
+      }),
       showVenuePopup: !!vp, closeVenuePopup: () => this.closeVenuePopup(),
       vpCustomer: vp ? (vp.label || 'Venue booking') : '', vpCode: vp ? (vp.code || '') : '', vpHasCode: !!(vp && vp.code),
       vpTimeRange: vp ? (vp.timeRange || vp.time || '') : '', vpCoach: vp ? (vp.coach || '') : '', vpHasCoach: !!(vp && vp.coach),
