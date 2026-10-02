@@ -1955,7 +1955,7 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
         <button onclick="{{ closeOpenGymList }}" style="background:transparent;border:0;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;flex-shrink:0;">&times;</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <sc-for items="{{ ogItems }}" as="og">
+        <sc-for list="{{ ogItems }}" as="og">
         <div onclick="{{ og.open }}" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:background .15s;" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='var(--panel)'">
           <div style="min-width:0;">
             <div style="font-family:'Barlow Condensed';font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ og.name }}</div>
