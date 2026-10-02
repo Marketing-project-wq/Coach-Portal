@@ -1830,7 +1830,7 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
       validationStatus: vStatus,
     });
   }
-  const vb = (await sbAll(`arena_bookings?select=full_name,booking_date,start_time,end_time,status,coach_id&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
+  const vb = (await sbAll(`arena_bookings?select=full_name,booking_date,start_time,end_time,status,coach_id,customer_type,rent_type&booking_date=gte.${mStart}&booking_date=lte.${mEnd}&order=booking_date.asc,start_time.asc`)) || [];
   const vbDir = await coachDirectory();
   for (const b of vb) {
     if (String(b.status || '').toLowerCase() === 'cancelled') continue;
@@ -1839,7 +1839,7 @@ route('GET', '/api/gro/calendar', async (req, res, s, q) => {
       kind: 'venue', time: hhmm(b.start_time), sort: hhmm(b.start_time),
       timeRange: hhmm(b.start_time) + (b.end_time ? ('-' + hhmm(b.end_time)) : ''),
       label: (b.full_name || 'Venue booking') + (coachName ? (' · ' + coachName) : ''),
-      coach: coachName,
+      coach: coachName, status: b.status || '', customerType: b.customer_type || '', rentType: b.rent_type || '',
     });
   }
   for (const d in byDay) byDay[d].sort((a, b) => a.sort.localeCompare(b.sort));
@@ -2520,7 +2520,7 @@ function venueBookingRow(b, assignMap, ptRates, coachById) {
   return { id: b.id, code: b.booking_code || '', customer: b.full_name || '(no name)',
     date: b.booking_date, dateLabel: b.booking_date ? fmtDMon(b.booking_date) : '', dayLabel: b.booking_date ? dLabel(b.booking_date) : '',
     time: hhmm(b.start_time), end: hhmm(b.end_time), needsCoach: venueNeedsCoach(b, ptRates), coach: (a && !dismissed) ? a.coach_name : '', dismissed, status: b.status || '',
-    coachId: b.coach_id || '', bookingCoach };
+    coachId: b.coach_id || '', bookingCoach, customerType: b.customer_type || '', rentType: b.rent_type || '' };
 }
 // Venue booking ids a coach is responsible for: dispatched via the old arena_venue_assignments
 // flow OR set as a booking's coach_id (new optional field). Union, deduped — so the coach sees
@@ -2566,7 +2566,7 @@ async function coachVenueCards(coach, from, to, today) {
 async function myVenueBookings(coach, assignMap, ptRates, from, coachById) {
   const ids = Object.keys(assignMap).filter((id) => assignMap[id].coach_name === coach);
   if (!ids.length) return [];
-  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id&id=in.(${ids.map(enc).join(',')})`;
+  let q = `arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type&id=in.(${ids.map(enc).join(',')})`;
   if (from) q += `&booking_date=gte.${from}`;
   const rows = ((await sb(q + '&order=booking_date.asc,start_time.asc')) || []).filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');
   return rows.map((b) => venueBookingRow(b, assignMap, ptRates, coachById));
@@ -2581,7 +2581,7 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
     // Fetch ALL upcoming bookings (paged, no 200 cap). Exclude cancelled in JS rather than
     // via `status=neq.cancelled` so rows with a NULL status are NOT dropped by PostgREST.
     const [rawRows, mine] = await Promise.all([
-      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
+      sbAll(`arena_bookings?select=id,booking_code,full_name,booking_date,start_time,end_time,status,notes,price,price_before_disc,coach_id,customer_type,rent_type&booking_date=gte.${today}&order=booking_date.asc,start_time.asc,id.asc`),
       myVenueBookings(s.c, assignMap, ptRates, today, dir.byId),
     ]);
     const rows = rawRows.filter((b) => String(b.status || '').toLowerCase() !== 'cancelled');

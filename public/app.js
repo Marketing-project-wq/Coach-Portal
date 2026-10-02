@@ -1952,10 +1952,15 @@ class Component extends DCLogic {
     // mode 'assign' → HC dispatch card (coach dropdown); mode 'coach' → coach card (own booking)
     const mapVenueBooking = (b, mode) => {
       const assigned = !!b.coach;
+      const isPending = String(b.status || '').toLowerCase() === 'pending_payment';
+      const payLabel = isPending ? 'PENDING' : 'CONFIRMED';
+      const payBg = isPending ? 'rgba(199,122,0,.16)' : 'rgba(28,138,75,.14)';
+      const payCol = isPending ? C.amber : C.green;
       return {
         id: b.id, code: b.code || '', customer: b.customer || '(no name)', dayLabel: b.dayLabel || '',
         timeLabel: b.time ? (b.time + (b.end ? '–' + b.end : '')) : 'Time not set',
         needsCoach: b.needsCoach, coach: b.coach || '', assigned,
+        payLabel, payBg, payCol,
         typeLabel: b.needsCoach ? 'Arena + Coach' : 'Arena', typeCol: b.needsCoach ? C.volt : C.cyan,
         typeBg: b.needsCoach ? 'var(--volt-dim)' : 'rgba(0,104,201,.1)',
         assignLabel: assigned ? ('✓ ' + b.coach) : 'No coach yet', assignCol: assigned ? C.green : C.amber,
@@ -1976,12 +1981,15 @@ class Component extends DCLogic {
         setCoach: (e) => this.setBookingCoach(b.id, e && e.target ? e.target.value : ''),
       };
     };
+    // "Open gym" = individual + venue_only → shown in schedule/calendar, not in venue booking list.
+    const isOpenGym = (b) => b.customerType === 'individual' && b.rentType === 'venue_only';
     // Two separate screens:
     //  • "Venue Booking" (own) → bookings assigned to me. HC gets D.venueMine; a coach's whole list IS their own.
     //  • "Assign Venue" (dispatch, HC/admin only) → all upcoming bookings with the coach dropdown.
     // GRO isn't assigned venues but must see every arena booking (to check guests in), so show
     // the full list rather than "assigned to me". HC keeps their own list; a coach's list is theirs.
-    const venueOwn = ((venueIsHC && !isGro) ? (D.venueMine || []) : (D.venueBookings || [])).map((b) => mapVenueBooking(b, 'coach'));
+    const venueRaw = (venueIsHC && !isGro) ? (D.venueMine || []) : (D.venueBookings || []);
+    const venueOwn = (isGro ? venueRaw.filter((b) => !isOpenGym(b)) : venueRaw).map((b) => mapVenueBooking(b, 'coach'));
     const noVenueOwn = venueOwn.length === 0;
     const venueAllHC = venueIsHC ? (D.venueBookings || []) : [];
     // Bookings marked "no coach needed" (e.g. clubs with their own trainer) are hidden from dispatch.
@@ -2380,7 +2388,12 @@ class Component extends DCLogic {
         bg: c.isToday ? C.voltDim : 'var(--panel2)', border: c.isToday ? C.volt : 'var(--border)',
         numCol: c.isToday ? C.volt : C.text,
         events: (c.events || []).map((e) => {
-          if (e.kind === 'venue') return { text: (e.timeRange || e.time) + ' ' + e.label, bg: '#2B3242', fg: '#ffffff', paxBg: 'rgba(0,0,0,.28)', cursor: 'default', hasPax: false, pax: '', open: () => {} };
+          if (e.kind === 'venue') {
+            const isPending = String(e.status || '').toLowerCase() === 'pending_payment';
+            const statusLabel = isPending ? 'PENDING' : 'CONFIRMED';
+            const vBg = isPending ? '#92400E' : '#2B3242';
+            return { text: (e.timeRange || e.time) + ' ' + e.label, bg: vBg, fg: '#ffffff', paxBg: isPending ? 'rgba(251,191,36,.35)' : 'rgba(74,222,128,.3)', cursor: 'default', hasPax: true, pax: statusLabel, open: () => {} };
+          }
           // Colour each class bar by its type (arena_class_types.color); fall back to the brand red.
           const bg = e.color || C.volt; const fg = contrastText(bg);
           return { text: e.time + ' ' + e.label, bg, fg, paxBg: fg === '#ffffff' ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.55)', cursor: 'pointer', hasPax: true, pax: String(e.pax), open: () => this.openClassPopup(e.scheduleId) };
