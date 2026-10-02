@@ -1969,6 +1969,8 @@ gtag('config', 'G-70JD631GZC', { cookie_domain: 'auto' });
       </div>
       <sc-if value="{{ vpCanCheckin }}"><div style="margin-top:18px;"><button onclick="{{ vpDoCheckin }}" style="width:100%;background:var(--green);border:0;color:#fff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.03em;">Check In</button></div></sc-if>
       <sc-if value="{{ vpCheckedIn }}"><div style="margin-top:18px;text-align:center;"><span style="font-size:14px;font-weight:800;color:var(--green);">&#10003; {{ vpCheckinTime }}</span></div></sc-if>
+      <sc-if value="{{ vpCanCheckout }}"><div style="margin-top:10px;"><button onclick="{{ vpDoCheckout }}" style="width:100%;background:#E4002B;border:0;color:#fff;border-radius:11px;padding:13px;font-family:'Barlow Condensed';font-weight:800;font-size:15px;cursor:pointer;text-transform:uppercase;letter-spacing:.03em;">Check Out</button></div></sc-if>
+      <sc-if value="{{ vpCheckedOut }}"><div style="margin-top:10px;text-align:center;"><span style="font-size:14px;font-weight:800;color:#E4002B;">&#10003; {{ vpCheckoutTime }}</span></div></sc-if>
       <button onclick="{{ closeVenuePopup }}" style="display:block;margin:18px auto 0;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:100px;padding:11px 26px;font-family:'Barlow Condensed';font-weight:800;font-size:13px;cursor:pointer;text-transform:uppercase;">Close</button>
     </div>
   </div>

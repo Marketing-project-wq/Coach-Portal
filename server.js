@@ -2596,18 +2596,32 @@ route('GET', '/api/venue/bookings', async (req, res, s) => {
   const bookings = await myVenueBookings(s.c, assignMap, ptRates, null, dir.byId);
   return send(res, 200, { bookings, coaches: [], coachList: [], isHC: false });
 });
-// GRO check-in for arena bookings (open gym). Records checked_in_at timestamp.
+// GRO: fetch check-in/out status for an arena booking (columns may not exist yet).
+route('GET', '/api/gro/arena/:id/status', async (req, res, s, q, params) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  let checkedInAt = null, checkedOutAt = null;
+  try {
+    const r = (await sb(`arena_bookings?select=checked_in_at,checked_out_at&id=eq.${enc(params.id)}&limit=1`)) || [];
+    if (r[0]) { checkedInAt = r[0].checked_in_at || null; checkedOutAt = r[0].checked_out_at || null; }
+  } catch (_) {
+    try {
+      const r2 = (await sb(`arena_bookings?select=checked_in_at&id=eq.${enc(params.id)}&limit=1`)) || [];
+      if (r2[0]) checkedInAt = r2[0].checked_in_at || null;
+    } catch (_2) { /* columns don't exist yet */ }
+  }
+  return send(res, 200, { checkedInAt, checkedOutAt });
+});
+// GRO check-in for arena bookings. Records checked_in_at timestamp.
 route('POST', '/api/gro/arena/:id/checkin', async (req, res, s, q, params) => {
   if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
   const rows = (await sb(`arena_bookings?select=id,status&id=eq.${enc(params.id)}&limit=1`)) || [];
   const b = rows[0];
   if (!b) return send(res, 404, { error: 'Booking tidak ditemukan.' });
   if (String(b.status || '').toLowerCase() === 'cancelled') return send(res, 400, { error: 'Booking sudah dibatalkan.' });
-  // Try reading checked_in_at (column may not exist yet).
   try {
     const chk = (await sb(`arena_bookings?select=checked_in_at&id=eq.${enc(params.id)}&limit=1`)) || [];
     if (chk[0] && chk[0].checked_in_at) return send(res, 200, { ok: true, checkedInAt: chk[0].checked_in_at, already: true });
-  } catch (_) { /* column may not exist yet — proceed to patch */ }
+  } catch (_) { /* column may not exist yet */ }
   const nowIso = new Date().toISOString();
   try {
     await sb(`arena_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ checked_in_at: nowIso }) });
@@ -2615,6 +2629,24 @@ route('POST', '/api/gro/arena/:id/checkin', async (req, res, s, q, params) => {
     return send(res, 400, { error: 'Kolom checked_in_at belum ada di tabel arena_bookings. Tambahkan kolom tersebut di Supabase.' });
   }
   return send(res, 200, { ok: true, checkedInAt: nowIso });
+});
+// GRO check-out for arena bookings. Records checked_out_at timestamp.
+route('POST', '/api/gro/arena/:id/checkout', async (req, res, s, q, params) => {
+  if (!isGro(s)) return send(res, 403, { error: 'Fitur ini hanya untuk GRO.' });
+  const rows = (await sb(`arena_bookings?select=id,status&id=eq.${enc(params.id)}&limit=1`)) || [];
+  const b = rows[0];
+  if (!b) return send(res, 404, { error: 'Booking tidak ditemukan.' });
+  try {
+    const chk = (await sb(`arena_bookings?select=checked_out_at&id=eq.${enc(params.id)}&limit=1`)) || [];
+    if (chk[0] && chk[0].checked_out_at) return send(res, 200, { ok: true, checkedOutAt: chk[0].checked_out_at, already: true });
+  } catch (_) { /* column may not exist yet */ }
+  const nowIso = new Date().toISOString();
+  try {
+    await sb(`arena_bookings?id=eq.${enc(params.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ checked_out_at: nowIso }) });
+  } catch (_) {
+    return send(res, 400, { error: 'Kolom checked_out_at belum ada di tabel arena_bookings. Tambahkan kolom tersebut di Supabase.' });
+  }
+  return send(res, 200, { ok: true, checkedOutAt: nowIso });
 });
 // Email every active coach when the responsible coach for an arena+coach booking is set/changed.
 // Fire-and-forget: it never blocks or fails the assignment, and is a safe no-op until

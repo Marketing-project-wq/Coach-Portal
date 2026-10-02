@@ -941,12 +941,26 @@ class Component extends DCLogic {
     this.api('/api/coach/class/' + encodeURIComponent(id)).then((d) => this.setState({ classPopup: d })).catch((e) => this.toastMsg(e.message));
   }
   closeClassPopup() { this.setState({ classPopup: null }); }
-  openVenuePopup(e) { if (!e) return; this.setState({ venuePopup: e }); }
+  openVenuePopup(e) {
+    if (!e) return;
+    this.setState({ venuePopup: e });
+    if (e.id) {
+      this.api('/api/gro/arena/' + encodeURIComponent(e.id) + '/status')
+        .then((r) => { if (this.state.venuePopup && this.state.venuePopup.id === e.id) this.setState({ venuePopup: Object.assign({}, this.state.venuePopup, { checkedInAt: r.checkedInAt || null, checkedOutAt: r.checkedOutAt || null }) }); })
+        .catch(() => {});
+    }
+  }
   closeVenuePopup() { this.setState({ venuePopup: null }); }
   venuePopupCheckin() {
     const vp = this.state.venuePopup; if (!vp || !vp.id) return;
     this.api('/api/gro/arena/' + encodeURIComponent(vp.id) + '/checkin', { method: 'POST' })
       .then((r) => { this.toastMsg('Check-in berhasil'); this.setState({ venuePopup: Object.assign({}, vp, { checkedInAt: r.checkedInAt || new Date().toISOString() }) }); })
+      .catch((e) => this.toastMsg(e.message));
+  }
+  venuePopupCheckout() {
+    const vp = this.state.venuePopup; if (!vp || !vp.id) return;
+    this.api('/api/gro/arena/' + encodeURIComponent(vp.id) + '/checkout', { method: 'POST' })
+      .then((r) => { this.toastMsg('Check-out berhasil'); this.setState({ venuePopup: Object.assign({}, vp, { checkedOutAt: r.checkedOutAt || new Date().toISOString() }) }); })
       .catch((e) => this.toastMsg(e.message));
   }
   // GRO checks the coach in/out on their behalf straight from the Kalender Arena popup (helps when
@@ -2499,6 +2513,8 @@ class Component extends DCLogic {
     const vpIsOpenGym = vp ? !!vp.isOpenGym : false;
     const vpCheckedIn = vp ? !!vp.checkedInAt : false;
     const vpCheckinTime = vpCheckedIn ? new Date(vp.checkedInAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+    const vpCheckedOut = vp ? !!vp.checkedOutAt : false;
+    const vpCheckoutTime = vpCheckedOut ? new Date(vp.checkedOutAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
     const vpPayLabel = vpIsPending ? 'PENDING PAYMENT' : 'CONFIRMED';
     const vpPayBg = vpIsPending ? 'rgba(199,122,0,.16)' : 'rgba(28,138,75,.14)';
     const vpPayCol = vpIsPending ? C.amber : C.green;
@@ -3332,8 +3348,11 @@ class Component extends DCLogic {
       vpPrice: vpPriceFmt, vpHasPrice: !!(vp && vp.price),
       vpPayMethod: vp ? (vp.paymentMethod || '') : '', vpHasPayMethod: !!(vp && vp.paymentMethod),
       vpIsOpenGym, vpCheckedIn, vpCheckinTime: vpCheckedIn ? ('Checked in · ' + vpCheckinTime) : '',
-      vpCanCheckin: isGro && vpIsOpenGym && !vpCheckedIn,
+      vpCheckedOut, vpCheckoutTime: vpCheckedOut ? ('Checked out · ' + vpCheckoutTime) : '',
+      vpCanCheckin: isGro && !vpCheckedIn,
+      vpCanCheckout: isGro && vpCheckedIn && !vpCheckedOut,
       vpDoCheckin: () => this.venuePopupCheckin(),
+      vpDoCheckout: () => this.venuePopupCheckout(),
       showClassPopup: !!cp, closeClassPopup: () => this.closeClassPopup(),
       cpTitle: cpSched.fullType || cpSched.type || 'Class', cpSubtitle: (cpSched.dateLabel || cpSched.date || '') + ' · ' + (cpSched.time || '') + (cpSched.end ? '–' + cpSched.end : '') + (cpSched.coach ? ' · ' + cpSched.coach : ''),
       cpConfirmed: cpConfirmed + (isID ? ' Terkonfirmasi' : ' Confirmed'), cpPending: cpPending + (isID ? ' Menunggu' : ' Pending'), cpQuota: (cpConfirmed + cpPending) + ' / ' + (cpSched.quota || 0) + (isID ? ' Kuota' : ' Quota'),
