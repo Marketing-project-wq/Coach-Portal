@@ -329,16 +329,17 @@ class Component extends DCLogic {
     if (restore) { const saved = this.screenGet(); if (saved && ['detail', 'stats', 'addcoach', 'subreq', 'templates'].indexOf(saved) < 0) screen = saved; }
     // External coaches may reach Schedule, Monitoring, Coverage, Venue Booking, Class Menu, the
     // class Detail (participant names + level), and their own Account Settings.
-    if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile'].indexOf(screen) < 0) screen = 'dash';
+    if (this.isExternal && ['dash', 'monthly', 'subreq', 'venue', 'menu', 'detail', 'profile', 'logbook'].indexOf(screen) < 0) screen = 'dash';
     const GYM_SCREENS = ['gymview', 'gymmembers', 'gympackages', 'gymmembership', 'gymdaypass', 'gymscan', 'gymvisits', 'gymreport'];
     // GRO screen scope depends on the unit they are locked to — Gym GRO gets only Gym screens,
     // Arena GRO only the Arena GRO screens (schedule/check-in, venue, class detail, members).
+    // The shared "Result Coach Log book" (logbook) is available to every role, so it is exempt.
     if (role === 'gro') {
-      if (groGym) { if (GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview'; }
-      else if (['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
+      if (groGym) { if (screen !== 'logbook' && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview'; }
+      else if (screen !== 'logbook' && ['dash', 'detail', 'venue', 'members'].indexOf(screen) < 0) screen = 'dash';
     }
     // Gym mode for the roles that can still switch units (coach, HC, admin) — GRO handled above.
-    if (this.state.unit === 'gym' && ['coach', 'hc', 'admin'].indexOf(role) >= 0 && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview';
+    if (this.state.unit === 'gym' && screen !== 'logbook' && ['coach', 'hc', 'admin'].indexOf(role) >= 0 && GYM_SCREENS.indexOf(screen) < 0) screen = 'gymview';
     this.screenSet(screen);
     this.setState({ role, screen });
     this.gaPageView(screen);
@@ -1861,6 +1862,7 @@ class Component extends DCLogic {
     titles.venueassign = ['Head Coach', 'Assign Venue'];
     titles.renters = ['Admin', 'Top Arena Renters'];
     titles.menu = [st.role === 'hc' ? 'Head Coach' : st.role === 'admin' ? 'Admin' : 'Coach', 'Class Menu'];
+    titles.logbook = ['Coach Portal', 'Result Coach Log book'];
     let tt = titles[scr] || ['', ''];
     if (scr === 'subrev' && st.role === 'coach') tt = ['Coach', 'Coverage'];
     titles.packageorders = ['GRO', 'Package Orders'];
@@ -1889,7 +1891,7 @@ class Component extends DCLogic {
     if (scr === 'gymdaypass') tt = titles.gymdaypass;
     if (scr === 'gympending') tt = titles.gympending;
     if (scr === 'gymreport') tt = titles.gymreport;
-    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymmembership: scr === 'gymmembership', gymdaypass: scr === 'gymdaypass', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', gymreport: scr === 'gymreport', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
+    const s = { gymview: scr === 'gymview', gymmembers: scr === 'gymmembers', gympackages: scr === 'gympackages', gymmembership: scr === 'gymmembership', gymdaypass: scr === 'gymdaypass', gymscan: scr === 'gymscan', gymvisits: scr === 'gymvisits', gympending: scr === 'gympending', gymreport: scr === 'gymreport', logbook: scr === 'logbook', dash: scr === 'dash', detail: scr === 'detail', subreq: scr === 'subreq', email: scr === 'email', reviews: scr === 'reviews', monthly: scr === 'monthly', members: scr === 'members', leaderboard: scr === 'leaderboard', venue: scr === 'venue', venueassign: scr === 'venueassign', menu: scr === 'menu', overview: scr === 'overview', schedule: scr === 'schedule', subrev: scr === 'subrev', monitor: scr === 'monitor', stats: scr === 'stats', reports: scr === 'reports', accounts: scr === 'accounts', addcoach: scr === 'addcoach', renters: scr === 'renters', templates: scr === 'templates', settings: scr === 'settings', perms: scr === 'perms', profile: scr === 'profile', checkin: scr === 'checkin', packageorders: scr === 'packageorders', reschedule: scr === 'reschedule', validatecoach: scr === 'validatecoach', recoverycenter: scr === 'recoverycenter' };
 
     // coach today
     const coachToday = (D.today || []).map((c) => {
@@ -3464,6 +3466,8 @@ class Component extends DCLogic {
       showArenaCal, arenaCalCells, arenaCalLabel: D.arenaCalLabel || '',
       arenaCalPrev: () => this.loadArenaCalendar(this.state.d.arenaCalPrevYm), arenaCalNext: () => this.loadArenaCalendar(this.state.d.arenaCalNextYm),
       showMenuNav: !isGro && st.unit !== 'gym', goMenu: () => this.go('menu'), menuCanManage, classMenus, noClassMenus, hasClassMenus: !noClassMenus,
+      // Shared "Result Coach Log book" tab — embeds the external form responses; visible to every role.
+      goLogbook: () => this.go('logbook'), logbookNav: this.navMeta(scr === 'logbook'), logbookUrl: 'https://form.20fit.id/r/coaches-logbook',
       openMenuModal: () => this.openMenuModal(),
       showMenuModal: !!st.menuModal, menuModalTitle: (mb && mb.id) ? 'Edit Menu' : 'Add Menu',
       mbTitle: mb ? mb.title : '', mbCategory: mb ? mb.category : '', mbCategoryOpts, mbNote: mb ? mb.note : '', mbNoteBottom: mb ? mb.noteBottom : '', mbBlocks,
